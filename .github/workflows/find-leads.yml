@@ -12,6 +12,10 @@ on:
         required: true
         default: 'Nashville, TN'
 
+permissions:
+  contents: read
+  id-token: write
+
 jobs:
   find-leads:
     runs-on: ubuntu-latest
@@ -25,7 +29,7 @@ jobs:
           python-version: '3.11'
 
       - name: Install dependencies
-        run: pip install requests
+        run: pip install requests gspread google-auth
 
       - name: Run lead discovery
         env:
@@ -34,6 +38,17 @@ jobs:
 
       - name: Run enrichment
         run: python enrich_leads.py
+
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ secrets.WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: ${{ secrets.SERVICE_ACCOUNT_EMAIL }}
+
+      - name: Write leads to Google Sheet
+        env:
+          SHEET_ID: ${{ secrets.SHEET_ID }}
+        run: python write_to_sheets.py
 
       - name: Upload results
         uses: actions/upload-artifact@v4
