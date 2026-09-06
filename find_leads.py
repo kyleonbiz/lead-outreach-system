@@ -1,5 +1,6 @@
 import os
 import sys
+import json
 import requests
 
 PLACES_API_KEY = os.environ.get("PLACES_API_KEY")
@@ -36,11 +37,22 @@ if __name__ == "__main__":
 
     results = search_businesses(industry, location)
 
-    print(f"\nFound {len(results)} businesses:\n")
+    leads = []
     for p in results:
-        name = p.get("displayName", {}).get("text", "")
-        addr = p.get("formattedAddress", "")
-        phone = p.get("internationalPhoneNumber", "")
-        website = p.get("websiteUri", "")
-        rating = p.get("rating", "")
-        print(f"- {name} | {addr} | {phone} | {website} | rating: {rating}")
+        leads.append({
+            "business_name": p.get("displayName", {}).get("text", ""),
+            "address": p.get("formattedAddress", ""),
+            "phone": p.get("internationalPhoneNumber", ""),
+            "website": p.get("websiteUri", ""),
+            "rating": p.get("rating", ""),
+            "place_id": p.get("id", ""),
+            "industry": industry,
+        })
+
+    print(f"\nFound {len(leads)} businesses:\n")
+    for lead in leads:
+        print(f"- {lead['business_name']} | {lead['address']} | {lead['phone']} | {lead['website']} | rating: {lead['rating']}")
+
+    with open("leads_raw.json", "w") as f:
+        json.dump(leads, f, indent=2)
+    print(f"\nSaved {len(leads)} leads to leads_raw.json")
