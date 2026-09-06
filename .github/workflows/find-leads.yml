@@ -1,0 +1,33 @@
+name: Find Leads
+
+on:
+  workflow_dispatch:
+    inputs:
+      industry:
+        description: 'Industry to search for'
+        required: true
+        default: 'coffee shops'
+      location:
+        description: 'Location to search in'
+        required: true
+        default: 'Nashville, TN'
+
+jobs:
+  find-leads:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repo
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: pip install requests
+
+      - name: Run lead discovery
+        env:
+          PLACES_API_KEY: ${{ secrets.PLACES_API_KEY }}
+        run: python find_leads.py "${{ inputs.industry }}" "${{ inputs.location }}"
