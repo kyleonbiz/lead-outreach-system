@@ -11,29 +11,27 @@ CLIENT_ID = os.environ.get("MS_CLIENT_ID")
 CLIENT_SECRET = os.environ.get("MS_CLIENT_SECRET")
 SENDER_EMAIL = os.environ.get("SENDER_EMAIL")
 SHEET_ID = os.environ.get("SHEET_ID")
-
 TEST_MODE = os.environ.get("TEST_MODE", "true").lower() == "true"
 TEST_EMAIL = os.environ.get("TEST_EMAIL", "")
-
 DAILY_CAP = 1 if TEST_MODE else 50
 
 SUBJECT_TEMPLATE = "Quick question about {business_name}'s back-office workload"
 
-BODY_TEMPLATE = """Hi {business_name} team,<br><br>
-I'll keep this short — running a business like {business_name} usually means the paperwork piles up around the edges: invoices to track, licenses and renewals to stay on top of, vendor files, data entry, reporting. It's necessary, but it's rarely why anyone got into the business.<br><br>
-That's exactly the work Aurum Ventura Enterprise takes off your plate. We're a Tennessee-based administrative back-office for small and growing businesses — handling documents, invoices, license tracking, vendor administration, and reporting within a clearly defined scope, so you always know what's covered and what it costs. Think of it as outsourced admin support without the overhead of a new hire.<br><br>
-If any of that sounds like a headache you'd rather hand off, I'd love to send over more details or set up a quick call — no pressure either way.<br><br>
-Best,<br>
-Kyle Fulwood Jr<br>
-Chief Executive Officer<br>
-Aurum Ventura Enterprise LLC — Business Administration Services<br>
-850-653-7797 | admin@aurumventura.net | aurumventura.net<br>
-"Your Business. Our Back Office."<br><br>
----<br>
-Nashville, TN 37214<br>
-Don't want to hear from us again? Just reply "UNSUBSCRIBE" and we'll take you off the list.
-"""
-
+BODY_TEMPLATE = (
+    "Hi {business_name} team,<br><br>"
+    "I'll keep this short — running a business like {business_name} usually means the paperwork piles up around the edges: invoices to track, licenses and renewals to stay on top of, vendor files, data entry, reporting. It's necessary, but it's rarely why anyone got into the business.<br><br>"
+    "That's exactly the work Aurum Ventura Enterprise takes off your plate. We're a Tennessee-based administrative back-office for small and growing businesses — handling documents, invoices, license tracking, vendor administration, and reporting within a clearly defined scope, so you always know what's covered and what it costs. Think of it as outsourced admin support without the overhead of a new hire.<br><br>"
+    "If any of that sounds like a headache you'd rather hand off, I'd love to send over more details or set up a quick call — no pressure either way.<br><br>"
+    "Best,<br>"
+    "Kyle Fulwood Jr<br>"
+    "Chief Executive Officer<br>"
+    "Aurum Ventura Enterprise LLC — Business Administration Services<br>"
+    "850-653-7797 | admin@aurumventura.net | aurumventura.net<br>"
+    "\"Your Business. Our Back Office.\"<br><br>"
+    "---<br>"
+    "Nashville, TN<br>"
+    "Don't want to hear from us again? Just reply \"UNSUBSCRIBE\" and we'll take you off the list."
+)
 
 def get_graph_token():
     url = f"https://login.microsoftonline.com/{TENANT_ID}/oauth2/v2.0/token"
@@ -46,7 +44,6 @@ def get_graph_token():
     resp = requests.post(url, data=data)
     resp.raise_for_status()
     return resp.json()["access_token"]
-
 
 def send_email(token, to_email, subject, html_body):
     url = f"https://graph.microsoft.com/v1.0/users/{SENDER_EMAIL}/sendMail"
@@ -64,13 +61,11 @@ def send_email(token, to_email, subject, html_body):
     }
     return requests.post(url, headers=headers, json=payload)
 
-
 def get_sheets_client():
     credentials, _ = google.auth.default(
         scopes=["https://www.googleapis.com/auth/spreadsheets"]
     )
     return gspread.authorize(credentials)
-
 
 if __name__ == "__main__":
     required = {
@@ -81,7 +76,6 @@ if __name__ == "__main__":
     for name, val in required.items():
         if not val:
             raise SystemExit(f"Set {name} first.")
-
     if TEST_MODE and not TEST_EMAIL:
         raise SystemExit("TEST_MODE is on but no TEST_EMAIL was provided.")
 
@@ -97,7 +91,6 @@ if __name__ == "__main__":
     col = {name: i for i, name in enumerate(header)}
 
     token = get_graph_token()
-
     sent_count = 0
     today = datetime.date.today().isoformat()
     log_rows = []
@@ -120,8 +113,8 @@ if __name__ == "__main__":
 
         subject = SUBJECT_TEMPLATE.format(business_name=business_name)
         body = BODY_TEMPLATE.format(business_name=business_name)
-
         recipient = TEST_EMAIL if TEST_MODE else email
+
         if TEST_MODE:
             subject = "[TEST] " + subject
 
