@@ -1,6 +1,7 @@
 import os
 import time
 import uuid
+import base64
 import datetime
 import requests
 import gspread
@@ -15,6 +16,8 @@ TEST_MODE = os.environ.get("TEST_MODE", "true").lower() == "true"
 TEST_EMAIL = os.environ.get("TEST_EMAIL", "")
 DAILY_CAP = 1 if TEST_MODE else 50
 
+LOGO_PATH = "logo.png"
+
 SUBJECT_TEMPLATE = "Quick question about {business_name}'s back-office workload"
 
 BODY_TEMPLATE = (
@@ -23,6 +26,7 @@ BODY_TEMPLATE = (
     "That's exactly the work Aurum Ventura Enterprise takes off your plate. We're a Tennessee-based administrative back-office for small and growing businesses — handling documents, invoices, license tracking, vendor administration, and reporting within a clearly defined scope, so you always know what's covered and what it costs. Think of it as outsourced admin support without the overhead of a new hire.<br><br>"
     "If any of that sounds like a headache you'd rather hand off, I'd love to send over more details or set up a quick call — no pressure either way.<br><br>"
     "Best,<br><br>"
+    "{logo_html}"
     "Kyle Fulwood Jr<br>"
     "Chief Executive Officer<br>"
     "Aurum Ventura Enterprise LLC — Business Administration Services<br>"
@@ -31,6 +35,13 @@ BODY_TEMPLATE = (
     "Nashville, TN<br>"
     "Don't want to hear from us again? Just reply \"UNSUBSCRIBE\" and we'll take you off the list."
 )
+
+def load_logo_base64():
+    try:
+        with open(LOGO_PATH, "rb") as f:
+            return base64.b64encode(f.read()).decode("utf-8")
+    except FileNotFoundError:
+        return None
 
 def get_graph_token():
     url = f"https://login.microsoftonline.com/{TENANT_ID}/oauth2/v2.0/token"
@@ -44,20 +55,29 @@ def get_graph_token():
     resp.raise_for_status()
     return resp.json()["access_token"]
 
-def send_email(token, to_email, subject, html_body):
+def send_email(token, to_email, subject, html_body, logo_b64=None):
     url = f"https://graph.microsoft.com/v1.0/users/{SENDER_EMAIL}/sendMail"
     headers = {
         "Authorization": f"Bearer {token}",
         "Content-Type": "application/json",
     }
-    payload = {
-        "message": {
-            "subject": subject,
-            "body": {"contentType": "HTML", "content": html_body},
-            "toRecipients": [{"emailAddress": {"address": to_email}}],
-        },
-        "saveToSentItems": "true",
+    message = {
+        "subject": subject,
+        "body": {"contentType": "HTML", "content": html_body},
+        "toRecipients": [{"emailAddress": {"address": to_email}}],
     }
+    if logo_b64:
+        message["attachments"] = [
+            {
+                "@odata.type": "#microsoft.graph.fileAttachment",
+                "name": "logo.png",
+                "contentType": "image/png",
+                "contentBytes": logo_b64,
+                "contentId": "aurum_logo",
+                "isInline": True,
+            }
+        ]
+    payload = {"message": message, "saveToSentItems": "true"}
     return requests.post(url, headers=headers, json=payload)
 
 def get_sheets_client():
@@ -79,6 +99,16 @@ if __name__ == "__main__":
         raise SystemExit("TEST_MODE is on but no TEST_EMAIL was provided.")
 
     print(f"Running in {'TEST' if TEST_MODE else 'LIVE'} mode. Cap: {DAILY_CAP} email(s).")
+
+    logo_b64 = load_logo_base64()
+    if logo_b64:
+        logo_html = (
+            "<img src=\"cid:aurum_logo\" alt=\"Aurum Ventura Enterprise LLC\" "
+            "width=\"160\" style=\"display:block;margin:8px 0;\"><br>"
+        )
+    else:
+        logo_html = ""
+        print("Warning: logo.png not found in repo root — sending without logo.")
 
     gc = get_sheets_client()
     sheet = gc.open_by_key(SHEET_ID)
@@ -111,13 +141,13 @@ if __name__ == "__main__":
             continue
 
         subject = SUBJECT_TEMPLATE.format(business_name=business_name)
-        body = BODY_TEMPLATE.format(business_name=business_name)
+        body = BODY_TEMPLATE.format(business_name=business_name, logo_html=logo_html)
         recipient = TEST_EMAIL if TEST_MODE else email
 
         if TEST_MODE:
             subject = "[TEST] " + subject
 
-        resp = send_email(token, recipient, subject, body)
+        resp = send_email(token, recipient, subject, body, logo_b64)
 
         if resp.status_code == 202:
             send_status = "sent_test" if TEST_MODE else "sent"
