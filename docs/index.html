@@ -1,0 +1,373 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Aurum Ventura — Outreach Dashboard</title>
+<style>
+  :root {
+    --navy: #0a1a3c;
+    --navy-light: #12244f;
+    --teal: #2ec4c6;
+    --teal-dark: #1a8f91;
+    --bg: #f4f6fa;
+    --card-bg: #ffffff;
+    --text: #1b1f2a;
+    --text-muted: #6b7280;
+    --border: #e5e8ef;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+  }
+  header {
+    background: linear-gradient(120deg, var(--navy), var(--navy-light));
+    color: white;
+    padding: 28px 20px;
+  }
+  header .inner {
+    max-width: 1100px;
+    margin: 0 auto;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 12px;
+  }
+  header h1 {
+    margin: 0;
+    font-size: 22px;
+    letter-spacing: 0.3px;
+  }
+  header .sub {
+    color: var(--teal);
+    font-size: 13px;
+    margin-top: 4px;
+  }
+  #last-updated {
+    font-size: 13px;
+    color: #cfd6e6;
+    text-align: right;
+  }
+  #refresh-btn {
+    background: var(--teal);
+    border: none;
+    color: var(--navy);
+    font-weight: 600;
+    padding: 8px 14px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 13px;
+  }
+  #refresh-btn:hover { background: #4ed4d6; }
+
+  main {
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 24px 20px 60px;
+  }
+
+  .stat-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 14px;
+    margin-bottom: 28px;
+  }
+  .stat-card {
+    background: var(--card-bg);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 16px;
+  }
+  .stat-card .value {
+    font-size: 28px;
+    font-weight: 700;
+    color: var(--navy);
+  }
+  .stat-card .label {
+    font-size: 12px;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-top: 2px;
+  }
+
+  section {
+    background: var(--card-bg);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 20px;
+    margin-bottom: 20px;
+  }
+  section h2 {
+    margin: 0 0 14px;
+    font-size: 15px;
+    color: var(--navy);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+
+  .breakdown-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 8px;
+    font-size: 13px;
+  }
+  .breakdown-row .bar-label {
+    width: 140px;
+    flex-shrink: 0;
+    color: var(--text-muted);
+  }
+  .breakdown-row .bar-track {
+    flex: 1;
+    background: var(--bg);
+    border-radius: 4px;
+    height: 10px;
+    overflow: hidden;
+  }
+  .breakdown-row .bar-fill {
+    height: 100%;
+    background: var(--teal);
+  }
+  .breakdown-row .bar-count {
+    width: 36px;
+    text-align: right;
+    font-weight: 600;
+    color: var(--navy);
+  }
+
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+  }
+  th, td {
+    text-align: left;
+    padding: 8px 10px;
+    border-bottom: 1px solid var(--border);
+  }
+  th {
+    color: var(--text-muted);
+    font-weight: 600;
+    text-transform: uppercase;
+    font-size: 11px;
+    letter-spacing: 0.4px;
+  }
+  tr:last-child td { border-bottom: none; }
+  .table-wrap { overflow-x: auto; }
+
+  .status-pill {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 999px;
+    font-size: 11px;
+    font-weight: 600;
+  }
+  .status-new { background: #e0f2fe; color: #0369a1; }
+  .status-contacted { background: #dcfce7; color: #15803d; }
+  .status-sent { background: #dcfce7; color: #15803d; }
+  .status-sent_test { background: #fef9c3; color: #854d0e; }
+  .status-failed { background: #fee2e2; color: #b91c1c; }
+  .status-not_contactable { background: #f1f5f9; color: #64748b; }
+  .status-default { background: #f1f5f9; color: #64748b; }
+
+  .empty-msg {
+    color: var(--text-muted);
+    font-size: 13px;
+    padding: 8px 0;
+  }
+  .two-col {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+  }
+  @media (max-width: 700px) {
+    .two-col { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="inner">
+    <div>
+      <h1>Aurum Ventura — Outreach Dashboard</h1>
+      <div class="sub">Lead-finding &amp; email outreach agents</div>
+    </div>
+    <div>
+      <div id="last-updated">Loading…</div>
+      <button id="refresh-btn" onclick="loadData()">Refresh</button>
+    </div>
+  </div>
+</header>
+
+<main>
+  <div class="stat-grid" id="stat-grid"></div>
+
+  <div class="two-col">
+    <section>
+      <h2>Leads by Status</h2>
+      <div id="leads-status-breakdown"></div>
+    </section>
+    <section>
+      <h2>Enrichment Results</h2>
+      <div id="enrichment-breakdown"></div>
+    </section>
+  </div>
+
+  <section>
+    <h2>Recent Leads</h2>
+    <div class="table-wrap">
+      <table id="recent-leads-table">
+        <thead>
+          <tr><th>Business</th><th>Location</th><th>Outreach</th><th>Enrichment</th><th>Contacted</th></tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+    </div>
+  </section>
+
+  <section>
+    <h2>Recent Outreach Activity</h2>
+    <div class="table-wrap">
+      <table id="recent-outreach-table">
+        <thead>
+          <tr><th>Business</th><th>Date</th><th>Subject</th><th>Status</th></tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+    </div>
+  </section>
+
+  <section>
+    <h2>Campaign Queue</h2>
+    <div class="table-wrap">
+      <table id="campaign-queue-table">
+        <thead>
+          <tr><th>Industry</th><th>Location</th><th>Active</th><th>Last Run</th></tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+    </div>
+  </section>
+</main>
+
+<script>
+function statusPillClass(status) {
+  const key = (status || '').toLowerCase();
+  return document.querySelector(`.status-${key}`) !== undefined && ['new','contacted','sent','sent_test','failed','not_contactable'].includes(key)
+    ? `status-${key}` : 'status-default';
+}
+
+function renderBreakdown(containerId, counts) {
+  const el = document.getElementById(containerId);
+  el.innerHTML = '';
+  const entries = Object.entries(counts || {});
+  if (entries.length === 0) {
+    el.innerHTML = '<div class="empty-msg">No data yet.</div>';
+    return;
+  }
+  const max = Math.max(...entries.map(([, v]) => v), 1);
+  entries.sort((a, b) => b[1] - a[1]).forEach(([label, count]) => {
+    const row = document.createElement('div');
+    row.className = 'breakdown-row';
+    row.innerHTML = `
+      <div class="bar-label">${label}</div>
+      <div class="bar-track"><div class="bar-fill" style="width:${(count / max) * 100}%"></div></div>
+      <div class="bar-count">${count}</div>
+    `;
+    el.appendChild(row);
+  });
+}
+
+function renderStatCards(data) {
+  const leads = data.leads || {};
+  const outreach = data.outreach || {};
+  const leadStatus = leads.status_counts || {};
+  const outreachStatus = outreach.status_counts || {};
+
+  const cards = [
+    { label: 'Total Leads', value: leads.total_leads ?? 0 },
+    { label: 'New (Uncontacted)', value: leadStatus.new ?? 0 },
+    { label: 'Contacted', value: leadStatus.contacted ?? 0 },
+    { label: 'Not Contactable', value: leadStatus.not_contactable ?? 0 },
+    { label: 'Emails Sent (Live)', value: outreachStatus.sent ?? 0 },
+    { label: 'Total Send Attempts', value: outreach.total_attempts ?? 0 },
+  ];
+
+  const grid = document.getElementById('stat-grid');
+  grid.innerHTML = cards.map(c => `
+    <div class="stat-card">
+      <div class="value">${c.value}</div>
+      <div class="label">${c.label}</div>
+    </div>
+  `).join('');
+}
+
+function renderTable(tableId, rows, rowFn) {
+  const tbody = document.querySelector(`#${tableId} tbody`);
+  if (!rows || rows.length === 0) {
+    tbody.innerHTML = `<tr><td colspan="6" class="empty-msg">No data yet.</td></tr>`;
+    return;
+  }
+  tbody.innerHTML = rows.map(rowFn).join('');
+}
+
+async function loadData() {
+  document.getElementById('last-updated').textContent = 'Refreshing…';
+  try {
+    const resp = await fetch(`./dashboard_data.json?t=${Date.now()}`);
+    const data = await resp.json();
+
+    const updated = data.last_updated ? new Date(data.last_updated) : null;
+    document.getElementById('last-updated').textContent = updated
+      ? `Last updated: ${updated.toLocaleString()}`
+      : 'Last updated: unknown';
+
+    renderStatCards(data);
+    renderBreakdown('leads-status-breakdown', (data.leads || {}).status_counts);
+    renderBreakdown('enrichment-breakdown', (data.leads || {}).enrichment_counts);
+
+    renderTable('recent-leads-table', data.recent_leads, lead => `
+      <tr>
+        <td>${lead.business_name || ''}</td>
+        <td>${[lead.city, lead.state].filter(Boolean).join(', ')}</td>
+        <td><span class="status-pill ${statusPillClass(lead.outreach_status)}">${lead.outreach_status || ''}</span></td>
+        <td>${lead.enrichment_status || ''}</td>
+        <td>${lead.date_contacted || '—'}</td>
+      </tr>
+    `);
+
+    renderTable('recent-outreach-table', data.recent_outreach, log => `
+      <tr>
+        <td>${log.business_name || ''}</td>
+        <td>${log.date_sent || ''}</td>
+        <td>${log.subject || ''}</td>
+        <td><span class="status-pill ${statusPillClass(log.status)}">${log.status || ''}</span></td>
+      </tr>
+    `);
+
+    renderTable('campaign-queue-table', data.campaign_queue, c => `
+      <tr>
+        <td>${c.industry || ''}</td>
+        <td>${c.location || ''}</td>
+        <td>${c.active || ''}</td>
+        <td>${c.last_run_at || 'never'}</td>
+      </tr>
+    `);
+  } catch (err) {
+    document.getElementById('last-updated').textContent = 'Failed to load data — has the dashboard workflow run yet?';
+    console.error(err);
+  }
+}
+
+loadData();
+setInterval(loadData, 5 * 60 * 1000); // auto-refresh every 5 minutes
+</script>
+
+</body>
+</html>
