@@ -28,7 +28,6 @@ BODY_TEMPLATE = (
     "Aurum Ventura Enterprise LLC — Business Administration Services<br>"
     "850-653-7797 | admin@aurumventura.net | aurumventura.net<br>"
     "\"Your Business. Our Back Office.\"<br><br>"
-    "---<br>"
     "Nashville, TN<br>"
     "Don't want to hear from us again? Just reply \"UNSUBSCRIBE\" and we'll take you off the list."
 )
