@@ -4,6 +4,7 @@ import json
 import requests
 
 PLACES_API_KEY = os.environ.get("PLACES_API_KEY")
+MAX_RESULTS_PER_RUN = int(os.environ.get("MAX_RESULTS_PER_RUN", "20"))
 
 def search_businesses(industry, location, max_results=20):
     url = "https://places.googleapis.com/v1/places:searchText"
@@ -35,7 +36,7 @@ if __name__ == "__main__":
         industry = input("Industry (e.g. 'roofing contractors'): ")
         location = input("Location (e.g. 'Nashville, TN'): ")
 
-    results = search_businesses(industry, location)
+    results = search_businesses(industry, location, max_results=MAX_RESULTS_PER_RUN)
 
     leads = []
     for p in results:
