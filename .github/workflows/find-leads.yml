@@ -20,16 +20,12 @@ jobs:
   find-leads:
     runs-on: ubuntu-latest
     steps:
-      - name: Check out repo
-        uses: actions/checkout@v4
-      - name: Set up Python
-        uses: actions/setup-python@v5
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
         with:
           python-version: '3.11'
-      - name: Install dependencies
-        run: pip install requests gspread google-auth
-      - name: Authenticate to Google Cloud
-        uses: google-github-actions/auth@v2
+      - run: pip install requests gspread google-auth
+      - uses: google-github-actions/auth@v2
         with:
           workload_identity_provider: ${{ secrets.WORKLOAD_IDENTITY_PROVIDER }}
           service_account: ${{ secrets.SERVICE_ACCOUNT_EMAIL }}
@@ -49,31 +45,26 @@ jobs:
             echo "industry=${{ steps.campaign.outputs.industry }}" >> "$GITHUB_OUTPUT"
             echo "location=${{ steps.campaign.outputs.location }}" >> "$GITHUB_OUTPUT"
           fi
-      - name: Notify Discord (starting)
+      - name: Discord start notification
         env:
           DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
-        run: |
-          curl -s -H "Content-Type: application/json" -X POST -d "{\"content\": \"🔍 Starting lead search: **${{ steps.vars.outputs.industry }}** in **${{ steps.vars.outputs.location }}**\"}" "$DISCORD_WEBHOOK_URL"
-      - name: Run lead discovery
+        run: curl -s -H "Content-Type: application/json" -X POST -d "{\"content\": \"🔍 Starting lead search: **${{ steps.vars.outputs.industry }}** in **${{ steps.vars.outputs.location }}**\"}" "$DISCORD_WEBHOOK_URL"
+      - name: Find leads
         env:
           PLACES_API_KEY: ${{ secrets.PLACES_API_KEY }}
           MAX_RESULTS_PER_RUN: '2'
-        run: |
-          python find_leads.py "${{ steps.vars.outputs.industry }}" "${{ steps.vars.outputs.location }}"
-      - name: Run enrichment
-        run: python enrich_leads.py
-      - name: Write leads to Google Sheet
+        run: python find_leads.py "${{ steps.vars.outputs.industry }}" "${{ steps.vars.outputs.location }}"
+      - run: python enrich_leads.py
+      - name: Write to sheets
         env:
           SHEET_ID: ${{ secrets.SHEET_ID }}
         run: python write_to_sheets.py
-      - name: Upload results
-        uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v4
         with:
           name: leads-enriched
           path: leads_enriched.json
-      - name: Notify Discord (finished)
+      - name: Discord completion notification
         if: always()
         env:
           DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
-        run: |
-          curl -s -H "Content-Type: application/json" -X POST -d "{\"content\": \"✅ Finished: **${{ steps.vars.outputs.industry }}** in **${{ steps.vars.outputs.location }}** — check the Leads sheet for results.\"}" "$DISCORD_WEBHOOK_URL"
+        run: curl -s -H "Content-Type: application/json" -X POST -d "{\"content\": \"✅ Finished: **${{ steps.vars.outputs.industry }}** in **${{ steps.vars.outputs.location }}** — check the Leads sheet.\"}" "$DISCORD_WEBHOOK_URL"
