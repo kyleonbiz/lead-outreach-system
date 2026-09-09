@@ -14,7 +14,9 @@ SENDER_EMAIL = os.environ.get("SENDER_EMAIL")
 SHEET_ID = os.environ.get("SHEET_ID")
 TEST_MODE = os.environ.get("TEST_MODE", "true").lower() == "true"
 TEST_EMAIL = os.environ.get("TEST_EMAIL", "")
-DAILY_CAP = 1 if TEST_MODE else 50
+
+DAILY_CAP = 50      # total live sends allowed per calendar day, across all runs
+PER_RUN_CAP = 5     # live sends allowed in a single run — spreads volume across the day
 
 LOGO_PATH = "logo.png"
 
@@ -86,6 +88,16 @@ def get_sheets_client():
     )
     return gspread.authorize(credentials)
 
+def count_sent_today(log_ws, today):
+    rows = log_ws.get_all_values()
+    count = 0
+    for row in rows[1:]:
+        date_sent = row[4] if len(row) > 4 else ""
+        status = row[7] if len(row) > 7 else ""
+        if date_sent == today and status == "sent":
+            count += 1
+    return count
+
 if __name__ == "__main__":
     required = {
         "MS_TENANT_ID": TENANT_ID, "MS_CLIENT_ID": CLIENT_ID,
@@ -98,7 +110,7 @@ if __name__ == "__main__":
     if TEST_MODE and not TEST_EMAIL:
         raise SystemExit("TEST_MODE is on but no TEST_EMAIL was provided.")
 
-    print(f"Running in {'TEST' if TEST_MODE else 'LIVE'} mode. Cap: {DAILY_CAP} email(s).")
+    print(f"Running in {'TEST' if TEST_MODE else 'LIVE'} mode.")
 
     logo_b64 = load_logo_base64()
     if logo_b64:
@@ -115,17 +127,28 @@ if __name__ == "__main__":
     leads_ws = sheet.worksheet("Leads")
     log_ws = sheet.worksheet("Outreach_Log")
 
+    today = datetime.date.today().isoformat()
+
+    if TEST_MODE:
+        run_cap = 1
+    else:
+        already_sent_today = count_sent_today(log_ws, today)
+        remaining_daily = max(0, DAILY_CAP - already_sent_today)
+        run_cap = min(PER_RUN_CAP, remaining_daily)
+        print(f"Already sent {already_sent_today}/{DAILY_CAP} today. This run will send up to {run_cap} more.")
+        if run_cap == 0:
+            print("Daily cap already reached — nothing to send this run.")
+
     rows = leads_ws.get_all_values()
     header = rows[0]
     col = {name: i for i, name in enumerate(header)}
 
     token = get_graph_token()
     sent_count = 0
-    today = datetime.date.today().isoformat()
     log_rows = []
 
     for row_num, row in enumerate(rows[1:], start=2):
-        if sent_count >= DAILY_CAP:
+        if sent_count >= run_cap:
             break
 
         def get(field):
@@ -173,9 +196,9 @@ if __name__ == "__main__":
             error_message,
         ])
 
-        time.sleep(2)
+        time.sleep(3)
 
     if log_rows:
         log_ws.append_rows(log_rows, value_input_option="USER_ENTERED")
 
-    print(f"Sent {sent_count} email(s). Logged {len(log_rows)} attempt(s).")
+    print(f"Sent {sent_count} email(s) this run. Logged {len(log_rows)} attempt(s).")
