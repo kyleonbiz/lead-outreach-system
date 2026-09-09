@@ -47,7 +47,8 @@ jobs:
       - name: Discord start notification
         env:
           DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
-        run: curl -s -H "Content-Type: application/json" -X POST -d "{\"content\": \"🔍 Daily lead pull starting: **${{ steps.vars.outputs.industry }}** in **${{ steps.vars.outputs.location }}**\"}" "$DISCORD_WEBHOOK_URL"
+        run: |
+          curl -s -H "Content-Type: application/json" -X POST -d '{"content": "🔍 Daily lead pull starting"}' "$DISCORD_WEBHOOK_URL"
       - name: Find leads
         env:
           PLACES_API_KEY: ${{ secrets.PLACES_API_KEY }}
@@ -66,4 +67,5 @@ jobs:
         if: always()
         env:
           DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
-        run: curl -s -H "Content-Type: application/json" -X POST -d "{\"content\": \"✅ Daily pull complete: 300 leads found. Send Outreach will run at 4pm UTC.\"}" "$DISCORD_WEBHOOK_URL"
+        run: |
+          curl -s -H "Content-Type: application/json" -X POST -d '{"content": "✅ Daily pull complete: 300 leads found"}' "$DISCORD_WEBHOOK_URL"
