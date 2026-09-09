@@ -1,9 +1,10 @@
 name: Send Outreach (Auto)
 on:
+  workflow_run:
+    workflows: ["Find Leads"]
+    types: [completed]
+    branches: [main]
   workflow_dispatch: {}
-  schedule:
-    - cron: '0,30 12-22 * * 1-5'
-    - cron: '0,30 0 * * 2-6'
 permissions:
   contents: read
   id-token: write
@@ -20,6 +21,8 @@ jobs:
         with:
           workload_identity_provider: ${{ secrets.WORKLOAD_IDENTITY_PROVIDER }}
           service_account: ${{ secrets.SERVICE_ACCOUNT_EMAIL }}
+      - name: Wait 1 minute for leads to be written
+        run: sleep 60
       - name: Send emails
         env:
           SHEET_ID: ${{ secrets.SHEET_ID }}
