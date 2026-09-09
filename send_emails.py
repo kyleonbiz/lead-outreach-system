@@ -15,8 +15,8 @@ SHEET_ID = os.environ.get("SHEET_ID")
 TEST_MODE = os.environ.get("TEST_MODE", "true").lower() == "true"
 TEST_EMAIL = os.environ.get("TEST_EMAIL", "")
 
-DAILY_CAP = 125     # total live sends allowed per calendar day, across all runs
-PER_RUN_CAP = 2     # live sends allowed in a single run — spreads volume across the day
+DAILY_CAP = 300
+PER_RUN_CAP = 300
 
 LOGO_PATH = "logo.png"
 
@@ -98,61 +98,6 @@ def count_sent_today(log_ws, today):
             count += 1
     return count
 
-def count_sent_this_month_by_city(log_ws):
-    """Return a dict of {city_state: count} for emails sent this month"""
-    rows = log_ws.get_all_values()
-    today = datetime.date.today()
-    month_start = today.replace(day=1)
-    
-    city_counts = {}
-    for row in rows[1:]:
-        date_sent = row[4] if len(row) > 4 else ""
-        status = row[7] if len(row) > 7 else ""
-        city_state = row[13] if len(row) > 13 else ""
-        
-        if status != "sent" or not date_sent:
-            continue
-        
-        try:
-            sent_date = datetime.datetime.fromisoformat(date_sent).date()
-        except (ValueError, TypeError):
-            continue
-        
-        if sent_date >= month_start:
-            city_counts[city_state] = city_counts.get(city_state, 0) + 1
-    
-    return city_counts
-
-def get_city_quotas(cities_ws):
-    """Return a dict of {city_state: max_emails} from Cities tab"""
-    rows = cities_ws.get_all_values()
-    header = rows[0]
-    col = {name: i for i, name in enumerate(header)}
-    
-    quotas = {}
-    for row in rows[1:]:
-        def get(field):
-            idx = col.get(field)
-            return row[idx] if idx is not None and idx < len(row) else ""
-        
-        status = get("Status").strip().upper()
-        if status != "ACTIVE":
-            continue
-        
-        city = get("City").strip()
-        state = get("State").strip()
-        max_emails_str = get("Max Monthly Emails").strip()
-        
-        try:
-            max_emails = int(max_emails_str)
-        except (ValueError, TypeError):
-            max_emails = 625
-        
-        city_state = f"{city}, {state}"
-        quotas[city_state] = max_emails
-    
-    return quotas
-
 if __name__ == "__main__":
     required = {
         "MS_TENANT_ID": TENANT_ID, "MS_CLIENT_ID": CLIENT_ID,
@@ -181,13 +126,8 @@ if __name__ == "__main__":
     sheet = gc.open_by_key(SHEET_ID)
     leads_ws = sheet.worksheet("Leads")
     log_ws = sheet.worksheet("Outreach_Log")
-    cities_ws = sheet.worksheet("Cities")
 
     today = datetime.date.today().isoformat()
-
-    # Load city quotas and current month counts
-    city_quotas = get_city_quotas(cities_ws)
-    city_sent_this_month = count_sent_this_month_by_city(log_ws)
 
     if TEST_MODE:
         run_cap = 1
@@ -225,15 +165,6 @@ if __name__ == "__main__":
         if outreach_status != "new" or not email:
             continue
 
-        # Check if city has hit its monthly quota
-        city_state = f"{city}, {state}"
-        max_for_city = city_quotas.get(city_state, 625)
-        sent_for_city = city_sent_this_month.get(city_state, 0)
-        
-        if sent_for_city >= max_for_city:
-            print(f"Skipping {business_name} — {city_state} has hit monthly quota ({sent_for_city}/{max_for_city}).")
-            continue
-
         subject = SUBJECT_TEMPLATE.format(business_name=business_name)
         body = BODY_TEMPLATE.format(business_name=business_name, logo_html=logo_html)
         recipient = TEST_EMAIL if TEST_MODE else email
@@ -249,7 +180,6 @@ if __name__ == "__main__":
             if not TEST_MODE:
                 leads_ws.update_cell(row_num, col["outreach_status"] + 1, "contacted")
                 leads_ws.update_cell(row_num, col["date_contacted"] + 1, today)
-                city_sent_this_month[city_state] = city_sent_this_month.get(city_state, 0) + 1
             sent_count += 1
         else:
             send_status = "failed"
@@ -268,7 +198,7 @@ if __name__ == "__main__":
             error_message,
             city,
             state,
-            city_state,
+            f"{city}, {state}",
         ])
 
         time.sleep(3)
