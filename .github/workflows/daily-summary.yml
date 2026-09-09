@@ -3,7 +3,7 @@ name: Daily Summary
 on:
   workflow_dispatch: {}
   schedule:
-    - cron: '15 21 * * 1-5'
+    - cron: '45 0 * * 2-6'
 
 permissions:
   id-token: write
