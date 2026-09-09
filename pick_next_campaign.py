@@ -19,7 +19,7 @@ if __name__ == "__main__":
 
     gc = get_client()
     sheet = gc.open_by_key(SHEET_ID)
-    ws = sheet.worksheet("Campaign_Queue")
+    ws = sheet.worksheet("Cities")
 
     rows = ws.get_all_values()
     header = rows[0]
@@ -31,24 +31,39 @@ if __name__ == "__main__":
             idx = col.get(field)
             return row[idx] if idx is not None and idx < len(row) else ""
 
-        active = get("active").strip().upper()
-        if active != "TRUE":
+        status = get("Status").strip().upper()
+        if status != "ACTIVE":
             continue
 
-        last_run_at = get("last_run_at").strip()
-        candidates.append((last_run_at, row_num, get("industry"), get("location")))
+        priority_str = get("Priority").strip()
+        last_run = get("Last Run").strip()
+        city = get("City").strip()
+        state = get("State").strip()
+        
+        # Convert priority to int for proper sorting
+        try:
+            priority = int(priority_str)
+        except (ValueError, TypeError):
+            priority = 999
+
+        candidates.append((priority, last_run, row_num, city, state))
 
     if not candidates:
-        raise SystemExit("No active campaigns in Campaign_Queue.")
+        raise SystemExit("No active cities in Cities tab.")
 
-    # Never-run campaigns (blank last_run_at) go first, then oldest timestamp first
-    candidates.sort(key=lambda c: (c[0] != "", c[0]))
+    # Sort by priority (ascending), then by last_run (nulls first, then oldest)
+    candidates.sort(key=lambda c: (c[1] != "", c[0], c[1]))
 
-    last_run_at, row_num, industry, location = candidates[0]
+    priority, last_run, row_num, city, state = candidates[0]
 
+    # Update last_run timestamp
     now = datetime.datetime.utcnow().isoformat()
-    last_run_col = col["last_run_at"] + 1
+    last_run_col = col["Last Run"] + 1
     ws.update_cell(row_num, last_run_col, now)
+
+    # Output city and state for location
+    location = f"{city}, {state}"
+    industry = "Accountants"
 
     github_output = os.environ.get("GITHUB_OUTPUT")
     if github_output:
