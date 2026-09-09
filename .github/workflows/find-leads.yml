@@ -57,7 +57,7 @@ jobs:
       - name: Run lead discovery
         env:
           PLACES_API_KEY: ${{ secrets.PLACES_API_KEY }}
-          MAX_RESULTS_PER_RUN: '3'
+          MAX_RESULTS_PER_RUN: '14'
         run: python find_leads.py "${{ steps.vars.outputs.industry }}" "${{ steps.vars.outputs.location }}"
       - name: Run enrichment
         run: python enrich_leads.py
