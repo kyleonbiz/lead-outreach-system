@@ -1,5 +1,6 @@
 name: Send Outreach (Auto)
 on:
+  workflow_dispatch: {}
   schedule:
     - cron: '0,30 12-22 * * 1-5'
     - cron: '0,30 0 * * 2-6'
