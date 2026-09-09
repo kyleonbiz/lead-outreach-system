@@ -11,8 +11,7 @@ on:
         required: false
         default: ''
   schedule:
-    - cron: '0 12-22/2 * * 1-5'
-    - cron: '0 0 * * 2-6'
+    - cron: '*/30 * * * *'
 permissions:
   contents: read
   id-token: write
