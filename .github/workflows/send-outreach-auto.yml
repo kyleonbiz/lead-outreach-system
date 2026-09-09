@@ -1,9 +1,10 @@
 name: Send Outreach (Auto)
 on:
+  workflow_run:
+    workflows: ["Find Leads"]
+    types: [completed]
+    branches: [main]
   workflow_dispatch: {}
-  schedule:
-    - cron: '0,30 12-22 * * 1-5'
-    - cron: '0,30 0 * * 2-6'
 permissions:
   contents: read
   id-token: write
@@ -11,21 +12,18 @@ jobs:
   send-outreach:
     runs-on: ubuntu-latest
     steps:
-      - name: Check out repo
-        uses: actions/checkout@v4
-      - name: Set up Python
-        uses: actions/setup-python@v5
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
         with:
           python-version: '3.11'
-      - name: Install dependencies
-        run: pip install requests gspread google-auth
-      - name: Authenticate to Google Cloud
-        uses: google-github-actions/auth@v2
+      - run: pip install requests gspread google-auth
+      - uses: google-github-actions/auth@v2
         with:
           workload_identity_provider: ${{ secrets.WORKLOAD_IDENTITY_PROVIDER }}
           service_account: ${{ secrets.SERVICE_ACCOUNT_EMAIL }}
+      - name: Wait 1 minute for leads to be written
+        run: sleep 60
       - name: Send emails
-        # Backlog clear run
         env:
           SHEET_ID: ${{ secrets.SHEET_ID }}
           MS_TENANT_ID: ${{ secrets.MS_TENANT_ID }}
@@ -36,9 +34,8 @@ jobs:
           PER_RUN_CAP: '15'
           DAILY_CAP: '125'
         run: python send_emails.py
-      - name: Notify Discord
+      - name: Discord notification
         if: always()
         env:
           DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
-        run: |
-          curl -s -H "Content-Type: application/json" -X POST -d "{\"content\": \"📧 Send Outreach (Auto) completed.\"}" "$DISCORD_WEBHOOK_URL"
+        run: curl -s -H "Content-Type: application/json" -X POST -d "{\"content\": \"📧 Send Outreach completed.\"}" "$DISCORD_WEBHOOK_URL"
