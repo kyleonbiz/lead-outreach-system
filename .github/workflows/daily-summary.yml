@@ -6,30 +6,21 @@ on:
     - cron: '0 18 * * 1-5'
 
 permissions:
-  id-token: read
   contents: read
 
 jobs:
   daily-summary:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout repo
-        uses: actions/checkout@v4
-
-      - name: Set up Python
-        uses: actions/setup-python@v5
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
         with:
           python-version: '3.11'
-
-      - name: Install dependencies
-        run: pip install gspread google-auth requests
-
-      - name: Authenticate to Google Cloud
-        uses: google-github-actions/auth@v2
+      - run: pip install gspread google-auth requests
+      - uses: google-github-actions/auth@v2
         with:
           workload_identity_provider: ${{ secrets.WORKLOAD_IDENTITY_PROVIDER }}
           service_account: ${{ secrets.SERVICE_ACCOUNT_EMAIL }}
-
       - name: Generate and send summary
         env:
           SHEET_ID: ${{ secrets.SHEET_ID }}
