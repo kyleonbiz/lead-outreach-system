@@ -19,6 +19,10 @@ jobs:
         with:
           workload_identity_provider: ${{ secrets.WORKLOAD_IDENTITY_PROVIDER }}
           service_account: ${{ secrets.SERVICE_ACCOUNT_EMAIL }}
+      - name: Discord start notification
+        env:
+          DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
+        run: curl -s -H "Content-Type: application/json" -X POST -d "{\"content\": \"📧 Daily outreach sending starting — processing all leads with staggered delays.\"}" "$DISCORD_WEBHOOK_URL"
       - name: Send emails
         env:
           SHEET_ID: ${{ secrets.SHEET_ID }}
@@ -30,7 +34,7 @@ jobs:
           PER_RUN_CAP: '300'
           DAILY_CAP: '300'
         run: python send_emails.py
-      - name: Discord notification
+      - name: Discord completion notification
         if: always()
         env:
           DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
