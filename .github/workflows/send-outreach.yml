@@ -1,26 +1,19 @@
-name: Send Outreach
+name: Send Outreach (Auto)
 
 on:
-  workflow_dispatch:
-    inputs:
-      test_mode:
-        description: 'Test mode (true = send 1 test email only, false = live send to real leads)'
-        required: true
-        default: 'true'
-      test_email:
-        description: 'Email to receive the test send (required when test_mode is true)'
-        required: false
-        default: ''
+  schedule:
+    - cron: '30 12-22/2 * * 1-5'
+    - cron: '30 0 * * 2-6'
 
 permissions:
-  contents: read
   id-token: write
+  contents: read
 
 jobs:
-  send-outreach:
+  send-outreach-auto:
     runs-on: ubuntu-latest
     steps:
-      - name: Check out repo
+      - name: Checkout repo
         uses: actions/checkout@v4
 
       - name: Set up Python
@@ -44,6 +37,5 @@ jobs:
           MS_CLIENT_SECRET: ${{ secrets.MS_CLIENT_SECRET }}
           SENDER_EMAIL: ${{ secrets.SENDER_EMAIL }}
           SHEET_ID: ${{ secrets.SHEET_ID }}
-          TEST_MODE: ${{ inputs.test_mode }}
-          TEST_EMAIL: ${{ inputs.test_email }}
+          TEST_MODE: "false"
         run: python send_emails.py
