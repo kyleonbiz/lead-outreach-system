@@ -1,19 +1,43 @@
 {
-  "last_updated": "2026-09-09T00:00:44.898508Z",
+  "last_updated": "2026-09-09T00:07:56.057137Z",
   "leads": {
-    "total_leads": 46,
+    "total_leads": 49,
     "status_counts": {
-      "not_contactable": 27,
-      "new": 19
+      "not_contactable": 28,
+      "new": 21
     },
     "enrichment_counts": {
-      "no_email_found": 22,
+      "no_email_found": 23,
       "site_unreachable": 4,
-      "enriched": 19,
+      "enriched": 21,
       "no_website": 1
     }
   },
   "recent_leads": [
+    {
+      "business_name": "Stratus Clean Nashville",
+      "city": "Antioch",
+      "state": "TN",
+      "outreach_status": "new",
+      "enrichment_status": "enriched",
+      "date_contacted": ""
+    },
+    {
+      "business_name": "Harpeth Cleaning Services",
+      "city": "Nashville",
+      "state": "TN",
+      "outreach_status": "not_contactable",
+      "enrichment_status": "no_email_found",
+      "date_contacted": ""
+    },
+    {
+      "business_name": "CleanWorks Commercial Cleaning",
+      "city": "Nashville",
+      "state": "TN",
+      "outreach_status": "new",
+      "enrichment_status": "enriched",
+      "date_contacted": ""
+    },
     {
       "business_name": "WH Property Management",
       "city": "Nashville",
@@ -109,30 +133,6 @@
       "outreach_status": "not_contactable",
       "enrichment_status": "no_email_found",
       "date_contacted": ""
-    },
-    {
-      "business_name": "Wehby Plumbing Company Inc",
-      "city": "Nashville",
-      "state": "TN",
-      "outreach_status": "not_contactable",
-      "enrichment_status": "site_unreachable",
-      "date_contacted": ""
-    },
-    {
-      "business_name": "Busy Bee Plumbing, Heating, & Air Conditioning",
-      "city": "Nashville",
-      "state": "TN",
-      "outreach_status": "not_contactable",
-      "enrichment_status": "site_unreachable",
-      "date_contacted": ""
-    },
-    {
-      "business_name": "Smooth Saling Plumbing & Water Heater Replacement",
-      "city": "Nashville",
-      "state": "TN",
-      "outreach_status": "not_contactable",
-      "enrichment_status": "no_email_found",
-      "date_contacted": ""
     }
   ],
   "outreach": {
@@ -220,7 +220,7 @@
       "industry": "Commercial Cleaning",
       "location": "Nashville, TN",
       "active": "TRUE",
-      "last_run_at": ""
+      "last_run_at": "2026-09-09 0:07:02"
     },
     {
       "industry": "HVAC",
