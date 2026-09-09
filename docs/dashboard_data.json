@@ -1,0 +1,388 @@
+{
+  "last_updated": "2026-09-09T00:00:44.898508Z",
+  "leads": {
+    "total_leads": 46,
+    "status_counts": {
+      "not_contactable": 27,
+      "new": 19
+    },
+    "enrichment_counts": {
+      "no_email_found": 22,
+      "site_unreachable": 4,
+      "enriched": 19,
+      "no_website": 1
+    }
+  },
+  "recent_leads": [
+    {
+      "business_name": "WH Property Management",
+      "city": "Nashville",
+      "state": "TN",
+      "outreach_status": "new",
+      "enrichment_status": "enriched",
+      "date_contacted": ""
+    },
+    {
+      "business_name": "PURE Property Management of Tennessee",
+      "city": "Nashville",
+      "state": "TN",
+      "outreach_status": "not_contactable",
+      "enrichment_status": "no_email_found",
+      "date_contacted": ""
+    },
+    {
+      "business_name": "Browning-Gordon Property Management",
+      "city": "Nashville",
+      "state": "TN",
+      "outreach_status": "not_contactable",
+      "enrichment_status": "no_email_found",
+      "date_contacted": ""
+    },
+    {
+      "business_name": "Nashville Construction Solutions",
+      "city": "Nashville",
+      "state": "TN",
+      "outreach_status": "new",
+      "enrichment_status": "enriched",
+      "date_contacted": ""
+    },
+    {
+      "business_name": "The Dan Company",
+      "city": "Nashville",
+      "state": "TN",
+      "outreach_status": "not_contactable",
+      "enrichment_status": "site_unreachable",
+      "date_contacted": ""
+    },
+    {
+      "business_name": "Ascension General Contractors",
+      "city": "Nashville",
+      "state": "TN",
+      "outreach_status": "new",
+      "enrichment_status": "enriched",
+      "date_contacted": ""
+    },
+    {
+      "business_name": "Maynard Heating and Cooling",
+      "city": "Nashville",
+      "state": "TN",
+      "outreach_status": "not_contactable",
+      "enrichment_status": "no_email_found",
+      "date_contacted": ""
+    },
+    {
+      "business_name": "TN Plumbing Solutions",
+      "city": "Murfreesboro",
+      "state": "TN",
+      "outreach_status": "new",
+      "enrichment_status": "enriched",
+      "date_contacted": ""
+    },
+    {
+      "business_name": "Lee Company",
+      "city": "Nashville",
+      "state": "TN",
+      "outreach_status": "not_contactable",
+      "enrichment_status": "no_email_found",
+      "date_contacted": ""
+    },
+    {
+      "business_name": "Avantel Plumber of Nashville TN",
+      "city": "Nashville",
+      "state": "TN",
+      "outreach_status": "new",
+      "enrichment_status": "enriched",
+      "date_contacted": ""
+    },
+    {
+      "business_name": "Coolray Heating, Cooling, Plumbing & Electrical",
+      "city": "Nashville",
+      "state": "TN",
+      "outreach_status": "not_contactable",
+      "enrichment_status": "no_email_found",
+      "date_contacted": ""
+    },
+    {
+      "business_name": "All Pipes, LLC",
+      "city": "Nashville",
+      "state": "TN",
+      "outreach_status": "not_contactable",
+      "enrichment_status": "no_email_found",
+      "date_contacted": ""
+    },
+    {
+      "business_name": "Wehby Plumbing Company Inc",
+      "city": "Nashville",
+      "state": "TN",
+      "outreach_status": "not_contactable",
+      "enrichment_status": "site_unreachable",
+      "date_contacted": ""
+    },
+    {
+      "business_name": "Busy Bee Plumbing, Heating, & Air Conditioning",
+      "city": "Nashville",
+      "state": "TN",
+      "outreach_status": "not_contactable",
+      "enrichment_status": "site_unreachable",
+      "date_contacted": ""
+    },
+    {
+      "business_name": "Smooth Saling Plumbing & Water Heater Replacement",
+      "city": "Nashville",
+      "state": "TN",
+      "outreach_status": "not_contactable",
+      "enrichment_status": "no_email_found",
+      "date_contacted": ""
+    }
+  ],
+  "outreach": {
+    "total_attempts": 10,
+    "status_counts": {
+      "sent_test": 10
+    }
+  },
+  "recent_outreach": [
+    {
+      "business_name": "Jonathan's Grille",
+      "date_sent": "2026-09-08",
+      "subject": "[TEST] Quick question about Jonathan's Grille's back-office workload",
+      "status": "sent_test"
+    },
+    {
+      "business_name": "Jonathan's Grille",
+      "date_sent": "2026-09-08",
+      "subject": "[TEST] Quick question about Jonathan's Grille's back-office workload",
+      "status": "sent_test"
+    },
+    {
+      "business_name": "Jonathan's Grille",
+      "date_sent": "2026-09-08",
+      "subject": "[TEST] Quick question about Jonathan's Grille's back-office workload",
+      "status": "sent_test"
+    },
+    {
+      "business_name": "Jonathan's Grille",
+      "date_sent": "2026-09-08",
+      "subject": "[TEST] Quick question about Jonathan's Grille's back-office workload",
+      "status": "sent_test"
+    },
+    {
+      "business_name": "Jonathan's Grille",
+      "date_sent": "2026-09-08",
+      "subject": "[TEST] Quick question about Jonathan's Grille's back-office workload",
+      "status": "sent_test"
+    },
+    {
+      "business_name": "Jonathan's Grille",
+      "date_sent": "2026-09-08",
+      "subject": "[TEST] Quick question about Jonathan's Grille's back-office workload",
+      "status": "sent_test"
+    },
+    {
+      "business_name": "Jonathan's Grille",
+      "date_sent": "2026-09-08",
+      "subject": "[TEST] Quick question about Jonathan's Grille's back-office workload",
+      "status": "sent_test"
+    },
+    {
+      "business_name": "Jonathan's Grille",
+      "date_sent": "2026-09-08",
+      "subject": "[TEST] Quick question about Jonathan's Grille's back-office workload",
+      "status": "sent_test"
+    },
+    {
+      "business_name": "Jonathan's Grille",
+      "date_sent": "2026-09-08",
+      "subject": "[TEST] Quick question about Jonathan's Grille's back-office workload",
+      "status": "sent_test"
+    },
+    {
+      "business_name": "Jonathan's Grille",
+      "date_sent": "2026-09-08",
+      "subject": "[TEST] Quick question about Jonathan's Grille's back-office workload",
+      "status": "sent_test"
+    }
+  ],
+  "campaign_queue": [
+    {
+      "industry": "General Contractors",
+      "location": "Nashville, TN",
+      "active": "TRUE",
+      "last_run_at": "2026-09-08 17:44:36"
+    },
+    {
+      "industry": "Property Management",
+      "location": "Nashville, TN",
+      "active": "TRUE",
+      "last_run_at": "2026-09-08 20:45:05"
+    },
+    {
+      "industry": "Commercial Cleaning",
+      "location": "Nashville, TN",
+      "active": "TRUE",
+      "last_run_at": ""
+    },
+    {
+      "industry": "HVAC",
+      "location": "Nashville, TN",
+      "active": "TRUE",
+      "last_run_at": ""
+    },
+    {
+      "industry": "Roofing",
+      "location": "Nashville, TN",
+      "active": "TRUE",
+      "last_run_at": ""
+    },
+    {
+      "industry": "Landscaping",
+      "location": "Nashville, TN",
+      "active": "TRUE",
+      "last_run_at": ""
+    },
+    {
+      "industry": "General Contractors",
+      "location": "Franklin, TN",
+      "active": "TRUE",
+      "last_run_at": ""
+    },
+    {
+      "industry": "Property Management",
+      "location": "Franklin, TN",
+      "active": "TRUE",
+      "last_run_at": ""
+    },
+    {
+      "industry": "Commercial Cleaning",
+      "location": "Franklin, TN",
+      "active": "TRUE",
+      "last_run_at": ""
+    },
+    {
+      "industry": "HVAC",
+      "location": "Franklin, TN",
+      "active": "TRUE",
+      "last_run_at": ""
+    },
+    {
+      "industry": "Roofing",
+      "location": "Franklin, TN",
+      "active": "TRUE",
+      "last_run_at": ""
+    },
+    {
+      "industry": "Landscaping",
+      "location": "Franklin, TN",
+      "active": "TRUE",
+      "last_run_at": ""
+    },
+    {
+      "industry": "General Contractors",
+      "location": "Murfreesboro, TN",
+      "active": "TRUE",
+      "last_run_at": ""
+    },
+    {
+      "industry": "Property Management",
+      "location": "Murfreesboro, TN",
+      "active": "TRUE",
+      "last_run_at": ""
+    },
+    {
+      "industry": "Commercial Cleaning",
+      "location": "Murfreesboro, TN",
+      "active": "TRUE",
+      "last_run_at": ""
+    },
+    {
+      "industry": "HVAC",
+      "location": "Murfreesboro, TN",
+      "active": "TRUE",
+      "last_run_at": ""
+    },
+    {
+      "industry": "Roofing",
+      "location": "Murfreesboro, TN",
+      "active": "TRUE",
+      "last_run_at": ""
+    },
+    {
+      "industry": "Landscaping",
+      "location": "Murfreesboro, TN",
+      "active": "TRUE",
+      "last_run_at": ""
+    },
+    {
+      "industry": "General Contractors",
+      "location": "Hendersonville, TN",
+      "active": "TRUE",
+      "last_run_at": ""
+    },
+    {
+      "industry": "Property Management",
+      "location": "Hendersonville, TN",
+      "active": "TRUE",
+      "last_run_at": ""
+    },
+    {
+      "industry": "Commercial Cleaning",
+      "location": "Hendersonville, TN",
+      "active": "TRUE",
+      "last_run_at": ""
+    },
+    {
+      "industry": "HVAC",
+      "location": "Hendersonville, TN",
+      "active": "TRUE",
+      "last_run_at": ""
+    },
+    {
+      "industry": "Roofing",
+      "location": "Hendersonville, TN",
+      "active": "TRUE",
+      "last_run_at": ""
+    },
+    {
+      "industry": "Landscaping",
+      "location": "Hendersonville, TN",
+      "active": "TRUE",
+      "last_run_at": ""
+    },
+    {
+      "industry": "General Contractors",
+      "location": "Gallatin, TN",
+      "active": "TRUE",
+      "last_run_at": ""
+    },
+    {
+      "industry": "Property Management",
+      "location": "Gallatin, TN",
+      "active": "TRUE",
+      "last_run_at": ""
+    },
+    {
+      "industry": "Commercial Cleaning",
+      "location": "Gallatin, TN",
+      "active": "TRUE",
+      "last_run_at": ""
+    },
+    {
+      "industry": "HVAC",
+      "location": "Gallatin, TN",
+      "active": "TRUE",
+      "last_run_at": ""
+    },
+    {
+      "industry": "Roofing",
+      "location": "Gallatin, TN",
+      "active": "TRUE",
+      "last_run_at": ""
+    },
+    {
+      "industry": "Landscaping",
+      "location": "Gallatin, TN",
+      "active": "TRUE",
+      "last_run_at": ""
+    }
+  ]
+}
