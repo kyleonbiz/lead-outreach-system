@@ -1,19 +1,35 @@
 {
-  "last_updated": "2026-09-09T00:07:56.057137Z",
+  "last_updated": "2026-09-09T13:48:29.171262Z",
   "leads": {
-    "total_leads": 49,
+    "total_leads": 51,
     "status_counts": {
-      "not_contactable": 28,
+      "not_contactable": 30,
       "new": 21
     },
     "enrichment_counts": {
-      "no_email_found": 23,
+      "no_email_found": 25,
       "site_unreachable": 4,
       "enriched": 21,
       "no_website": 1
     }
   },
   "recent_leads": [
+    {
+      "business_name": "South Nashville Heating & Cooling",
+      "city": "Nashville",
+      "state": "TN",
+      "outreach_status": "not_contactable",
+      "enrichment_status": "no_email_found",
+      "date_contacted": ""
+    },
+    {
+      "business_name": "Premier Heating & Air",
+      "city": "Nashville",
+      "state": "TN",
+      "outreach_status": "not_contactable",
+      "enrichment_status": "no_email_found",
+      "date_contacted": ""
+    },
     {
       "business_name": "Stratus Clean Nashville",
       "city": "Antioch",
@@ -117,31 +133,21 @@
       "outreach_status": "new",
       "enrichment_status": "enriched",
       "date_contacted": ""
-    },
-    {
-      "business_name": "Coolray Heating, Cooling, Plumbing & Electrical",
-      "city": "Nashville",
-      "state": "TN",
-      "outreach_status": "not_contactable",
-      "enrichment_status": "no_email_found",
-      "date_contacted": ""
-    },
-    {
-      "business_name": "All Pipes, LLC",
-      "city": "Nashville",
-      "state": "TN",
-      "outreach_status": "not_contactable",
-      "enrichment_status": "no_email_found",
-      "date_contacted": ""
     }
   ],
   "outreach": {
-    "total_attempts": 10,
+    "total_attempts": 11,
     "status_counts": {
-      "sent_test": 10
+      "sent_test": 11
     }
   },
   "recent_outreach": [
+    {
+      "business_name": "Jonathan's Grille",
+      "date_sent": "2026-09-09",
+      "subject": "[TEST] Quick question about Jonathan's Grille's back-office workload",
+      "status": "sent_test"
+    },
     {
       "business_name": "Jonathan's Grille",
       "date_sent": "2026-09-08",
@@ -226,7 +232,7 @@
       "industry": "HVAC",
       "location": "Nashville, TN",
       "active": "TRUE",
-      "last_run_at": ""
+      "last_run_at": "2026-09-09 13:15:09"
     },
     {
       "industry": "Roofing",
