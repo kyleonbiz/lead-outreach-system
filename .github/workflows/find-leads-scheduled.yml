@@ -1,7 +1,7 @@
 name: Find Leads
 on:
   schedule:
-    - cron: '*/30 * * * *'
+   - cron: '0,30 * * * *'
 permissions:
   contents: read
   id-token: write
