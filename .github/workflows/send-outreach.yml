@@ -1,8 +1,8 @@
 name: Send Outreach (Auto)
 on:
   schedule:
-    - cron: '15,45 12-22 * * 1-5'
-    - cron: '15,45 0 * * 2-6'
+    - cron: '0,30 12-22 * * 1-5'
+    - cron: '0,30 0 * * 2-6'
 permissions:
   contents: read
   id-token: write
@@ -41,4 +41,3 @@ jobs:
           DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
         run: |
           curl -s -H "Content-Type: application/json" -X POST -d "{\"content\": \"📧 Send Outreach (Auto) completed.\"}" "$DISCORD_WEBHOOK_URL"
-          
