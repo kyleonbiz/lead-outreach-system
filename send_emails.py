@@ -15,8 +15,8 @@ SHEET_ID = os.environ.get("SHEET_ID")
 TEST_MODE = os.environ.get("TEST_MODE", "true").lower() == "true"
 TEST_EMAIL = os.environ.get("TEST_EMAIL", "")
 
-DAILY_CAP = 50      # total live sends allowed per calendar day, across all runs
-PER_RUN_CAP = 5     # live sends allowed in a single run — spreads volume across the day
+DAILY_CAP = 125     # total live sends allowed per calendar day, across all runs
+PER_RUN_CAP = 2     # live sends allowed in a single run — spreads volume across the day
 
 LOGO_PATH = "logo.png"
 
@@ -98,107 +98,36 @@ def count_sent_today(log_ws, today):
             count += 1
     return count
 
-if __name__ == "__main__":
-    required = {
-        "MS_TENANT_ID": TENANT_ID, "MS_CLIENT_ID": CLIENT_ID,
-        "MS_CLIENT_SECRET": CLIENT_SECRET, "SENDER_EMAIL": SENDER_EMAIL,
-        "SHEET_ID": SHEET_ID,
-    }
-    for name, val in required.items():
-        if not val:
-            raise SystemExit(f"Set {name} first.")
-    if TEST_MODE and not TEST_EMAIL:
-        raise SystemExit("TEST_MODE is on but no TEST_EMAIL was provided.")
+def count_sent_this_month_by_city(log_ws):
+    """Return a dict of {city_state: count} for emails sent this month"""
+    rows = log_ws.get_all_values()
+    today = datetime.date.today()
+    month_start = today.replace(day=1)
+    
+    city_counts = {}
+    for row in rows[1:]:
+        date_sent = row[4] if len(row) > 4 else ""
+        status = row[7] if len(row) > 7 else ""
+        city_state = row[13] if len(row) > 13 else ""  # Added city_state column
+        
+        if status != "sent" or not date_sent:
+            continue
+        
+        try:
+            sent_date = datetime.datetime.fromisoformat(date_sent).date()
+        except (ValueError, TypeError):
+            continue
+        
+        if sent_date >= month_start:
+            city_counts[city_state] = city_counts.get(city_state, 0) + 1
+    
+    return city_counts
 
-    print(f"Running in {'TEST' if TEST_MODE else 'LIVE'} mode.")
-
-    logo_b64 = load_logo_base64()
-    if logo_b64:
-        logo_html = (
-            "<img src=\"cid:aurum_logo\" alt=\"Aurum Ventura Enterprise LLC\" "
-            "width=\"160\" style=\"display:block;margin:8px 0;\"><br>"
-        )
-    else:
-        logo_html = ""
-        print("Warning: logo.png not found in repo root — sending without logo.")
-
-    gc = get_sheets_client()
-    sheet = gc.open_by_key(SHEET_ID)
-    leads_ws = sheet.worksheet("Leads")
-    log_ws = sheet.worksheet("Outreach_Log")
-
-    today = datetime.date.today().isoformat()
-
-    if TEST_MODE:
-        run_cap = 1
-    else:
-        already_sent_today = count_sent_today(log_ws, today)
-        remaining_daily = max(0, DAILY_CAP - already_sent_today)
-        run_cap = min(PER_RUN_CAP, remaining_daily)
-        print(f"Already sent {already_sent_today}/{DAILY_CAP} today. This run will send up to {run_cap} more.")
-        if run_cap == 0:
-            print("Daily cap already reached — nothing to send this run.")
-
-    rows = leads_ws.get_all_values()
+def get_city_quotas(cities_ws):
+    """Return a dict of {city_state: max_emails} from Cities tab"""
+    rows = cities_ws.get_all_values()
     header = rows[0]
     col = {name: i for i, name in enumerate(header)}
-
-    token = get_graph_token()
-    sent_count = 0
-    log_rows = []
-
-    for row_num, row in enumerate(rows[1:], start=2):
-        if sent_count >= run_cap:
-            break
-
-        def get(field):
-            idx = col.get(field)
-            return row[idx] if idx is not None and idx < len(row) else ""
-
-        outreach_status = get("outreach_status")
-        email = get("email")
-        business_name = get("business_name")
-        lead_id = get("lead_id")
-
-        if outreach_status != "new" or not email:
-            continue
-
-        subject = SUBJECT_TEMPLATE.format(business_name=business_name)
-        body = BODY_TEMPLATE.format(business_name=business_name, logo_html=logo_html)
-        recipient = TEST_EMAIL if TEST_MODE else email
-
-        if TEST_MODE:
-            subject = "[TEST] " + subject
-
-        resp = send_email(token, recipient, subject, body, logo_b64)
-
-        if resp.status_code == 202:
-            send_status = "sent_test" if TEST_MODE else "sent"
-            error_message = ""
-            if not TEST_MODE:
-                leads_ws.update_cell(row_num, col["outreach_status"] + 1, "contacted")
-                leads_ws.update_cell(row_num, col["date_contacted"] + 1, today)
-            sent_count += 1
-        else:
-            send_status = "failed"
-            error_message = resp.text[:200]
-
-        log_rows.append([
-            str(uuid.uuid4())[:8],
-            lead_id,
-            business_name,
-            recipient,
-            today,
-            subject,
-            "v1_backoffice_pitch",
-            send_status,
-            "", "", "",
-            error_message,
-        ])
-
-        time.sleep(3)
-
-    if log_rows:
-        log_ws.append_rows(log_rows, value_input_option="USER_ENTERED")
-
-    print(f"Sent {sent_count} email(s) this run. Logged {len(log_rows)} attempt(s).")
+    
+    quotas = {}
+    for row in
