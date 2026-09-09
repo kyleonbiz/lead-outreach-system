@@ -3,10 +3,10 @@ name: Daily Summary
 on:
   workflow_dispatch: {}
   schedule:
-    - cron: '45 0 * * 2-6'
+    - cron: '0 18 * * 1-5'
 
 permissions:
-  id-token: write
+  id-token: read
   contents: read
 
 jobs:
@@ -30,7 +30,7 @@ jobs:
           workload_identity_provider: ${{ secrets.WORKLOAD_IDENTITY_PROVIDER }}
           service_account: ${{ secrets.SERVICE_ACCOUNT_EMAIL }}
 
-      - name: Run daily summary
+      - name: Generate and send summary
         env:
           SHEET_ID: ${{ secrets.SHEET_ID }}
           DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
