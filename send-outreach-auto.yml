@@ -1,10 +1,9 @@
 name: Send Outreach (Auto)
 on:
-  workflow_run:
-    workflows: ["Find Leads"]
-    types: [completed]
-    branches: [main]
   workflow_dispatch: {}
+  schedule:
+    - cron: '0 16-23 * * 1-5'
+    - cron: '0 0-2 * * 2-6'
 permissions:
   contents: read
   id-token: write
@@ -21,8 +20,11 @@ jobs:
         with:
           workload_identity_provider: ${{ secrets.WORKLOAD_IDENTITY_PROVIDER }}
           service_account: ${{ secrets.SERVICE_ACCOUNT_EMAIL }}
-      - name: Wait 1 minute for leads to be written
-        run: sleep 60
+      - name: Discord start notification
+        env:
+          DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
+        run: |
+          curl -s -H "Content-Type: application/json" -X POST -d '{"content": "📧 Sending 10 emails"}' "$DISCORD_WEBHOOK_URL"
       - name: Send emails
         env:
           SHEET_ID: ${{ secrets.SHEET_ID }}
@@ -31,11 +33,12 @@ jobs:
           MS_CLIENT_SECRET: ${{ secrets.MS_CLIENT_SECRET }}
           SENDER_EMAIL: ${{ secrets.SENDER_EMAIL }}
           TEST_MODE: 'false'
-          PER_RUN_CAP: '15'
-          DAILY_CAP: '125'
+          PER_RUN_CAP: '10'
+          DAILY_CAP: '100'
         run: python send_emails.py
-      - name: Discord notification
+      - name: Discord completion notification
         if: always()
         env:
           DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
-        run: curl -s -H "Content-Type: application/json" -X POST -d "{\"content\": \"📧 Send Outreach completed.\"}" "$DISCORD_WEBHOOK_URL"
+        run: |
+          curl -s -H "Content-Type: application/json" -X POST -d '{"content": "✅ Batch sent"}' "$DISCORD_WEBHOOK_URL"
