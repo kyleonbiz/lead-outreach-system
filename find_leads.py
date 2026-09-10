@@ -7,6 +7,14 @@ PLACES_API_KEY = os.environ.get("PLACES_API_KEY")
 MAX_RESULTS_PER_RUN = int(os.environ.get("MAX_RESULTS_PER_RUN", "20"))
 
 def search_businesses(industry, location, max_results=20):
+    # Extract state from location (e.g., "Murfreeseboro, TN" -> "TN")
+    parts = location.split(",")
+    if len(parts) >= 2:
+        state = parts[-1].strip()
+        search_location = state
+    else:
+        search_location = location
+    
     url = "https://places.googleapis.com/v1/places:searchText"
     headers = {
         "Content-Type": "application/json",
@@ -18,7 +26,7 @@ def search_businesses(industry, location, max_results=20):
         ),
     }
     body = {
-        "textQuery": f"{industry} in {location}",
+        "textQuery": f"{industry} in {search_location}",
         "maxResultCount": min(max_results, 20),
     }
     resp = requests.post(url, headers=headers, json=body)
