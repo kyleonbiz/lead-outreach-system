@@ -6,6 +6,7 @@ import datetime
 import requests
 import gspread
 import google.auth
+from google.auth.exceptions import TransportError
 
 TENANT_ID = os.environ.get("MS_TENANT_ID")
 CLIENT_ID = os.environ.get("MS_CLIENT_ID")
@@ -15,8 +16,8 @@ SHEET_ID = os.environ.get("SHEET_ID")
 TEST_MODE = os.environ.get("TEST_MODE", "true").lower() == "true"
 TEST_EMAIL = os.environ.get("TEST_EMAIL", "")
 
-DAILY_CAP = 300
-PER_RUN_CAP = 300
+DAILY_CAP = 100
+PER_RUN_CAP = 10
 
 LOGO_PATH = "logo.png"
 
@@ -98,6 +99,21 @@ def count_sent_today(log_ws, today):
             count += 1
     return count
 
+def get_sheets_with_retry(max_retries=3):
+    """Retry Google Sheets connection up to 3 times"""
+    for attempt in range(max_retries):
+        try:
+            gc = get_sheets_client()
+            sheet = gc.open_by_key(SHEET_ID)
+            return sheet
+        except (TransportError, Exception) as e:
+            if attempt < max_retries - 1:
+                wait_time = 5 * (attempt + 1)
+                print(f"Connection error, retrying in {wait_time}s... (attempt {attempt + 1}/{max_retries})")
+                time.sleep(wait_time)
+            else:
+                raise SystemExit(f"Failed to connect to Google Sheets after {max_retries} attempts: {e}")
+
 if __name__ == "__main__":
     required = {
         "MS_TENANT_ID": TENANT_ID, "MS_CLIENT_ID": CLIENT_ID,
@@ -122,8 +138,7 @@ if __name__ == "__main__":
         logo_html = ""
         print("Warning: logo.png not found in repo root — sending without logo.")
 
-    gc = get_sheets_client()
-    sheet = gc.open_by_key(SHEET_ID)
+    sheet = get_sheets_with_retry()
     leads_ws = sheet.worksheet("Leads")
     log_ws = sheet.worksheet("Outreach_Log")
 
