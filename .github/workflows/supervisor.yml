@@ -1,0 +1,66 @@
+name: Supervisor
+
+on:
+  workflow_dispatch: {}
+  schedule:
+    - cron: '0 15 * * 1-5'
+
+permissions:
+  actions: read
+  contents: read
+
+jobs:
+  supervisor:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Supervisor starting
+        env:
+          DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
+        run: |
+          curl -s -H "Content-Type: application/json" -X POST -d '{"content": "🔍 Supervisor checking workflows..."}' "$DISCORD_WEBHOOK_URL"
+      - name: Check workflow statuses
+        id: check
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          WORKFLOWS=("find-leads" "send-outreach-auto" "update-dashboard" "daily-summary")
+          FAILED=""
+          
+          for workflow in "${WORKFLOWS[@]}"; do
+            # Get latest run status
+            STATUS=$(gh run list --workflow="$workflow.yml" --limit=1 --json=conclusion --jq='.[0].conclusion')
+            echo "Workflow: $workflow - Status: $STATUS"
+            
+            if [ "$STATUS" != "success" ]; then
+              FAILED="$FAILED $workflow"
+            fi
+          done
+          
+          if [ -z "$FAILED" ]; then
+            echo "result=healthy" >> "$GITHUB_OUTPUT"
+          else
+            echo "result=failed" >> "$GITHUB_OUTPUT"
+            echo "failed_workflows=$FAILED" >> "$GITHUB_OUTPUT"
+          fi
+      - name: Alert on failure
+        if: steps.check.outputs.result == 'failed'
+        env:
+          DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
+        run: |
+          curl -s -H "Content-Type: application/json" -X POST -d '{"content": "⚠️ Supervisor Alert: Failed workflows:${{ steps.check.outputs.failed_workflows }}"}' "$DISCORD_WEBHOOK_URL"
+      - name: Retry failed workflows
+        if: steps.check.outputs.result == 'failed'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          for workflow in ${{ steps.check.outputs.failed_workflows }}; do
+            echo "Retrying $workflow..."
+            gh workflow run "$workflow.yml"
+          done
+      - name: Healthy status
+        if: steps.check.outputs.result == 'healthy'
+        env:
+          DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
+        run: |
+          curl -s -H "Content-Type: application/json" -X POST -d '{"content": "✅ Supervisor: All workflows healthy"}' "$DISCORD_WEBHOOK_URL"
