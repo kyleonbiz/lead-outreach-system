@@ -1,46 +1,53 @@
 {
-  "last_updated": "2026-09-09T21:40:35.676224Z",
+  "last_updated": "2026-09-10T19:28:50.689123Z",
   "leads": {
-    "total_leads": 122,
+    "total_leads": 179,
     "status_counts": {
-      "not_contactable": 60,
-      "contacted": 22,
-      "new": 40
+      "not_contactable": 88,
+      "contacted": 91
     },
     "enrichment_counts": {
-      "no_email_found": 42,
-      "site_unreachable": 13,
-      "enriched": 62,
-      "no_website": 5
+      "no_email_found": 62,
+      "site_unreachable": 19,
+      "enriched": 91,
+      "no_website": 7
     }
   },
   "recent_leads": [
     {
-      "business_name": "Davis, Brown & Company, PLLC",
-      "city": "Hendersonville",
+      "business_name": "Zuercher Electric Company",
+      "city": "Crossville",
       "state": "TN",
       "outreach_status": "not_contactable",
       "enrichment_status": "no_email_found",
       "date_contacted": ""
     },
     {
-      "business_name": "Brown & Maguire CPAs, PLLC",
-      "city": "Nashville",
+      "business_name": "Higher Power Electric Tn",
+      "city": "Goodlettsville",
       "state": "TN",
-      "outreach_status": "new",
+      "outreach_status": "contacted",
       "enrichment_status": "enriched",
-      "date_contacted": ""
+      "date_contacted": "2026-09-10"
     },
     {
-      "business_name": "TriStar CPAs, PLLC",
+      "business_name": "Empower Electric, LLC",
       "city": "Nashville",
       "state": "TN",
-      "outreach_status": "not_contactable",
-      "enrichment_status": "no_email_found",
-      "date_contacted": ""
+      "outreach_status": "contacted",
+      "enrichment_status": "enriched",
+      "date_contacted": "2026-09-10"
     },
     {
-      "business_name": "Puryear & Noonan CPAs",
+      "business_name": "Hardy Electric",
+      "city": "Nashville",
+      "state": "TN",
+      "outreach_status": "contacted",
+      "enrichment_status": "enriched",
+      "date_contacted": "2026-09-10"
+    },
+    {
+      "business_name": "Modern Electrical Contracting, Inc.",
       "city": "Nashville",
       "state": "TN",
       "outreach_status": "not_contactable",
@@ -48,23 +55,7 @@
       "date_contacted": ""
     },
     {
-      "business_name": "Hildreth & Associates CPA",
-      "city": "Nashville",
-      "state": "TN",
-      "outreach_status": "not_contactable",
-      "enrichment_status": "no_email_found",
-      "date_contacted": ""
-    },
-    {
-      "business_name": "Compere CPA Group, Inc.",
-      "city": "Nashville",
-      "state": "TN",
-      "outreach_status": "new",
-      "enrichment_status": "enriched",
-      "date_contacted": ""
-    },
-    {
-      "business_name": "Jason Moll, CPA",
+      "business_name": "Gervais Electric, Inc.",
       "city": "Nashville",
       "state": "TN",
       "outreach_status": "not_contactable",
@@ -72,166 +63,175 @@
       "date_contacted": ""
     },
     {
-      "business_name": "Oakley CPA PLLC",
+      "business_name": "Greenway Electric of Nashville",
       "city": "Nashville",
       "state": "TN",
-      "outreach_status": "new",
+      "outreach_status": "contacted",
       "enrichment_status": "enriched",
-      "date_contacted": ""
+      "date_contacted": "2026-09-10"
     },
     {
-      "business_name": "Baker Sullivan Hoover",
+      "business_name": "Dodd Electric",
       "city": "Nashville",
+      "state": "TN",
+      "outreach_status": "contacted",
+      "enrichment_status": "enriched",
+      "date_contacted": "2026-09-10"
+    },
+    {
+      "business_name": "ABEC Electric Company, LLC",
+      "city": "Nashville",
+      "state": "TN",
+      "outreach_status": "contacted",
+      "enrichment_status": "enriched",
+      "date_contacted": "2026-09-10"
+    },
+    {
+      "business_name": "Ace Electric Service Co, LLC",
+      "city": "Knoxville",
+      "state": "TN",
+      "outreach_status": "contacted",
+      "enrichment_status": "enriched",
+      "date_contacted": "2026-09-10"
+    },
+    {
+      "business_name": "Lloyd's Electric Service",
+      "city": "Knoxville",
       "state": "TN",
       "outreach_status": "not_contactable",
       "enrichment_status": "no_email_found",
       "date_contacted": ""
     },
     {
-      "business_name": "TriStar Tax and Business Solutions Nashville",
-      "city": "Nashville",
+      "business_name": "Thompson Electric | Generator Installation",
+      "city": "Lebanon",
       "state": "TN",
-      "outreach_status": "new",
+      "outreach_status": "contacted",
       "enrichment_status": "enriched",
-      "date_contacted": ""
+      "date_contacted": "2026-09-10"
     },
     {
-      "business_name": "Sunil Kawatra CPA",
-      "city": "Nashville",
-      "state": "TN",
-      "outreach_status": "new",
-      "enrichment_status": "enriched",
-      "date_contacted": ""
-    },
-    {
-      "business_name": "Dark Horse CPAs",
-      "city": "Nashville",
-      "state": "TN",
-      "outreach_status": "new",
-      "enrichment_status": "enriched",
-      "date_contacted": ""
-    },
-    {
-      "business_name": "Craine, Thompson & Jones, P.C.",
-      "city": "Morristown",
+      "business_name": "Southern Electric of TN, Inc",
+      "city": "Spring Hill",
       "state": "TN",
       "outreach_status": "not_contactable",
       "enrichment_status": "no_email_found",
       "date_contacted": ""
     },
     {
-      "business_name": "ATA",
-      "city": "Milan",
-      "state": "TN",
-      "outreach_status": "new",
+      "business_name": "Reliable Electric Services INC",
+      "city": "Mt Sterling",
+      "state": "KY",
+      "outreach_status": "contacted",
       "enrichment_status": "enriched",
-      "date_contacted": ""
+      "date_contacted": "2026-09-10"
     },
     {
-      "business_name": "Husbands CPA",
-      "city": "Centerville",
-      "state": "TN",
+      "business_name": "Villa Hills Electric",
+      "city": "Erlanger",
+      "state": "KY",
       "outreach_status": "not_contactable",
-      "enrichment_status": "site_unreachable",
+      "enrichment_status": "no_email_found",
       "date_contacted": ""
     }
   ],
   "outreach": {
-    "total_attempts": 34,
+    "total_attempts": 104,
     "status_counts": {
       "sent_test": 12,
-      "sent": 22
+      "sent": 91,
+      "failed": 1
     }
   },
   "recent_outreach": [
     {
-      "business_name": "Music City Roofers",
-      "date_sent": "2026-09-09",
-      "subject": "Quick question about Music City Roofers's back-office workload",
+      "business_name": "Higher Power Electric Tn",
+      "date_sent": "2026-09-10",
+      "subject": "Quick question about Higher Power Electric Tn's back-office workload",
       "status": "sent"
     },
     {
-      "business_name": "Stratus Clean Nashville",
-      "date_sent": "2026-09-09",
-      "subject": "Quick question about Stratus Clean Nashville's back-office workload",
+      "business_name": "Empower Electric, LLC",
+      "date_sent": "2026-09-10",
+      "subject": "Quick question about Empower Electric, LLC's back-office workload",
       "status": "sent"
     },
     {
-      "business_name": "CleanWorks Commercial Cleaning",
-      "date_sent": "2026-09-09",
-      "subject": "Quick question about CleanWorks Commercial Cleaning's back-office workload",
+      "business_name": "Hardy Electric",
+      "date_sent": "2026-09-10",
+      "subject": "Quick question about Hardy Electric's back-office workload",
       "status": "sent"
     },
     {
-      "business_name": "WH Property Management",
-      "date_sent": "2026-09-09",
-      "subject": "Quick question about WH Property Management's back-office workload",
+      "business_name": "Greenway Electric of Nashville",
+      "date_sent": "2026-09-10",
+      "subject": "Quick question about Greenway Electric of Nashville's back-office workload",
       "status": "sent"
     },
     {
-      "business_name": "Nashville Construction Solutions",
-      "date_sent": "2026-09-09",
-      "subject": "Quick question about Nashville Construction Solutions's back-office workload",
+      "business_name": "Dodd Electric",
+      "date_sent": "2026-09-10",
+      "subject": "Quick question about Dodd Electric's back-office workload",
       "status": "sent"
     },
     {
-      "business_name": "Ascension General Contractors",
-      "date_sent": "2026-09-09",
-      "subject": "Quick question about Ascension General Contractors's back-office workload",
+      "business_name": "ABEC Electric Company, LLC",
+      "date_sent": "2026-09-10",
+      "subject": "Quick question about ABEC Electric Company, LLC's back-office workload",
       "status": "sent"
     },
     {
-      "business_name": "Avantel Plumber of Nashville TN",
-      "date_sent": "2026-09-09",
-      "subject": "Quick question about Avantel Plumber of Nashville TN's back-office workload",
+      "business_name": "Ace Electric Service Co, LLC",
+      "date_sent": "2026-09-10",
+      "subject": "Quick question about Ace Electric Service Co, LLC's back-office workload",
       "status": "sent"
     },
     {
-      "business_name": "Southern Plumbing Works",
-      "date_sent": "2026-09-09",
-      "subject": "Quick question about Southern Plumbing Works's back-office workload",
+      "business_name": "Thompson Electric | Generator Installation",
+      "date_sent": "2026-09-10",
+      "subject": "Quick question about Thompson Electric | Generator Installation's back-office workload",
       "status": "sent"
     },
     {
-      "business_name": "Jack Ward & Sons Plumbing Company",
-      "date_sent": "2026-09-09",
-      "subject": "Quick question about Jack Ward & Sons Plumbing Company's back-office workload",
+      "business_name": "Reliable Electric Services INC",
+      "date_sent": "2026-09-10",
+      "subject": "Quick question about Reliable Electric Services INC's back-office workload",
       "status": "sent"
     },
     {
-      "business_name": "Benjamin Franklin Plumbing of Nashville",
-      "date_sent": "2026-09-09",
-      "subject": "Quick question about Benjamin Franklin Plumbing of Nashville's back-office workload",
+      "business_name": "Hudson Electric",
+      "date_sent": "2026-09-10",
+      "subject": "Quick question about Hudson Electric's back-office workload",
       "status": "sent"
     },
     {
-      "business_name": "615 Plumbing",
-      "date_sent": "2026-09-09",
-      "subject": "Quick question about 615 Plumbing's back-office workload",
+      "business_name": "United Electric Co",
+      "date_sent": "2026-09-10",
+      "subject": "Quick question about United Electric Co's back-office workload",
       "status": "sent"
     },
     {
-      "business_name": "Doctor Drips Plumbing - Nashville",
-      "date_sent": "2026-09-09",
-      "subject": "Quick question about Doctor Drips Plumbing - Nashville's back-office workload",
+      "business_name": "United Electrical Contractors, LLC",
+      "date_sent": "2026-09-10",
+      "subject": "Quick question about United Electrical Contractors, LLC's back-office workload",
       "status": "sent"
     },
     {
-      "business_name": "TN Plumbing Solutions",
-      "date_sent": "2026-09-09",
-      "subject": "Quick question about TN Plumbing Solutions's back-office workload",
+      "business_name": "Elliot Electric Kentucky Inc",
+      "date_sent": "2026-09-10",
+      "subject": "Quick question about Elliot Electric Kentucky Inc's back-office workload",
       "status": "sent"
     },
     {
-      "business_name": "Holt Plumbing Company",
-      "date_sent": "2026-09-09",
-      "subject": "Quick question about Holt Plumbing Company's back-office workload",
+      "business_name": "Doctor Electric",
+      "date_sent": "2026-09-10",
+      "subject": "Quick question about Doctor Electric's back-office workload",
       "status": "sent"
     },
     {
-      "business_name": "Taqueria La Barca Jalisco",
-      "date_sent": "2026-09-09",
-      "subject": "Quick question about Taqueria La Barca Jalisco's back-office workload",
+      "business_name": "Risen Electric",
+      "date_sent": "2026-09-10",
+      "subject": "Quick question about Risen Electric's back-office workload",
       "status": "sent"
     }
   ],
