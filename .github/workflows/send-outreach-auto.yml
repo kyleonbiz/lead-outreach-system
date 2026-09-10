@@ -32,8 +32,8 @@ jobs:
           MS_CLIENT_SECRET: ${{ secrets.MS_CLIENT_SECRET }}
           SENDER_EMAIL: ${{ secrets.SENDER_EMAIL }}
           TEST_MODE: 'false'
-          PER_RUN_CAP: '300'
-          DAILY_CAP: '300'
+          PER_RUN_CAP: '100'
+          DAILY_CAP: '100'
         run: python send_emails.py
       - name: Discord completion notification
         if: always()
