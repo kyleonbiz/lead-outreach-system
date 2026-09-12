@@ -20,7 +20,7 @@ jobs:
         uses: google-github-actions/auth@v1
         with:
           workload_identity_provider: ${{ secrets.WORKLOAD_IDENTITY_PROVIDER }}
-          service_account_email: ${{ secrets.SERVICE_ACCOUNT_EMAIL }}
+          service_account: ${{ secrets.SERVICE_ACCOUNT_EMAIL }}
 
       - name: Set up Python
         uses: actions/setup-python@v4
