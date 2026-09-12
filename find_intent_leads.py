@@ -8,16 +8,12 @@ import os
 import json
 from datetime import datetime
 import requests
-from google.oauth2.service_account import Credentials
-from google.auth.transport.requests import Request
 from googleapiclient.discovery import build
 from anthropic import Anthropic
 
 # Config
 GOOGLE_SEARCH_ENGINE_ID = "d1750679433a24384"
 SHEET_ID = os.getenv("SHEET_ID")
-WORKLOAD_IDENTITY_PROVIDER = os.getenv("WORKLOAD_IDENTITY_PROVIDER")
-SERVICE_ACCOUNT_EMAIL = os.getenv("SERVICE_ACCOUNT_EMAIL")
 GOOGLE_SEARCH_API_KEY = os.getenv("GOOGLE_SEARCH_API_KEY")
 DISCORD_WEBHOOK_URL = os.getenv("DISCORD_WEBHOOK_URL")
 
@@ -32,30 +28,10 @@ anthropic_client = Anthropic()
 
 
 def get_google_sheets_client():
-    """Authenticate to Google Sheets via Workload Identity."""
-    from google.identity.generativelanguage import rest as identity_rest
+    """Authenticate to Google Sheets via Application Default Credentials."""
+    from google.auth import default
     
-    # Exchange OIDC token for service account credentials
-    credential_request_url = WORKLOAD_IDENTITY_PROVIDER
-    credential_request = requests.post(
-        credential_request_url,
-        headers={"Content-Type": "application/x-www-form-urlencoded"},
-        data={
-            "grant_type": "urn:ietf:params:oauth:grant-type:token-exchange",
-            "audience": f"//iam.googleapis.com/projects/PROJECT_NUMBER/locations/global/workloadIdentityPools/github-actions-pool/providers/github-provider",
-            "requested_token_use": "access_token",
-            "subject_token": os.getenv("GITHUB_TOKEN"),
-            "subject_token_type": "urn:ietf:params:oauth:token-type:id_token",
-        },
-    )
-    access_token = credential_request.json()["access_token"]
-    
-    # Use service account email to get sheets scope
-    credentials = Credentials(
-        token=access_token,
-        scopes=["https://www.googleapis.com/auth/spreadsheets"]
-    )
-    
+    credentials, project = default(scopes=["https://www.googleapis.com/auth/spreadsheets"])
     return build("sheets", "v4", credentials=credentials)
 
 
@@ -350,7 +326,7 @@ def send_discord_summary(summary):
                     },
                     {
                         "name": "Skipped",
-                        "value": str(summary["qualified_skipped"]),
+                        "value": str(summary["skipped"]),
                         "inline": True
                     }
                 ]
