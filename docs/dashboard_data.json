@@ -1,19 +1,59 @@
 {
-  "last_updated": "2026-09-14T20:46:03.286052Z",
+  "last_updated": "2026-09-15T20:03:42.059331Z",
   "leads": {
-    "total_leads": 181,
+    "total_leads": 186,
     "status_counts": {
-      "not_contactable": 89,
-      "contacted": 92
+      "not_contactable": 93,
+      "contacted": 93
     },
     "enrichment_counts": {
-      "no_email_found": 63,
+      "no_email_found": 67,
       "site_unreachable": 19,
-      "enriched": 92,
+      "enriched": 93,
       "no_website": 7
     }
   },
   "recent_leads": [
+    {
+      "business_name": "Nashville Electric Service",
+      "city": "Nashville",
+      "state": "TN",
+      "outreach_status": "not_contactable",
+      "enrichment_status": "no_email_found",
+      "date_contacted": ""
+    },
+    {
+      "business_name": "Middle Tennessee Electric",
+      "city": "Franklin",
+      "state": "TN",
+      "outreach_status": "not_contactable",
+      "enrichment_status": "no_email_found",
+      "date_contacted": ""
+    },
+    {
+      "business_name": "JK&L Electric Company",
+      "city": "Kingston Springs",
+      "state": "TN",
+      "outreach_status": "not_contactable",
+      "enrichment_status": "no_email_found",
+      "date_contacted": ""
+    },
+    {
+      "business_name": "Superior Electric/Mechanical Tennessee Valley Company",
+      "city": "Nashville",
+      "state": "TN",
+      "outreach_status": "not_contactable",
+      "enrichment_status": "no_email_found",
+      "date_contacted": ""
+    },
+    {
+      "business_name": "Kedron Electric LLC",
+      "city": "College Grove",
+      "state": "TN",
+      "outreach_status": "contacted",
+      "enrichment_status": "enriched",
+      "date_contacted": "2026-09-15"
+    },
     {
       "business_name": "Electrical Works LLC",
       "city": "Lebanon",
@@ -93,57 +133,23 @@
       "outreach_status": "contacted",
       "enrichment_status": "enriched",
       "date_contacted": "2026-09-10"
-    },
-    {
-      "business_name": "ABEC Electric Company, LLC",
-      "city": "Nashville",
-      "state": "TN",
-      "outreach_status": "contacted",
-      "enrichment_status": "enriched",
-      "date_contacted": "2026-09-10"
-    },
-    {
-      "business_name": "Ace Electric Service Co, LLC",
-      "city": "Knoxville",
-      "state": "TN",
-      "outreach_status": "contacted",
-      "enrichment_status": "enriched",
-      "date_contacted": "2026-09-10"
-    },
-    {
-      "business_name": "Lloyd's Electric Service",
-      "city": "Knoxville",
-      "state": "TN",
-      "outreach_status": "not_contactable",
-      "enrichment_status": "no_email_found",
-      "date_contacted": ""
-    },
-    {
-      "business_name": "Thompson Electric | Generator Installation",
-      "city": "Lebanon",
-      "state": "TN",
-      "outreach_status": "contacted",
-      "enrichment_status": "enriched",
-      "date_contacted": "2026-09-10"
-    },
-    {
-      "business_name": "Southern Electric of TN, Inc",
-      "city": "Spring Hill",
-      "state": "TN",
-      "outreach_status": "not_contactable",
-      "enrichment_status": "no_email_found",
-      "date_contacted": ""
     }
   ],
   "outreach": {
-    "total_attempts": 105,
+    "total_attempts": 106,
     "status_counts": {
       "sent_test": 12,
-      "sent": 92,
+      "sent": 93,
       "failed": 1
     }
   },
   "recent_outreach": [
+    {
+      "business_name": "Kedron Electric LLC",
+      "date_sent": "2026-09-15",
+      "subject": "Quick question about Kedron Electric LLC's back-office workload",
+      "status": "sent"
+    },
     {
       "business_name": "Travis Electrical Service & Plumbing",
       "date_sent": "2026-09-11",
@@ -226,12 +232,6 @@
       "business_name": "Elliot Electric Kentucky Inc",
       "date_sent": "2026-09-10",
       "subject": "Quick question about Elliot Electric Kentucky Inc's back-office workload",
-      "status": "sent"
-    },
-    {
-      "business_name": "Doctor Electric",
-      "date_sent": "2026-09-10",
-      "subject": "Quick question about Doctor Electric's back-office workload",
       "status": "sent"
     }
   ],
