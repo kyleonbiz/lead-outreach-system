@@ -1,19 +1,51 @@
 {
-  "last_updated": "2026-09-15T20:03:42.059331Z",
+  "last_updated": "2026-09-16T19:52:22.251747Z",
   "leads": {
-    "total_leads": 186,
+    "total_leads": 190,
     "status_counts": {
-      "not_contactable": 93,
-      "contacted": 93
+      "not_contactable": 95,
+      "contacted": 95
     },
     "enrichment_counts": {
-      "no_email_found": 67,
+      "no_email_found": 69,
       "site_unreachable": 19,
-      "enriched": 93,
+      "enriched": 95,
       "no_website": 7
     }
   },
   "recent_leads": [
+    {
+      "business_name": "Morris Electric Company",
+      "city": "Louisville",
+      "state": "KY",
+      "outreach_status": "contacted",
+      "enrichment_status": "enriched",
+      "date_contacted": "2026-09-16"
+    },
+    {
+      "business_name": "Corrigan Electric Company",
+      "city": "Louisville",
+      "state": "KY",
+      "outreach_status": "not_contactable",
+      "enrichment_status": "no_email_found",
+      "date_contacted": ""
+    },
+    {
+      "business_name": "Durbin Electric LLC",
+      "city": "Louisville",
+      "state": "KY",
+      "outreach_status": "contacted",
+      "enrichment_status": "enriched",
+      "date_contacted": "2026-09-16"
+    },
+    {
+      "business_name": "Allen Electrical Services",
+      "city": "Louisville",
+      "state": "KY",
+      "outreach_status": "not_contactable",
+      "enrichment_status": "no_email_found",
+      "date_contacted": ""
+    },
     {
       "business_name": "Nashville Electric Service",
       "city": "Nashville",
@@ -101,49 +133,29 @@
       "outreach_status": "contacted",
       "enrichment_status": "enriched",
       "date_contacted": "2026-09-10"
-    },
-    {
-      "business_name": "Modern Electrical Contracting, Inc.",
-      "city": "Nashville",
-      "state": "TN",
-      "outreach_status": "not_contactable",
-      "enrichment_status": "site_unreachable",
-      "date_contacted": ""
-    },
-    {
-      "business_name": "Gervais Electric, Inc.",
-      "city": "Nashville",
-      "state": "TN",
-      "outreach_status": "not_contactable",
-      "enrichment_status": "site_unreachable",
-      "date_contacted": ""
-    },
-    {
-      "business_name": "Greenway Electric of Nashville",
-      "city": "Nashville",
-      "state": "TN",
-      "outreach_status": "contacted",
-      "enrichment_status": "enriched",
-      "date_contacted": "2026-09-10"
-    },
-    {
-      "business_name": "Dodd Electric",
-      "city": "Nashville",
-      "state": "TN",
-      "outreach_status": "contacted",
-      "enrichment_status": "enriched",
-      "date_contacted": "2026-09-10"
     }
   ],
   "outreach": {
-    "total_attempts": 106,
+    "total_attempts": 108,
     "status_counts": {
       "sent_test": 12,
-      "sent": 93,
+      "sent": 95,
       "failed": 1
     }
   },
   "recent_outreach": [
+    {
+      "business_name": "Morris Electric Company",
+      "date_sent": "2026-09-16",
+      "subject": "Quick question about Morris Electric Company's back-office workload",
+      "status": "sent"
+    },
+    {
+      "business_name": "Durbin Electric LLC",
+      "date_sent": "2026-09-16",
+      "subject": "Quick question about Durbin Electric LLC's back-office workload",
+      "status": "sent"
+    },
     {
       "business_name": "Kedron Electric LLC",
       "date_sent": "2026-09-15",
@@ -220,18 +232,6 @@
       "business_name": "United Electric Co",
       "date_sent": "2026-09-10",
       "subject": "Quick question about United Electric Co's back-office workload",
-      "status": "sent"
-    },
-    {
-      "business_name": "United Electrical Contractors, LLC",
-      "date_sent": "2026-09-10",
-      "subject": "Quick question about United Electrical Contractors, LLC's back-office workload",
-      "status": "sent"
-    },
-    {
-      "business_name": "Elliot Electric Kentucky Inc",
-      "date_sent": "2026-09-10",
-      "subject": "Quick question about Elliot Electric Kentucky Inc's back-office workload",
       "status": "sent"
     }
   ],
