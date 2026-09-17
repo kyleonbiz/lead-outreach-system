@@ -1,19 +1,27 @@
 {
-  "last_updated": "2026-09-16T19:52:22.251747Z",
+  "last_updated": "2026-09-17T20:04:06.189081Z",
   "leads": {
-    "total_leads": 190,
+    "total_leads": 191,
     "status_counts": {
       "not_contactable": 95,
-      "contacted": 95
+      "contacted": 96
     },
     "enrichment_counts": {
       "no_email_found": 69,
       "site_unreachable": 19,
-      "enriched": 95,
+      "enriched": 96,
       "no_website": 7
     }
   },
   "recent_leads": [
+    {
+      "business_name": "Tennessee Associated Electric",
+      "city": "Knoxville",
+      "state": "TN",
+      "outreach_status": "contacted",
+      "enrichment_status": "enriched",
+      "date_contacted": "2026-09-17"
+    },
     {
       "business_name": "Morris Electric Company",
       "city": "Louisville",
@@ -125,25 +133,23 @@
       "outreach_status": "contacted",
       "enrichment_status": "enriched",
       "date_contacted": "2026-09-10"
-    },
-    {
-      "business_name": "Hardy Electric",
-      "city": "Nashville",
-      "state": "TN",
-      "outreach_status": "contacted",
-      "enrichment_status": "enriched",
-      "date_contacted": "2026-09-10"
     }
   ],
   "outreach": {
-    "total_attempts": 108,
+    "total_attempts": 109,
     "status_counts": {
       "sent_test": 12,
-      "sent": 95,
+      "sent": 96,
       "failed": 1
     }
   },
   "recent_outreach": [
+    {
+      "business_name": "Tennessee Associated Electric",
+      "date_sent": "2026-09-17",
+      "subject": "Quick question about Tennessee Associated Electric's back-office workload",
+      "status": "sent"
+    },
     {
       "business_name": "Morris Electric Company",
       "date_sent": "2026-09-16",
@@ -226,12 +232,6 @@
       "business_name": "Hudson Electric",
       "date_sent": "2026-09-10",
       "subject": "Quick question about Hudson Electric's back-office workload",
-      "status": "sent"
-    },
-    {
-      "business_name": "United Electric Co",
-      "date_sent": "2026-09-10",
-      "subject": "Quick question about United Electric Co's back-office workload",
       "status": "sent"
     }
   ],
