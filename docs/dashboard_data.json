@@ -1,19 +1,27 @@
 {
-  "last_updated": "2026-09-17T20:04:06.189081Z",
+  "last_updated": "2026-09-18T19:27:58.786793Z",
   "leads": {
-    "total_leads": 191,
+    "total_leads": 192,
     "status_counts": {
       "not_contactable": 95,
-      "contacted": 96
+      "contacted": 97
     },
     "enrichment_counts": {
       "no_email_found": 69,
       "site_unreachable": 19,
-      "enriched": 96,
+      "enriched": 97,
       "no_website": 7
     }
   },
   "recent_leads": [
+    {
+      "business_name": "Danny Davis Electrical Contractors, Inc.",
+      "city": "Maryville",
+      "state": "TN",
+      "outreach_status": "contacted",
+      "enrichment_status": "enriched",
+      "date_contacted": "2026-09-18"
+    },
     {
       "business_name": "Tennessee Associated Electric",
       "city": "Knoxville",
@@ -125,25 +133,23 @@
       "outreach_status": "contacted",
       "enrichment_status": "enriched",
       "date_contacted": "2026-09-10"
-    },
-    {
-      "business_name": "Empower Electric, LLC",
-      "city": "Nashville",
-      "state": "TN",
-      "outreach_status": "contacted",
-      "enrichment_status": "enriched",
-      "date_contacted": "2026-09-10"
     }
   ],
   "outreach": {
-    "total_attempts": 109,
+    "total_attempts": 110,
     "status_counts": {
       "sent_test": 12,
-      "sent": 96,
+      "sent": 97,
       "failed": 1
     }
   },
   "recent_outreach": [
+    {
+      "business_name": "Danny Davis Electrical Contractors, Inc.",
+      "date_sent": "2026-09-18",
+      "subject": "Quick question about Danny Davis Electrical Contractors, Inc.'s back-office workload",
+      "status": "sent"
+    },
     {
       "business_name": "Tennessee Associated Electric",
       "date_sent": "2026-09-17",
@@ -226,12 +232,6 @@
       "business_name": "Reliable Electric Services INC",
       "date_sent": "2026-09-10",
       "subject": "Quick question about Reliable Electric Services INC's back-office workload",
-      "status": "sent"
-    },
-    {
-      "business_name": "Hudson Electric",
-      "date_sent": "2026-09-10",
-      "subject": "Quick question about Hudson Electric's back-office workload",
       "status": "sent"
     }
   ],
