@@ -1,19 +1,75 @@
 {
-  "last_updated": "2026-09-23T19:59:34.395129Z",
+  "last_updated": "2026-09-24T20:17:59.221586Z",
   "leads": {
-    "total_leads": 193,
+    "total_leads": 200,
     "status_counts": {
-      "not_contactable": 95,
-      "contacted": 98
+      "not_contactable": 99,
+      "contacted": 101
     },
     "enrichment_counts": {
-      "no_email_found": 69,
-      "site_unreachable": 19,
-      "enriched": 98,
-      "no_website": 7
+      "no_email_found": 70,
+      "site_unreachable": 21,
+      "enriched": 101,
+      "no_website": 8
     }
   },
   "recent_leads": [
+    {
+      "business_name": "All Star Electric LLC",
+      "city": "Lexington",
+      "state": "KY",
+      "outreach_status": "not_contactable",
+      "enrichment_status": "no_website",
+      "date_contacted": ""
+    },
+    {
+      "business_name": "All Spark Electric",
+      "city": "Mt Sterling",
+      "state": "KY",
+      "outreach_status": "not_contactable",
+      "enrichment_status": "site_unreachable",
+      "date_contacted": ""
+    },
+    {
+      "business_name": "5 Star Electric, LLC",
+      "city": "Clay",
+      "state": "KY",
+      "outreach_status": "not_contactable",
+      "enrichment_status": "no_email_found",
+      "date_contacted": ""
+    },
+    {
+      "business_name": "Fayette Electrical Service, INC.",
+      "city": "Winchester",
+      "state": "KY",
+      "outreach_status": "not_contactable",
+      "enrichment_status": "site_unreachable",
+      "date_contacted": ""
+    },
+    {
+      "business_name": "Bookman Electrical Services",
+      "city": "Lexington",
+      "state": "KY",
+      "outreach_status": "contacted",
+      "enrichment_status": "enriched",
+      "date_contacted": "2026-09-24"
+    },
+    {
+      "business_name": "Glenwood Electric Inc",
+      "city": "Walton",
+      "state": "KY",
+      "outreach_status": "contacted",
+      "enrichment_status": "enriched",
+      "date_contacted": "2026-09-24"
+    },
+    {
+      "business_name": "Rimar Electric LLC",
+      "city": "Winchester",
+      "state": "KY",
+      "outreach_status": "contacted",
+      "enrichment_status": "enriched",
+      "date_contacted": "2026-09-24"
+    },
     {
       "business_name": "Amprite Electric Company",
       "city": "Nashville",
@@ -77,73 +133,35 @@
       "outreach_status": "not_contactable",
       "enrichment_status": "no_email_found",
       "date_contacted": ""
-    },
-    {
-      "business_name": "Middle Tennessee Electric",
-      "city": "Franklin",
-      "state": "TN",
-      "outreach_status": "not_contactable",
-      "enrichment_status": "no_email_found",
-      "date_contacted": ""
-    },
-    {
-      "business_name": "JK&L Electric Company",
-      "city": "Kingston Springs",
-      "state": "TN",
-      "outreach_status": "not_contactable",
-      "enrichment_status": "no_email_found",
-      "date_contacted": ""
-    },
-    {
-      "business_name": "Superior Electric/Mechanical Tennessee Valley Company",
-      "city": "Nashville",
-      "state": "TN",
-      "outreach_status": "not_contactable",
-      "enrichment_status": "no_email_found",
-      "date_contacted": ""
-    },
-    {
-      "business_name": "Kedron Electric LLC",
-      "city": "College Grove",
-      "state": "TN",
-      "outreach_status": "contacted",
-      "enrichment_status": "enriched",
-      "date_contacted": "2026-09-15"
-    },
-    {
-      "business_name": "Electrical Works LLC",
-      "city": "Lebanon",
-      "state": "TN",
-      "outreach_status": "not_contactable",
-      "enrichment_status": "no_email_found",
-      "date_contacted": ""
-    },
-    {
-      "business_name": "Travis Electrical Service & Plumbing",
-      "city": "Clarksville",
-      "state": "TN",
-      "outreach_status": "contacted",
-      "enrichment_status": "enriched",
-      "date_contacted": "2026-09-11"
-    },
-    {
-      "business_name": "Zuercher Electric Company",
-      "city": "Crossville",
-      "state": "TN",
-      "outreach_status": "not_contactable",
-      "enrichment_status": "no_email_found",
-      "date_contacted": ""
     }
   ],
   "outreach": {
-    "total_attempts": 111,
+    "total_attempts": 114,
     "status_counts": {
       "sent_test": 12,
-      "sent": 98,
+      "sent": 101,
       "failed": 1
     }
   },
   "recent_outreach": [
+    {
+      "business_name": "Bookman Electrical Services",
+      "date_sent": "2026-09-24",
+      "subject": "Quick question about Bookman Electrical Services's back-office workload",
+      "status": "sent"
+    },
+    {
+      "business_name": "Glenwood Electric Inc",
+      "date_sent": "2026-09-24",
+      "subject": "Quick question about Glenwood Electric Inc's back-office workload",
+      "status": "sent"
+    },
+    {
+      "business_name": "Rimar Electric LLC",
+      "date_sent": "2026-09-24",
+      "subject": "Quick question about Rimar Electric LLC's back-office workload",
+      "status": "sent"
+    },
     {
       "business_name": "Amprite Electric Company",
       "date_sent": "2026-09-21",
@@ -214,24 +232,6 @@
       "business_name": "Dodd Electric",
       "date_sent": "2026-09-10",
       "subject": "Quick question about Dodd Electric's back-office workload",
-      "status": "sent"
-    },
-    {
-      "business_name": "ABEC Electric Company, LLC",
-      "date_sent": "2026-09-10",
-      "subject": "Quick question about ABEC Electric Company, LLC's back-office workload",
-      "status": "sent"
-    },
-    {
-      "business_name": "Ace Electric Service Co, LLC",
-      "date_sent": "2026-09-10",
-      "subject": "Quick question about Ace Electric Service Co, LLC's back-office workload",
-      "status": "sent"
-    },
-    {
-      "business_name": "Thompson Electric | Generator Installation",
-      "date_sent": "2026-09-10",
-      "subject": "Quick question about Thompson Electric | Generator Installation's back-office workload",
       "status": "sent"
     }
   ],
