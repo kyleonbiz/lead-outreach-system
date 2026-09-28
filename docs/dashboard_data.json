@@ -1,19 +1,27 @@
 {
-  "last_updated": "2026-09-25T20:18:53.892304Z",
+  "last_updated": "2026-09-28T22:26:58.603659Z",
   "leads": {
-    "total_leads": 200,
+    "total_leads": 201,
     "status_counts": {
       "not_contactable": 99,
-      "contacted": 101
+      "contacted": 102
     },
     "enrichment_counts": {
       "no_email_found": 70,
       "site_unreachable": 21,
-      "enriched": 101,
+      "enriched": 102,
       "no_website": 8
     }
   },
   "recent_leads": [
+    {
+      "business_name": "Diversified Electrical",
+      "city": "Oak Ridge",
+      "state": "TN",
+      "outreach_status": "contacted",
+      "enrichment_status": "enriched",
+      "date_contacted": "2026-09-28"
+    },
     {
       "business_name": "All Star Electric LLC",
       "city": "Lexington",
@@ -125,25 +133,23 @@
       "outreach_status": "not_contactable",
       "enrichment_status": "no_email_found",
       "date_contacted": ""
-    },
-    {
-      "business_name": "Nashville Electric Service",
-      "city": "Nashville",
-      "state": "TN",
-      "outreach_status": "not_contactable",
-      "enrichment_status": "no_email_found",
-      "date_contacted": ""
     }
   ],
   "outreach": {
-    "total_attempts": 114,
+    "total_attempts": 115,
     "status_counts": {
       "sent_test": 12,
-      "sent": 101,
+      "sent": 102,
       "failed": 1
     }
   },
   "recent_outreach": [
+    {
+      "business_name": "Diversified Electrical",
+      "date_sent": "2026-09-28",
+      "subject": "Quick question about Diversified Electrical's back-office workload",
+      "status": "sent"
+    },
     {
       "business_name": "Bookman Electrical Services",
       "date_sent": "2026-09-24",
@@ -226,12 +232,6 @@
       "business_name": "Greenway Electric of Nashville",
       "date_sent": "2026-09-10",
       "subject": "Quick question about Greenway Electric of Nashville's back-office workload",
-      "status": "sent"
-    },
-    {
-      "business_name": "Dodd Electric",
-      "date_sent": "2026-09-10",
-      "subject": "Quick question about Dodd Electric's back-office workload",
       "status": "sent"
     }
   ],
