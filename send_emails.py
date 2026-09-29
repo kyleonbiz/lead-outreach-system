@@ -2,6 +2,7 @@ import os
 import time
 import uuid
 import base64
+import math
 import datetime
 import requests
 import gspread
@@ -16,8 +17,14 @@ SHEET_ID = os.environ.get("SHEET_ID")
 TEST_MODE = os.environ.get("TEST_MODE", "true").lower() == "true"
 TEST_EMAIL = os.environ.get("TEST_EMAIL", "")
 
-DAILY_CAP = 100
-PER_RUN_CAP = 10
+# Gradual ramp-up: start at RAMP_START_CAP/day, add RAMP_STEP for every day we've
+# actually sent emails since RAMP_START_DATE, until RAMP_MAX_CAP. Pausing sending
+# pauses the ramp too, so it never jumps ahead after a break.
+RAMP_START_DATE = "2026-09-29"
+RAMP_START_CAP = 150
+RAMP_STEP = 25
+RAMP_MAX_CAP = 300
+RUNS_PER_DAY = 9  # spread the daily cap over ~9 of the hourly runs (leaves slack for skipped runs)
 
 LOGO_PATH = "logo.png"
 TEMPLATE_VERSION = "v2_intro"
@@ -110,15 +117,26 @@ def get_sheets_client():
     )
     return gspread.authorize(credentials)
 
-def count_sent_today(log_ws, today):
+def sending_stats(log_ws, today):
+    """How many we've sent today, and how many earlier days we've sent on since the ramp began."""
     rows = log_ws.get_all_values()
-    count = 0
+    sent_today = 0
+    prior_days = set()
     for row in rows[1:]:
         date_sent = row[4] if len(row) > 4 else ""
         status = row[7] if len(row) > 7 else ""
-        if date_sent == today and status == "sent":
-            count += 1
-    return count
+        if status != "sent":
+            continue
+        if date_sent == today:
+            sent_today += 1
+        elif RAMP_START_DATE <= date_sent < today:
+            prior_days.add(date_sent)
+    return sent_today, len(prior_days)
+
+def todays_caps(prior_days):
+    daily_cap = min(RAMP_MAX_CAP, RAMP_START_CAP + RAMP_STEP * prior_days)
+    per_run_cap = math.ceil(daily_cap / RUNS_PER_DAY)
+    return daily_cap, per_run_cap
 
 def get_sheets_with_retry(max_retries=3):
     """Retry Google Sheets connection up to 3 times"""
@@ -168,10 +186,12 @@ if __name__ == "__main__":
     if TEST_MODE:
         run_cap = 1
     else:
-        already_sent_today = count_sent_today(log_ws, today)
-        remaining_daily = max(0, DAILY_CAP - already_sent_today)
-        run_cap = min(PER_RUN_CAP, remaining_daily)
-        print(f"Already sent {already_sent_today}/{DAILY_CAP} today. This run will send up to {run_cap} more.")
+        already_sent_today, prior_days = sending_stats(log_ws, today)
+        daily_cap, per_run_cap = todays_caps(prior_days)
+        remaining_daily = max(0, daily_cap - already_sent_today)
+        run_cap = min(per_run_cap, remaining_daily)
+        print(f"Ramp day {prior_days + 1}: today's cap is {daily_cap}.")
+        print(f"Already sent {already_sent_today}/{daily_cap} today. This run will send up to {run_cap} more.")
         if run_cap == 0:
             print("Daily cap already reached — nothing to send this run.")
 
