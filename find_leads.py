@@ -1,20 +1,174 @@
 import os
 import sys
 import json
+import time
 import requests
+import gspread
+import google.auth
 
 PLACES_API_KEY = os.environ.get("PLACES_API_KEY")
-MAX_RESULTS_PER_RUN = int(os.environ.get("MAX_RESULTS_PER_RUN", "20"))
+SHEET_ID = os.environ.get("SHEET_ID")
 
-def search_businesses(industry, location, max_results=20):
-    # Extract state from location (e.g., "Murfreeseboro, TN" -> "TN")
-    parts = location.split(",")
-    if len(parts) >= 2:
-        state = parts[-1].strip()
-        search_location = state
-    else:
-        search_location = location
-    
+# How many NEW (not already in the sheet) leads to collect per run
+TARGET_NEW_LEADS = int(os.environ.get("MAX_RESULTS_PER_RUN", "100"))
+# Safety cap on searches per run so a bad run can't burn through the API budget
+MAX_SEARCHES_PER_RUN = int(os.environ.get("MAX_SEARCHES_PER_RUN", "60"))
+# Google Places returns max 20 per page, max 3 pages (60 results) per search
+MAX_PAGES_PER_SEARCH = 3
+
+PROGRESS_TAB = "Search_Progress"
+
+INDUSTRIES = [
+    "plumbers", "electricians", "HVAC contractors", "roofing contractors",
+    "general contractors", "landscaping companies", "cleaning services",
+    "pest control companies", "painting contractors", "flooring contractors",
+    "auto repair shops", "dentists", "chiropractors", "physical therapy clinics",
+    "veterinary clinics", "med spas", "insurance agencies", "real estate agencies",
+    "property management companies", "law firms", "accounting firms",
+    "marketing agencies", "construction companies", "moving companies",
+    "trucking companies", "towing companies", "pool services",
+    "garage door repair", "fencing contractors", "concrete contractors",
+    "remodeling contractors", "solar installers", "home inspectors",
+    "mortgage brokers", "financial advisors", "staffing agencies",
+    "event planners", "catering companies", "photography studios",
+    "fitness studios", "daycare centers", "home health care agencies",
+    "IT services companies", "printing services", "sign companies",
+    "locksmiths", "appliance repair", "tree services",
+]
+
+CITIES = [
+    "New York, NY", "Los Angeles, CA", "Chicago, IL", "Houston, TX", "Phoenix, AZ",
+    "Philadelphia, PA", "San Antonio, TX", "San Diego, CA", "Dallas, TX", "Jacksonville, FL",
+    "Fort Worth, TX", "San Jose, CA", "Austin, TX", "Charlotte, NC", "Columbus, OH",
+    "Indianapolis, IN", "San Francisco, CA", "Seattle, WA", "Denver, CO", "Oklahoma City, OK",
+    "Nashville, TN", "Washington, DC", "El Paso, TX", "Las Vegas, NV", "Boston, MA",
+    "Detroit, MI", "Portland, OR", "Louisville, KY", "Memphis, TN", "Baltimore, MD",
+    "Milwaukee, WI", "Albuquerque, NM", "Tucson, AZ", "Fresno, CA", "Sacramento, CA",
+    "Mesa, AZ", "Atlanta, GA", "Kansas City, MO", "Colorado Springs, CO", "Omaha, NE",
+    "Raleigh, NC", "Miami, FL", "Virginia Beach, VA", "Long Beach, CA", "Oakland, CA",
+    "Minneapolis, MN", "Bakersfield, CA", "Tulsa, OK", "Tampa, FL", "Arlington, TX",
+    "Wichita, KS", "Aurora, CO", "New Orleans, LA", "Cleveland, OH", "Honolulu, HI",
+    "Anaheim, CA", "Henderson, NV", "Orlando, FL", "Lexington, KY", "Stockton, CA",
+    "Riverside, CA", "Irvine, CA", "Corpus Christi, TX", "Newark, NJ", "Santa Ana, CA",
+    "Cincinnati, OH", "Pittsburgh, PA", "Saint Paul, MN", "Greensboro, NC", "Jersey City, NJ",
+    "Durham, NC", "Lincoln, NE", "North Las Vegas, NV", "Plano, TX", "Anchorage, AK",
+    "Gilbert, AZ", "Madison, WI", "Reno, NV", "Chandler, AZ", "St. Louis, MO",
+    "Chula Vista, CA", "Buffalo, NY", "Fort Wayne, IN", "Lubbock, TX", "St. Petersburg, FL",
+    "Toledo, OH", "Laredo, TX", "Port St. Lucie, FL", "Glendale, AZ", "Irving, TX",
+    "Winston-Salem, NC", "Chesapeake, VA", "Garland, TX", "Scottsdale, AZ", "Boise, ID",
+    "Hialeah, FL", "Frisco, TX", "Richmond, VA", "Cape Coral, FL", "Norfolk, VA",
+    "Spokane, WA", "Huntsville, AL", "Santa Clarita, CA", "Tacoma, WA", "Fremont, CA",
+    "McKinney, TX", "San Bernardino, CA", "Baton Rouge, LA", "Modesto, CA", "Fontana, CA",
+    "Salt Lake City, UT", "Moreno Valley, CA", "Des Moines, IA", "Worcester, MA", "Yonkers, NY",
+    "Fayetteville, NC", "Sioux Falls, SD", "Grand Prairie, TX", "Rochester, NY", "Tallahassee, FL",
+    "Little Rock, AR", "Amarillo, TX", "Overland Park, KS", "Augusta, GA", "Mobile, AL",
+    "Oxnard, CA", "Grand Rapids, MI", "Peoria, AZ", "Vancouver, WA", "Knoxville, TN",
+    "Birmingham, AL", "Montgomery, AL", "Providence, RI", "Huntington Beach, CA", "Brownsville, TX",
+    "Chattanooga, TN", "Fort Lauderdale, FL", "Tempe, AZ", "Akron, OH", "Clarksville, TN",
+    "Ontario, CA", "Newport News, VA", "Elk Grove, CA", "Cary, NC", "Eugene, OR",
+    "Aurora, IL", "Salem, OR", "Santa Rosa, CA", "Rancho Cucamonga, CA", "Pembroke Pines, FL",
+    "Fort Collins, CO", "Springfield, MO", "Oceanside, CA", "Garden Grove, CA", "Lancaster, CA",
+    "Murfreesboro, TN", "Palmdale, CA", "Corona, CA", "Killeen, TX", "Salinas, CA",
+    "Roseville, CA", "Denton, TX", "Surprise, AZ", "Macon, GA", "Paterson, NJ",
+    "Lakewood, CO", "Hayward, CA", "Charleston, SC", "Alexandria, VA", "Hollywood, FL",
+    "Springfield, MA", "Kansas City, KS", "Sunnyvale, CA", "Bellevue, WA", "Joliet, IL",
+    "Naperville, IL", "Escondido, CA", "Bridgeport, CT", "Savannah, GA", "Olathe, KS",
+    "Mesquite, TX", "Syracuse, NY", "Pasadena, TX", "McAllen, TX", "Rockford, IL",
+    "Gainesville, FL", "Pomona, CA", "Visalia, CA", "Thornton, CO", "Waco, TX",
+    "Jackson, MS", "Columbia, SC", "Fullerton, CA", "Torrance, CA", "Victorville, CA",
+    "Midland, TX", "Orange, CA", "Miramar, FL", "Hampton, VA", "Warren, MI",
+    "Stamford, CT", "Cedar Rapids, IA", "Elizabeth, NJ", "Palm Bay, FL", "Dayton, OH",
+    "New Haven, CT", "Coral Springs, FL", "Meridian, ID", "West Valley City, UT", "Pasadena, CA",
+    "Lewisville, TX", "Kent, WA", "Sterling Heights, MI", "Fargo, ND", "Carrollton, TX",
+    "Santa Clara, CA", "Round Rock, TX", "Norman, OK", "Columbia, MO", "Abilene, TX",
+    "Athens, GA", "Pearland, TX", "Clovis, CA", "Topeka, KS", "College Station, TX",
+    "Simi Valley, CA", "Allentown, PA", "West Palm Beach, FL", "Thousand Oaks, CA", "Vallejo, CA",
+    "Wilmington, NC", "Evansville, IN", "Independence, MO", "Ann Arbor, MI", "Provo, UT",
+    "Lansing, MI", "Beaumont, TX", "Odessa, TX", "Springfield, IL", "Hartford, CT",
+    "Fairfield, CA", "Lafayette, LA", "Peoria, IL", "Berkeley, CA", "Richardson, TX",
+    "Arvada, CO", "Billings, MT", "Murrieta, CA", "Rochester, MN", "Cambridge, MA",
+    "Westminster, CO", "Manchester, NH", "Lowell, MA", "High Point, NC", "Clearwater, FL",
+    "Pueblo, CO", "Temecula, CA", "Green Bay, WI", "Broken Arrow, OK", "Miami Gardens, FL",
+    "League City, TX", "Antioch, CA", "Tyler, TX", "Las Cruces, NM", "Everett, WA",
+    "Boulder, CO", "Wichita Falls, TX", "Sugar Land, TX", "Greeley, CO", "Lakeland, FL",
+    "Gresham, OR", "Davenport, IA", "South Bend, IN", "Jurupa Valley, CA", "Rialto, CA",
+    "Edison, NJ", "Burbank, CA", "Charleston, WV", "Waterbury, CT", "Kenosha, WI",
+    "Concord, NC", "Greenville, SC", "Asheville, NC", "Franklin, TN", "Johnson City, TN",
+    "Jackson, TN", "Bowling Green, KY", "Huntington, WV", "Portland, ME", "Burlington, VT",
+    "Wilmington, DE", "Cheyenne, WY", "Casper, WY", "Missoula, MT", "Bismarck, ND",
+    "Rapid City, SD", "Idaho Falls, ID", "St. George, UT", "Ogden, UT", "Santa Fe, NM",
+    "Flagstaff, AZ", "Yuma, AZ", "Fayetteville, AR", "Fort Smith, AR", "Shreveport, LA",
+    "Gulfport, MS", "Hattiesburg, MS", "Tuscaloosa, AL", "Dothan, AL", "Pensacola, FL",
+    "Sarasota, FL", "Fort Myers, FL", "Daytona Beach, FL", "Ocala, FL", "Columbus, GA",
+    "Myrtle Beach, SC", "Spartanburg, SC", "Roanoke, VA", "Lynchburg, VA", "Erie, PA",
+    "Scranton, PA", "Lancaster, PA", "Reading, PA", "Albany, NY", "Trenton, NJ",
+]
+
+
+def get_client():
+    credentials, _ = google.auth.default(
+        scopes=["https://www.googleapis.com/auth/spreadsheets"]
+    )
+    return gspread.authorize(credentials)
+
+
+def with_retry(fn, *args, attempts=5, **kwargs):
+    """Retry transient Google Sheets errors with exponential backoff."""
+    for i in range(attempts):
+        try:
+            return fn(*args, **kwargs)
+        except Exception as e:
+            if i == attempts - 1:
+                raise
+            wait = 2 ** i
+            print(f"Sheets error ({e}); retrying in {wait}s...")
+            time.sleep(wait)
+
+
+def load_existing_place_ids(sheet):
+    ws = with_retry(sheet.worksheet, "Leads")
+    rows = with_retry(ws.get_all_values)
+    ids = set()
+    if rows and "place_id" in rows[0]:
+        col = rows[0].index("place_id")
+        for row in rows[1:]:
+            if len(row) > col and row[col]:
+                ids.add(row[col])
+    return ids
+
+
+def get_progress_ws(sheet):
+    try:
+        return with_retry(sheet.worksheet, PROGRESS_TAB)
+    except gspread.exceptions.WorksheetNotFound:
+        ws = sheet.add_worksheet(title=PROGRESS_TAB, rows=10, cols=3)
+        ws.update(range_name="A1:B1", values=[["next_index", "0"]])
+        return ws
+
+
+def read_next_index(ws):
+    val = with_retry(ws.acell, "B1").value
+    try:
+        return int(val)
+    except (TypeError, ValueError):
+        return 0
+
+
+def save_next_index(ws, idx):
+    with_retry(ws.update, range_name="A1:B1", values=[["next_index", str(idx)]])
+
+
+def combo_for_index(idx):
+    """Walk every industry in a city, then move to the next city. Wraps forever."""
+    total = len(INDUSTRIES) * len(CITIES)
+    idx = idx % total
+    industry = INDUSTRIES[idx % len(INDUSTRIES)]
+    city = CITIES[idx // len(INDUSTRIES)]
+    return industry, city
+
+
+def search_businesses(industry, location):
+    """Run one Places text search and page through up to 60 results."""
     url = "https://places.googleapis.com/v1/places:searchText"
     headers = {
         "Content-Type": "application/json",
@@ -22,46 +176,83 @@ def search_businesses(industry, location, max_results=20):
         "X-Goog-FieldMask": (
             "places.displayName,places.formattedAddress,"
             "places.internationalPhoneNumber,places.websiteUri,"
-            "places.rating,places.id"
+            "places.rating,places.id,nextPageToken"
         ),
     }
-    body = {
-        "textQuery": f"{industry} in {search_location}",
-        "maxResultCount": min(max_results, 20),
+    body = {"textQuery": f"{industry} in {location}", "pageSize": 20}
+    results = []
+    for _ in range(MAX_PAGES_PER_SEARCH):
+        resp = requests.post(url, headers=headers, json=body, timeout=30)
+        if resp.status_code in (401, 403):
+            # Bad key / API disabled / billing issue: stop the whole run
+            raise SystemExit(f"Places API auth error {resp.status_code}: {resp.text}")
+        if resp.status_code != 200:
+            print(f"  Places error {resp.status_code} for '{body['textQuery']}': {resp.text[:200]}")
+            break
+        data = resp.json()
+        results.extend(data.get("places", []))
+        token = data.get("nextPageToken")
+        if not token:
+            break
+        body["pageToken"] = token
+        time.sleep(2)  # page tokens need a moment before they're valid
+    return results
+
+
+def to_lead(p, industry):
+    return {
+        "business_name": p.get("displayName", {}).get("text", ""),
+        "address": p.get("formattedAddress", ""),
+        "phone": p.get("internationalPhoneNumber", ""),
+        "website": p.get("websiteUri", ""),
+        "rating": p.get("rating", ""),
+        "place_id": p.get("id", ""),
+        "industry": industry,
     }
-    resp = requests.post(url, headers=headers, json=body)
-    resp.raise_for_status()
-    return resp.json().get("places", [])
+
 
 if __name__ == "__main__":
     if not PLACES_API_KEY:
         raise SystemExit("Set PLACES_API_KEY first.")
+    if not SHEET_ID:
+        raise SystemExit("Set SHEET_ID first.")
 
-    if len(sys.argv) >= 3:
-        industry = sys.argv[1]
-        location = sys.argv[2]
-    else:
-        industry = input("Industry (e.g. 'roofing contractors'): ")
-        location = input("Location (e.g. 'Nashville, TN'): ")
-
-    results = search_businesses(industry, location, max_results=MAX_RESULTS_PER_RUN)
+    sheet = get_client().open_by_key(SHEET_ID)
+    seen = load_existing_place_ids(sheet)
+    print(f"{len(seen)} leads already in the sheet (will be skipped).")
 
     leads = []
-    for p in results:
-        leads.append({
-            "business_name": p.get("displayName", {}).get("text", ""),
-            "address": p.get("formattedAddress", ""),
-            "phone": p.get("internationalPhoneNumber", ""),
-            "website": p.get("websiteUri", ""),
-            "rating": p.get("rating", ""),
-            "place_id": p.get("id", ""),
-            "industry": industry,
-        })
+    manual = len(sys.argv) >= 3 and sys.argv[1].strip() and sys.argv[2].strip()
 
-    print(f"\nFound {len(leads)} businesses:\n")
-    for lead in leads:
-        print(f"- {lead['business_name']} | {lead['address']} | {lead['phone']} | {lead['website']} | rating: {lead['rating']}")
+    if manual:
+        # One-off search from a manual workflow run
+        industry, location = sys.argv[1], sys.argv[2]
+        for p in search_businesses(industry, location):
+            if p.get("id") and p["id"] not in seen:
+                seen.add(p["id"])
+                leads.append(to_lead(p, industry))
+        print(f"{industry} in {location}: {len(leads)} new")
+    else:
+        progress_ws = get_progress_ws(sheet)
+        idx = read_next_index(progress_ws)
+        searches = 0
+        try:
+            while len(leads) < TARGET_NEW_LEADS and searches < MAX_SEARCHES_PER_RUN:
+                industry, location = combo_for_index(idx)
+                new_here = 0
+                for p in search_businesses(industry, location):
+                    pid = p.get("id")
+                    if pid and pid not in seen:
+                        seen.add(pid)
+                        leads.append(to_lead(p, industry))
+                        new_here += 1
+                print(f"[{searches + 1}] {industry} in {location}: {new_here} new (total {len(leads)})")
+                idx += 1
+                searches += 1
+        finally:
+            save_next_index(progress_ws, idx)
+            print(f"Progress saved. Next run starts at search #{idx} of {len(INDUSTRIES) * len(CITIES)}.")
 
     with open("leads_raw.json", "w") as f:
         json.dump(leads, f, indent=2)
-    print(f"\nSaved {len(leads)} leads to leads_raw.json")
+    print(f"\nSaved {len(leads)} new leads to leads_raw.json")
