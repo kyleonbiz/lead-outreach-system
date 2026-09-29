@@ -1,43 +1,73 @@
-name: Find Intent Leads
-
+name: Find Leads
 on:
-  schedule:
-    - cron: '0 13 * * 1-5'  # 8am CDT, weekdays (UTC-5)
-    - cron: '0 14 * * 2-6'  # 8am CDT on Tue-Sat (accounts for UTC day boundary)
   workflow_dispatch:
-
+    inputs:
+      industry:
+        description: 'Optional one-off industry (leave blank for automatic nationwide search)'
+        required: false
+        default: ''
+      location:
+        description: 'Optional one-off location, e.g. "Denver, CO" (leave blank for automatic)'
+        required: false
+        default: ''
+  schedule:
+    # Every 2 hours, 7am-7pm Central (CDT), weekdays
+    - cron: '0 12-22/2 * * 1-5'
+    - cron: '0 0 * * 2-6'
 permissions:
-  id-token: write
   contents: read
-
+  id-token: write
+concurrency:
+  group: find-leads
+  cancel-in-progress: false
 jobs:
-  find_intent_leads:
+  find-leads:
     runs-on: ubuntu-latest
+    timeout-minutes: 90
     steps:
       - uses: actions/checkout@v4
-
-      - name: Authenticate to Google Cloud
-        uses: google-github-actions/auth@v1
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - run: pip install requests gspread google-auth
+      - uses: google-github-actions/auth@v2
         with:
           workload_identity_provider: ${{ secrets.WORKLOAD_IDENTITY_PROVIDER }}
           service_account: ${{ secrets.SERVICE_ACCOUNT_EMAIL }}
-
-      - name: Set up Python
-        uses: actions/setup-python@v4
-        with:
-          python-version: '3.11'
-
-      - name: Install dependencies
+      - name: Discord start notification
+        env:
+          DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
         run: |
-          pip install --upgrade pip
-          pip install google-auth google-auth-oauthlib google-auth-httplib2 google-api-python-client anthropic requests
-
-      - name: Run Web Intent Lead Finder
+          curl -s -H "Content-Type: application/json" -X POST -d '{"content": "🔍 Nationwide lead pull starting"}' "$DISCORD_WEBHOOK_URL"
+      - name: Find leads
+        env:
+          PLACES_API_KEY: ${{ secrets.PLACES_API_KEY }}
+          SHEET_ID: ${{ secrets.SHEET_ID }}
+          MAX_RESULTS_PER_RUN: '100'
+          MAX_SEARCHES_PER_RUN: '60'
+        run: python find_leads.py "${{ inputs.industry }}" "${{ inputs.location }}"
+      - run: python enrich_leads.py
+      - name: Write to sheets
         env:
           SHEET_ID: ${{ secrets.SHEET_ID }}
-          WORKLOAD_IDENTITY_PROVIDER: ${{ secrets.WORKLOAD_IDENTITY_PROVIDER }}
-          SERVICE_ACCOUNT_EMAIL: ${{ secrets.SERVICE_ACCOUNT_EMAIL }}
-          GOOGLE_SEARCH_API_KEY: ${{ secrets.GOOGLE_SEARCH_API_KEY }}
+        run: |
+          set -o pipefail
+          python write_to_sheets.py | tee write_output.txt
+      - uses: actions/upload-artifact@v4
+        with:
+          name: leads-enriched
+          path: leads_enriched.json
+      - name: Discord completion notification
+        if: always()
+        env:
           DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: python find_intent_leads.py
+          JOB_STATUS: ${{ job.status }}
+        run: |
+          ADDED=$(grep -oE 'Added [0-9]+' write_output.txt 2>/dev/null | grep -oE '[0-9]+' || echo "0")
+          WITH_EMAIL=$(python -c "import json;print(sum(1 for l in json.load(open('leads_enriched.json')) if l.get('email')))" 2>/dev/null || echo "0")
+          if [ "$JOB_STATUS" = "success" ]; then
+            MSG="✅ Lead pull complete: ${ADDED} new leads added (${WITH_EMAIL} with email)"
+          else
+            MSG="❌ Lead pull failed (status: ${JOB_STATUS}). Check GitHub Actions logs."
+          fi
+          curl -s -H "Content-Type: application/json" -X POST -d "{\"content\": \"${MSG}\"}" "$DISCORD_WEBHOOK_URL"
