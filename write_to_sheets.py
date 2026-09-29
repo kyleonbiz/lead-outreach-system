@@ -38,17 +38,21 @@ if __name__ == "__main__":
 
     existing_rows = worksheet.get_all_values()
     existing_place_ids = set()
+    existing_emails = set()
     if existing_rows:
-        header = existing_rows[0]
-        if "place_id" in header:
-            place_id_col = header.index("place_id")
-            for row in existing_rows[1:]:
-                if len(row) > place_id_col and row[place_id_col]:
-                    existing_place_ids.add(row[place_id_col])
+        header = [h.strip().lower() for h in existing_rows[0]]
+        place_id_col = header.index("place_id") if "place_id" in header else None
+        email_col = header.index("email") if "email" in header else 9
+        for row in existing_rows[1:]:
+            if place_id_col is not None and len(row) > place_id_col and row[place_id_col]:
+                existing_place_ids.add(row[place_id_col])
+            if len(row) > email_col and row[email_col].strip():
+                existing_emails.add(row[email_col].strip().lower())
 
     today = datetime.date.today().isoformat()
     new_rows = []
     skipped = 0
+    skipped_email = 0
 
     for lead in leads:
         place_id = lead.get("place_id", "")
@@ -56,8 +60,14 @@ if __name__ == "__main__":
             skipped += 1
             continue
 
+        email = (lead.get("email") or "").strip().lower()
+        if email and email in existing_emails:
+            # Same company (e.g. another location) already in the sheet with this email
+            skipped_email += 1
+            continue
+
         city, state = parse_city_state(lead.get("address", ""))
-        has_email = bool(lead.get("email"))
+        has_email = bool(email)
 
         row = [
             str(uuid.uuid4())[:8],
@@ -69,7 +79,7 @@ if __name__ == "__main__":
             lead.get("phone", ""),
             lead.get("website", ""),
             lead.get("rating", ""),
-            lead.get("email", ""),
+            email,
             "",
             "Google Places",
             today,
@@ -83,8 +93,11 @@ if __name__ == "__main__":
         new_rows.append(row)
         if place_id:
             existing_place_ids.add(place_id)
+        if email:
+            existing_emails.add(email)
 
     if new_rows:
         worksheet.append_rows(new_rows, value_input_option="USER_ENTERED")
 
-    print(f"Added {len(new_rows)} new leads. Skipped {skipped} duplicates already in the sheet.")
+    print(f"Added {len(new_rows)} new leads. Skipped {skipped} duplicates already in the sheet "
+          f"and {skipped_email} with an email already in the sheet.")
