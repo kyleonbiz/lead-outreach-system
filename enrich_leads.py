@@ -1,12 +1,13 @@
-import os
 import json
 import time
 import re
 import requests
 from urllib.parse import urljoin
+from concurrent.futures import ThreadPoolExecutor
 
 HEADERS = {"User-Agent": "Mozilla/5.0 (compatible; LeadEnrichmentBot/1.0)"}
-TIMEOUT = 10
+TIMEOUT = 8
+WORKERS = 12  # check 12 different websites at the same time
 
 EMAIL_RE = re.compile(r'[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}')
 JUNK_TLDS = {"png", "jpg", "jpeg", "gif", "svg", "webp", "ico", "bmp", "css", "js"}
@@ -83,7 +84,7 @@ def enrich_lead(lead):
 
     contact_url = find_contact_page(website, html)
     if contact_url and contact_url != website:
-        time.sleep(1)
+        time.sleep(1)  # be polite to the same site between page loads
         contact_html = fetch(contact_url)
         if contact_html:
             emails |= extract_emails(contact_html)
@@ -96,19 +97,29 @@ def enrich_lead(lead):
     return lead
 
 
+def safe_enrich(lead):
+    try:
+        return enrich_lead(lead)
+    except Exception as e:
+        lead["email"] = ""
+        lead["all_emails_found"] = ""
+        lead["socials"] = {}
+        lead["enrichment_status"] = f"error: {type(e).__name__}"
+        return lead
+
+
 if __name__ == "__main__":
     with open("leads_raw.json") as f:
         leads = json.load(f)
 
-    enriched = []
-    for i, lead in enumerate(leads, 1):
-        print(f"[{i}/{len(leads)}] Enriching: {lead.get('business_name')}")
-        enriched.append(enrich_lead(lead))
-        time.sleep(1)  # be polite between businesses
+    print(f"Enriching {len(leads)} businesses ({WORKERS} at a time)...")
+    start = time.time()
+    with ThreadPoolExecutor(max_workers=WORKERS) as pool:
+        enriched = list(pool.map(safe_enrich, leads))
 
     with open("leads_enriched.json", "w") as f:
         json.dump(enriched, f, indent=2)
 
     found_count = sum(1 for l in enriched if l.get("email"))
-    print(f"\nDone. Found emails for {found_count}/{len(enriched)} businesses.")
+    print(f"\nDone in {int(time.time() - start)}s. Found emails for {found_count}/{len(enriched)} businesses.")
     print("Saved to leads_enriched.json")
