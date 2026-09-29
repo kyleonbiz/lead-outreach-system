@@ -1,8 +1,10 @@
 import os
 import sys
 import json
+import re
 import time
 import requests
+from urllib.parse import urlparse
 import gspread
 import google.auth
 
@@ -17,6 +19,18 @@ MAX_SEARCHES_PER_RUN = int(os.environ.get("MAX_SEARCHES_PER_RUN", "60"))
 MAX_PAGES_PER_SEARCH = 3
 
 PROGRESS_TAB = "Search_Progress"
+
+# Chain / franchise filters
+CHAIN_REVIEW_LIMIT = int(os.environ.get("CHAIN_REVIEW_LIMIT", "1500"))  # more reviews than this = likely chain
+CHAIN_NAME_LIMIT = int(os.environ.get("CHAIN_NAME_LIMIT", "3"))  # same name this many times = chain
+
+# "Websites" that aren't the business's own site, so they can't be used to spot duplicates
+SHARED_HOSTS = {
+    "facebook.com", "m.facebook.com", "instagram.com", "linkedin.com", "twitter.com", "x.com",
+    "google.com", "sites.google.com", "business.site", "yelp.com", "linktr.ee", "square.site",
+    "wixsite.com", "godaddysites.com", "weebly.com", "wordpress.com", "squarespace.com",
+    "nextdoor.com", "angi.com", "homeadvisor.com", "thumbtack.com", "bbb.org", "g.page",
+}
 
 INDUSTRIES = [
     "plumbers", "electricians", "HVAC contractors", "roofing contractors",
@@ -117,6 +131,8 @@ def with_retry(fn, *args, attempts=5, **kwargs):
     for i in range(attempts):
         try:
             return fn(*args, **kwargs)
+        except gspread.exceptions.WorksheetNotFound:
+            raise
         except Exception as e:
             if i == attempts - 1:
                 raise
@@ -125,16 +141,94 @@ def with_retry(fn, *args, attempts=5, **kwargs):
             time.sleep(wait)
 
 
-def load_existing_place_ids(sheet):
+def normalize_name(name):
+    """'Mr. Rooter Plumbing - Austin, LLC' -> 'mr rooter plumbing'"""
+    n = (name or "").lower()
+    n = re.split(r"\s[-|–]\s", n)[0]
+    n = re.sub(r"[^a-z0-9 ]", " ", n)
+    n = re.sub(r"\b(llc|inc|co|corp|company|ltd|pllc|pc|pa)\b", " ", n)
+    return " ".join(n.split())
+
+
+def site_key(url):
+    """Business's own website domain, or '' if it's a shared host like facebook.com."""
+    if not url:
+        return ""
+    host = urlparse(url if "//" in url else "http://" + url).netloc.lower().split(":")[0]
+    if host.startswith("www."):
+        host = host[4:]
+    if host in SHARED_HOSTS or any(host.endswith("." + h) for h in SHARED_HOSTS):
+        return ""
+    return host
+
+
+def load_existing(sheet):
+    """Place IDs, website domains and name counts already in the Leads tab."""
     ws = with_retry(sheet.worksheet, "Leads")
     rows = with_retry(ws.get_all_values)
-    ids = set()
-    if rows and "place_id" in rows[0]:
-        col = rows[0].index("place_id")
-        for row in rows[1:]:
-            if len(row) > col and row[col]:
-                ids.add(row[col])
-    return ids
+    place_ids, domains, name_counts = set(), set(), {}
+    if not rows:
+        return place_ids, domains, name_counts
+    header = [h.strip().lower() for h in rows[0]]
+
+    def col(*names, default=None):
+        for n in names:
+            if n in header:
+                return header.index(n)
+        return default
+
+    pid_col = col("place_id")
+    web_col = col("website", default=7)
+    name_col = col("business_name", "business name", "name", default=1)
+    for row in rows[1:]:
+        if pid_col is not None and len(row) > pid_col and row[pid_col]:
+            place_ids.add(row[pid_col])
+        if len(row) > web_col:
+            d = site_key(row[web_col])
+            if d:
+                domains.add(d)
+        if len(row) > name_col:
+            n = normalize_name(row[name_col])
+            if n:
+                name_counts[n] = name_counts.get(n, 0) + 1
+    return place_ids, domains, name_counts
+
+
+class Filter:
+    """Decides whether a Places result is a new, independent business worth keeping."""
+
+    def __init__(self, place_ids, domains, name_counts):
+        self.place_ids = place_ids
+        self.domains = domains
+        self.name_counts = name_counts
+        self.skipped = {"already_have": 0, "same_website": 0, "chain": 0, "closed": 0}
+
+    def keep(self, p):
+        pid = p.get("id")
+        if not pid or pid in self.place_ids:
+            self.skipped["already_have"] += 1
+            return False
+        self.place_ids.add(pid)
+
+        if p.get("businessStatus") and p["businessStatus"] != "OPERATIONAL":
+            self.skipped["closed"] += 1
+            return False
+
+        name = normalize_name(p.get("displayName", {}).get("text", ""))
+        if name:
+            self.name_counts[name] = self.name_counts.get(name, 0) + 1
+        if (p.get("userRatingCount") or 0) > CHAIN_REVIEW_LIMIT or \
+                (name and self.name_counts[name] > CHAIN_NAME_LIMIT):
+            self.skipped["chain"] += 1
+            return False
+
+        domain = site_key(p.get("websiteUri", ""))
+        if domain:
+            if domain in self.domains:
+                self.skipped["same_website"] += 1
+                return False
+            self.domains.add(domain)
+        return True
 
 
 def get_progress_ws(sheet):
@@ -176,7 +270,8 @@ def search_businesses(industry, location):
         "X-Goog-FieldMask": (
             "places.displayName,places.formattedAddress,"
             "places.internationalPhoneNumber,places.websiteUri,"
-            "places.rating,places.id,nextPageToken"
+            "places.rating,places.id,places.userRatingCount,"
+            "places.businessStatus,nextPageToken"
         ),
     }
     body = {"textQuery": f"{industry} in {location}", "pageSize": 20}
@@ -218,8 +313,9 @@ if __name__ == "__main__":
         raise SystemExit("Set SHEET_ID first.")
 
     sheet = get_client().open_by_key(SHEET_ID)
-    seen = load_existing_place_ids(sheet)
-    print(f"{len(seen)} leads already in the sheet (will be skipped).")
+    place_ids, domains, name_counts = load_existing(sheet)
+    filt = Filter(place_ids, domains, name_counts)
+    print(f"{len(place_ids)} leads already in the sheet (will be skipped).")
 
     leads = []
     manual = len(sys.argv) >= 3 and sys.argv[1].strip() and sys.argv[2].strip()
@@ -228,8 +324,7 @@ if __name__ == "__main__":
         # One-off search from a manual workflow run
         industry, location = sys.argv[1], sys.argv[2]
         for p in search_businesses(industry, location):
-            if p.get("id") and p["id"] not in seen:
-                seen.add(p["id"])
+            if filt.keep(p):
                 leads.append(to_lead(p, industry))
         print(f"{industry} in {location}: {len(leads)} new")
     else:
@@ -241,9 +336,7 @@ if __name__ == "__main__":
                 industry, location = combo_for_index(idx)
                 new_here = 0
                 for p in search_businesses(industry, location):
-                    pid = p.get("id")
-                    if pid and pid not in seen:
-                        seen.add(pid)
+                    if filt.keep(p):
                         leads.append(to_lead(p, industry))
                         new_here += 1
                 print(f"[{searches + 1}] {industry} in {location}: {new_here} new (total {len(leads)})")
@@ -252,6 +345,8 @@ if __name__ == "__main__":
         finally:
             save_next_index(progress_ws, idx)
             print(f"Progress saved. Next run starts at search #{idx} of {len(INDUSTRIES) * len(CITIES)}.")
+
+    print(f"Skipped: {filt.skipped}")
 
     with open("leads_raw.json", "w") as f:
         json.dump(leads, f, indent=2)
