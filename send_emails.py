@@ -20,23 +20,44 @@ DAILY_CAP = 100
 PER_RUN_CAP = 10
 
 LOGO_PATH = "logo.png"
+TEMPLATE_VERSION = "v2_intro"
 
-SUBJECT_TEMPLATE = "Quick question about {business_name}'s back-office workload"
+SUBJECT_TEMPLATE = "Quick intro"
+
+NAVY = "#1B2A5A"
+
+SIGNATURE_HTML = (
+    "<table cellpadding=\"0\" cellspacing=\"0\" border=\"0\" style=\"border-collapse:collapse;margin-top:8px;\">"
+    "<tr>"
+    "<td style=\"vertical-align:middle;padding:0 18px 0 0;\">{logo_html}</td>"
+    "<td style=\"vertical-align:top;font-family:'Arial Narrow',Arial,Helvetica,sans-serif;"
+    "font-size:15px;line-height:1.5;color:" + NAVY + ";font-weight:bold;\">"
+    "Kyle Fulwood Jr<br>"
+    "Founder<br><br>"
+    "Phone: (850) 653-7797<br>"
+    "Email: <a href=\"mailto:admin@aurumventura.net\" style=\"color:" + NAVY + ";\">admin@aurumventura.net</a><br>"
+    "Website: <a href=\"https://aurumventura.net\" style=\"color:" + NAVY + ";\">aurumventura.net</a>"
+    "</td>"
+    "</tr>"
+    "</table>"
+)
 
 BODY_TEMPLATE = (
-    "Hi {business_name} team,<br><br>"
-    "I'll keep this short — running a business like {business_name} usually means the paperwork piles up around the edges: invoices to track, licenses and renewals to stay on top of, vendor files, data entry, reporting. It's necessary, but it's rarely why anyone got into the business.<br><br>"
-    "That's exactly the work Aurum Ventura Enterprise takes off your plate. We're a Tennessee-based administrative back-office for small and growing businesses — handling documents, invoices, license tracking, vendor administration, and reporting within a clearly defined scope, so you always know what's covered and what it costs. Think of it as outsourced admin support without the overhead of a new hire.<br><br>"
-    "If any of that sounds like a headache you'd rather hand off, I'd love to send over more details or set up a quick call — no pressure either way.<br><br>"
+    "<div style=\"font-family:Arial,Helvetica,sans-serif;font-size:14px;line-height:1.5;color:#222222;\">"
+    "Hi there,<br><br>"
+    "I'm Kyle with Aurum Ventura.<br><br>"
+    "We provide human-led administrative support at a fraction of the cost of hiring in-house, "
+    "handling the back-office work so you can stay focused on your customers.<br><br>"
+    "No contracts. Just administrative support when you need it.<br><br>"
+    "I'm simply reaching out to make you aware we exist.<br><br>"
+    "<a href=\"https://aurumventura.net\">aurumventura.net</a><br><br>"
     "Best,<br><br>"
-    "{logo_html}"
-    "Kyle Fulwood Jr<br>"
-    "Chief Executive Officer<br>"
-    "Aurum Ventura Enterprise LLC — Business Administration Services<br>"
-    "850-653-7797 | admin@aurumventura.net | aurumventura.net<br>"
-    "\"Your Business. Our Back Office.\"<br><br>"
-    "Nashville, TN<br>"
+    + SIGNATURE_HTML +
+    "<br><span style=\"font-size:11px;color:#888888;\">"
+    "Aurum Ventura Enterprise LLC, Nashville, TN<br>"
     "Don't want to hear from us again? Just reply \"UNSUBSCRIBE\" and we'll take you off the list."
+    "</span>"
+    "</div>"
 )
 
 def load_logo_base64():
@@ -132,7 +153,7 @@ if __name__ == "__main__":
     if logo_b64:
         logo_html = (
             "<img src=\"cid:aurum_logo\" alt=\"Aurum Ventura Enterprise LLC\" "
-            "width=\"160\" style=\"display:block;margin:8px 0;\"><br>"
+            "width=\"170\" style=\"display:block;border:0;\">"
         )
     else:
         logo_html = ""
@@ -180,8 +201,8 @@ if __name__ == "__main__":
         if outreach_status != "new" or not email:
             continue
 
-        subject = SUBJECT_TEMPLATE.format(business_name=business_name)
-        body = BODY_TEMPLATE.format(business_name=business_name, logo_html=logo_html)
+        subject = SUBJECT_TEMPLATE
+        body = BODY_TEMPLATE.format(logo_html=logo_html)
         recipient = TEST_EMAIL if TEST_MODE else email
 
         if TEST_MODE:
@@ -207,7 +228,7 @@ if __name__ == "__main__":
             recipient,
             today,
             subject,
-            "v1_backoffice_pitch",
+            TEMPLATE_VERSION,
             send_status,
             "", "", "",
             error_message,
