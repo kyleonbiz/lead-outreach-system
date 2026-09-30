@@ -2,10 +2,12 @@ import os
 import time
 import uuid
 import base64
+import re
 import math
 import datetime
 import requests
 import gspread
+from gspread.utils import rowcol_to_a1
 import google.auth
 from google.auth.exceptions import TransportError
 
@@ -111,6 +113,73 @@ def send_email(token, to_email, subject, html_body, logo_b64=None):
     payload = {"message": message, "saveToSentItems": "true"}
     return requests.post(url, headers=headers, json=payload)
 
+# ---------- Email checks (protect sender reputation) ----------
+EMAIL_RE = re.compile(r"^[a-z0-9._%+-]+@[a-z0-9-]+(\.[a-z0-9-]+)*\.[a-z]{2,}$")
+BAD_PREFIXES = {
+    "noreply", "no-reply", "donotreply", "do-not-reply", "mailer-daemon", "postmaster",
+    "abuse", "webmaster", "hostmaster", "privacy", "unsubscribe", "careers", "jobs",
+    "example", "test", "user", "name", "email", "your", "yourname", "youremail",
+}
+JUNK_TLDS = {"png", "jpg", "jpeg", "gif", "svg", "webp", "css", "js", "pdf"}
+_domain_cache = {}
+
+
+DNS_ENDPOINTS = [
+    ("https://dns.google/resolve", {}),
+    ("https://cloudflare-dns.com/dns-query", {"accept": "application/dns-json"}),
+]
+
+
+def lookup_mx(domain):
+    """Ask a public DNS-over-HTTPS service for the domain's mail servers. None if unreachable."""
+    for url, headers in DNS_ENDPOINTS:
+        try:
+            r = requests.get(url, params={"name": domain, "type": "MX"}, headers=headers, timeout=10)
+            if r.status_code == 200:
+                return r.json()
+        except Exception:
+            continue
+    return None
+
+
+def domain_accepts_mail(domain):
+    """True/False if the domain has working mail servers (MX records), None if we couldn't check."""
+    if domain in _domain_cache:
+        return _domain_cache[domain]
+    data = lookup_mx(domain)
+    if data is None:
+        return None  # DNS lookup failed: don't judge, try again next run
+    status = data.get("Status")
+    if status == 3:  # domain doesn't exist
+        result = False
+    elif status != 0:
+        return None
+    else:
+        mx = [a.get("data", "") for a in data.get("Answer", []) if a.get("type") == 15]
+        # A "null MX" ("0 .") means the domain explicitly refuses email
+        result = any(m.split()[-1].strip(".") for m in mx if m.split())
+    _domain_cache[domain] = result
+    return result
+
+
+def check_email(email):
+    """Returns (ok, reason). ok=None means 'unknown, skip for now'."""
+    email = (email or "").strip().lower()
+    if not EMAIL_RE.match(email):
+        return False, "bad_format"
+    local, domain = email.rsplit("@", 1)
+    if local in BAD_PREFIXES:
+        return False, "role_address"
+    if domain.split(".")[-1] in JUNK_TLDS:
+        return False, "bad_format"
+    accepts = domain_accepts_mail(domain)
+    if accepts is None:
+        return None, "dns_check_failed"
+    if not accepts:
+        return False, "domain_cannot_receive_mail"
+    return True, ""
+
+
 def get_sheets_client():
     credentials, _ = google.auth.default(
         scopes=["https://www.googleapis.com/auth/spreadsheets"]
@@ -202,6 +271,8 @@ if __name__ == "__main__":
     token = get_graph_token()
     sent_count = 0
     log_rows = []
+    status_updates = []  # (row_num, new_status) written in one batch at the end
+    skipped_invalid = 0
 
     for row_num, row in enumerate(rows[1:], start=2):
         if sent_count >= run_cap:
@@ -219,6 +290,15 @@ if __name__ == "__main__":
         state = get("state").strip()
 
         if outreach_status != "new" or not email:
+            continue
+
+        ok, reason = check_email(email)
+        if ok is None:
+            continue  # couldn't check right now; leave it as "new" for a later run
+        if not ok:
+            status_updates.append((row_num, "invalid_email"))
+            skipped_invalid += 1
+            print(f"Skipping {email}: {reason}")
             continue
 
         subject = SUBJECT_TEMPLATE
@@ -240,6 +320,9 @@ if __name__ == "__main__":
         else:
             send_status = "failed"
             error_message = resp.text[:200]
+            if not TEST_MODE:
+                # Don't keep retrying the same address every run
+                status_updates.append((row_num, "send_failed"))
 
         log_rows.append([
             str(uuid.uuid4())[:8],
@@ -262,4 +345,12 @@ if __name__ == "__main__":
     if log_rows:
         log_ws.append_rows(log_rows, value_input_option="USER_ENTERED")
 
-    print(f"Sent {sent_count} email(s) this run. Logged {len(log_rows)} attempt(s).")
+    if status_updates and not TEST_MODE:
+        status_col = col["outreach_status"] + 1
+        leads_ws.batch_update([
+            {"range": rowcol_to_a1(r, status_col), "values": [[st]]}
+            for r, st in status_updates
+        ])
+
+    print(f"Sent {sent_count} email(s) this run. Logged {len(log_rows)} attempt(s). "
+          f"Skipped {skipped_invalid} invalid address(es).")
