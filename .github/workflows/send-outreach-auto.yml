@@ -12,7 +12,6 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-        # Refresh schedule
       - uses: actions/setup-python@v5
         with:
           python-version: '3.11'
@@ -21,11 +20,6 @@ jobs:
         with:
           workload_identity_provider: ${{ secrets.WORKLOAD_IDENTITY_PROVIDER }}
           service_account: ${{ secrets.SERVICE_ACCOUNT_EMAIL }}
-      - name: Discord start notification
-        env:
-          DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
-        run: |
-          curl -s -H "Content-Type: application/json" -X POST -d '{"content": "📧 Sending 10 emails"}' "$DISCORD_WEBHOOK_URL"
       - name: Send emails
         env:
           SHEET_ID: ${{ secrets.SHEET_ID }}
@@ -34,12 +28,20 @@ jobs:
           MS_CLIENT_SECRET: ${{ secrets.MS_CLIENT_SECRET }}
           SENDER_EMAIL: ${{ secrets.SENDER_EMAIL }}
           TEST_MODE: 'false'
-          PER_RUN_CAP: '10'
-          DAILY_CAP: '100'
-        run: python send_emails.py
-      - name: Discord completion notification
+        run: |
+          set -o pipefail
+          python send_emails.py | tee send_output.txt
+      - name: Discord notification
         if: always()
         env:
           DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
+          JOB_STATUS: ${{ job.status }}
         run: |
-          curl -s -H "Content-Type: application/json" -X POST -d '{"content": "✅ Batch sent"}' "$DISCORD_WEBHOOK_URL"
+          SENT=$(grep -oE 'Sent [0-9]+' send_output.txt 2>/dev/null | grep -oE '[0-9]+' || echo "0")
+          RAMP=$(grep -oE 'Ramp day [0-9]+: today.s cap is [0-9]+' send_output.txt 2>/dev/null | sed -E 's/Ramp day ([0-9]+): today.s cap is ([0-9]+)/ramp day \1, cap \2\/day/' || echo "")
+          if [ "$JOB_STATUS" = "success" ]; then
+            MSG="✅ Sent ${SENT} emails (${RAMP})"
+          else
+            MSG="❌ Email send failed (status: ${JOB_STATUS}). Check GitHub Actions logs."
+          fi
+          curl -s -H "Content-Type: application/json" -X POST -d "{\"content\": \"${MSG}\"}" "$DISCORD_WEBHOOK_URL"
