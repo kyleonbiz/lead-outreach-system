@@ -1,0 +1,32 @@
+name: Create FB Posts
+
+on:
+  schedule:
+    # Mondays 8:00am Central (CDT = UTC-5). During CST (winter) this runs at 7:00am Central.
+    - cron: '0 13 * * 1'
+  workflow_dispatch:
+
+concurrency:
+  group: create-fb-posts
+  cancel-in-progress: false
+
+jobs:
+  create-posts:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Check out repo
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Generate and send Facebook posts
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          DISCORD_FB_POSTS_WEBHOOK: ${{ secrets.DISCORD_FB_POSTS_WEBHOOK }}
+          CLAUDE_MODEL: 'claude-sonnet-4-5'
+        run: python create_fb_posts.py
