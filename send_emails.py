@@ -150,6 +150,9 @@ BAD_PREFIXES = {
     "abuse", "webmaster", "hostmaster", "privacy", "unsubscribe", "careers", "jobs",
     "example", "test", "user", "name", "email", "your", "yourname", "youremail",
 }
+BLOCKED_DOMAINS = {
+    "aol.com", "aolmail.com", "aol.co.uk", "verizon.net", "mail.com",
+}
 JUNK_TLDS = {"png", "jpg", "jpeg", "gif", "svg", "webp", "css", "js", "pdf"}
 _domain_cache = {}
 
@@ -196,6 +199,8 @@ def check_email(email):
     local, domain = email.rsplit("@", 1)
     if local in BAD_PREFIXES:
         return False, "role_address"
+    if domain in BLOCKED_DOMAINS:
+        return False, "blocked_domain"
     if domain.split(".")[-1] in JUNK_TLDS:
         return False, "bad_format"
     accepts = domain_accepts_mail(domain)
