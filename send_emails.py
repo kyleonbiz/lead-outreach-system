@@ -10,6 +10,7 @@ import gspread
 from gspread.utils import rowcol_to_a1
 import google.auth
 from google.auth.exceptions import TransportError
+from collections import defaultdict
 
 TENANT_ID = os.environ.get("MS_TENANT_ID")
 CLIENT_ID = os.environ.get("MS_CLIENT_ID")
@@ -34,6 +35,15 @@ TEMPLATE_VERSION = "v2_intro"
 SUBJECT_TEMPLATE = "Quick intro"
 
 NAVY = "#1B2A5A"
+
+# ==== GUARDRAILS ====
+MAX_FAILURES_PER_RUN = 5  # Stop if >5 consecutive failures
+MAX_RETRYABLE_FAILURES = 3  # Retry soft fails max 3 times before marking as failed
+RETRY_BACKOFF_MULTIPLIER = 2  # Exponential backoff for retries
+MAX_BOUNCE_RATE_PERCENT = 5  # Alarm if >5% of sends are hard bounces
+MAX_EMAILS_PER_DOMAIN = 10  # Don't send >10 emails to same domain per run
+MAX_CONSECUTIVE_RETRIES = 2  # Only retry failures once before moving on
+MICROSECOND_GRAPH_RATE_LIMIT_WAIT = 65  # If 429 from MS Graph, wait this long
 
 SIGNATURE_HTML = (
     "<table cellpadding=\"0\" cellspacing=\"0\" border=\"0\" style=\"border-collapse:collapse;margin-top:8px;\">"
@@ -88,7 +98,13 @@ def get_graph_token():
     resp.raise_for_status()
     return resp.json()["access_token"]
 
-def send_email(token, to_email, subject, html_body, logo_b64=None):
+def send_email(token, to_email, subject, html_body, logo_b64=None, retry_count=0):
+    """Send email with exponential backoff on rate limits.
+
+    Returns (status_code, error_message, is_retryable).
+    - status_code 202: success
+    - is_retryable True: indicates soft failure (rate limit, temp unavailable)
+    """
     url = f"https://graph.microsoft.com/v1.0/users/{SENDER_EMAIL}/sendMail"
     headers = {
         "Authorization": f"Bearer {token}",
@@ -111,7 +127,21 @@ def send_email(token, to_email, subject, html_body, logo_b64=None):
             }
         ]
     payload = {"message": message, "saveToSentItems": "true"}
-    return requests.post(url, headers=headers, json=payload)
+    resp = requests.post(url, headers=headers, json=payload)
+
+    # Classify error as retryable or permanent
+    is_retryable = resp.status_code in [429, 503, 504, 500]  # Rate limit, unavailable, gateway timeout
+    error_msg = resp.text[:200] if resp.status_code != 202 else ""
+
+    # Handle rate limiting with exponential backoff
+    if resp.status_code == 429:
+        retry_after = int(resp.headers.get("Retry-After", MICROSECOND_GRAPH_RATE_LIMIT_WAIT))
+        if retry_count < MAX_CONSECUTIVE_RETRIES:
+            print(f"⚠️  Rate limited (429). Waiting {retry_after}s before retry...")
+            time.sleep(retry_after)
+            return send_email(token, to_email, subject, html_body, logo_b64, retry_count + 1)
+
+    return resp.status_code, error_msg, is_retryable
 
 # ---------- Email checks (protect sender reputation) ----------
 EMAIL_RE = re.compile(r"^[a-z0-9._%+-]+@[a-z0-9-]+(\.[a-z0-9-]+)*\.[a-z]{2,}$")
@@ -123,12 +153,10 @@ BAD_PREFIXES = {
 JUNK_TLDS = {"png", "jpg", "jpeg", "gif", "svg", "webp", "css", "js", "pdf"}
 _domain_cache = {}
 
-
 DNS_ENDPOINTS = [
     ("https://dns.google/resolve", {}),
     ("https://cloudflare-dns.com/dns-query", {"accept": "application/dns-json"}),
 ]
-
 
 def lookup_mx(domain):
     """Ask a public DNS-over-HTTPS service for the domain's mail servers. None if unreachable."""
@@ -140,7 +168,6 @@ def lookup_mx(domain):
         except Exception:
             continue
     return None
-
 
 def domain_accepts_mail(domain):
     """True/False if the domain has working mail servers (MX records), None if we couldn't check."""
@@ -161,7 +188,6 @@ def domain_accepts_mail(domain):
     _domain_cache[domain] = result
     return result
 
-
 def check_email(email):
     """Returns (ok, reason). ok=None means 'unknown, skip for now'."""
     email = (email or "").strip().lower()
@@ -179,7 +205,6 @@ def check_email(email):
         return False, "domain_cannot_receive_mail"
     return True, ""
 
-
 def get_sheets_client():
     credentials, _ = google.auth.default(
         scopes=["https://www.googleapis.com/auth/spreadsheets"]
@@ -191,16 +216,24 @@ def sending_stats(log_ws, today):
     rows = log_ws.get_all_values()
     sent_today = 0
     prior_days = set()
+    bounce_stats = {"hard": 0, "soft": 0, "sent": 0}
+
     for row in rows[1:]:
         date_sent = row[4] if len(row) > 4 else ""
         status = row[7] if len(row) > 7 else ""
-        if status != "sent":
-            continue
-        if date_sent == today:
-            sent_today += 1
-        elif RAMP_START_DATE <= date_sent < today:
-            prior_days.add(date_sent)
-    return sent_today, len(prior_days)
+
+        if status == "sent":
+            bounce_stats["sent"] += 1
+            if date_sent == today:
+                sent_today += 1
+            elif RAMP_START_DATE <= date_sent < today:
+                prior_days.add(date_sent)
+        elif status in ["hard_bounce", "invalid_email"]:
+            bounce_stats["hard"] += 1
+        elif status == "soft_bounce":
+            bounce_stats["soft"] += 1
+
+    return sent_today, len(prior_days), bounce_stats
 
 def todays_caps(prior_days):
     daily_cap = min(RAMP_MAX_CAP, RAMP_START_CAP + RAMP_STEP * prior_days)
@@ -221,6 +254,33 @@ def get_sheets_with_retry(max_retries=3):
                 time.sleep(wait_time)
             else:
                 raise SystemExit(f"Failed to connect to Google Sheets after {max_retries} attempts: {e}")
+
+def verify_sender_auth(token):
+    """Test that sender can actually send emails before bulk send."""
+    test_subject = "[AUTH TEST] Aurum Ventura - Ignore this message"
+    test_body = "<p>This is an authentication test. You can safely delete this email.</p>"
+
+    status, error, _ = send_email(token, SENDER_EMAIL, test_subject, test_body)
+    if status == 202:
+        print("✅ Authentication verified: sender can send emails")
+        return True
+    else:
+        print(f"❌ Authentication test failed (status {status}): {error}")
+        return False
+
+def check_bounce_rate(bounce_stats):
+    """Check if bounce rate exceeds safety threshold."""
+    sent = bounce_stats.get("sent", 0)
+    hard_bounces = bounce_stats.get("hard", 0)
+
+    if sent == 0:
+        return True, "No sends yet"
+
+    bounce_rate = (hard_bounces / sent) * 100
+    if bounce_rate > MAX_BOUNCE_RATE_PERCENT:
+        return False, f"Hard bounce rate {bounce_rate:.1f}% exceeds {MAX_BOUNCE_RATE_PERCENT}% limit"
+
+    return True, f"Bounce rate OK ({bounce_rate:.1f}%)"
 
 if __name__ == "__main__":
     required = {
@@ -252,10 +312,22 @@ if __name__ == "__main__":
 
     today = datetime.date.today().isoformat()
 
+    # GUARDRAIL: Verify auth before mass send
+    token = get_graph_token()
+    if not verify_sender_auth(token):
+        raise SystemExit("Cannot proceed: sender authentication failed.")
+
     if TEST_MODE:
         run_cap = 1
     else:
-        already_sent_today, prior_days = sending_stats(log_ws, today)
+        already_sent_today, prior_days, bounce_stats = sending_stats(log_ws, today)
+
+        # GUARDRAIL: Check bounce rate
+        bounce_ok, bounce_msg = check_bounce_rate(bounce_stats)
+        print(f"📊 {bounce_msg}")
+        if not bounce_ok:
+            raise SystemExit(f"STOPPING: {bounce_msg}. Review bounces in Outreach_Log before resuming.")
+
         daily_cap, per_run_cap = todays_caps(prior_days)
         remaining_daily = max(0, daily_cap - already_sent_today)
         run_cap = min(per_run_cap, remaining_daily)
@@ -268,14 +340,20 @@ if __name__ == "__main__":
     header = rows[0]
     col = {name: i for i, name in enumerate(header)}
 
-    token = get_graph_token()
     sent_count = 0
     log_rows = []
-    status_updates = []  # (row_num, new_status) written in one batch at the end
+    status_updates = []
     skipped_invalid = 0
+    consecutive_failures = 0
+    domain_send_count = defaultdict(int)  # Track sends per domain
 
     for row_num, row in enumerate(rows[1:], start=2):
         if sent_count >= run_cap:
+            break
+
+        # GUARDRAIL: Stop if too many consecutive failures
+        if consecutive_failures >= MAX_FAILURES_PER_RUN:
+            print(f"⛔ Stopping: {MAX_FAILURES_PER_RUN} consecutive failures detected. Review errors.")
             break
 
         def get(field):
@@ -301,6 +379,13 @@ if __name__ == "__main__":
             print(f"Skipping {email}: {reason}")
             continue
 
+        # GUARDRAIL: Per-domain rate limiting
+        domain = email.split("@")[1]
+        if domain_send_count[domain] >= MAX_EMAILS_PER_DOMAIN:
+            print(f"Skipping {email}: already sent {MAX_EMAILS_PER_DOMAIN} to {domain} this run")
+            continue
+        domain_send_count[domain] += 1
+
         subject = SUBJECT_TEMPLATE
         body = BODY_TEMPLATE.format(logo_html=logo_html)
         recipient = TEST_EMAIL if TEST_MODE else email
@@ -308,21 +393,28 @@ if __name__ == "__main__":
         if TEST_MODE:
             subject = "[TEST] " + subject
 
-        resp = send_email(token, recipient, subject, body, logo_b64)
+        status_code, error_message, is_retryable = send_email(token, recipient, subject, body, logo_b64)
 
-        if resp.status_code == 202:
+        if status_code == 202:
             send_status = "sent_test" if TEST_MODE else "sent"
-            error_message = ""
+            consecutive_failures = 0
             if not TEST_MODE:
                 leads_ws.update_cell(row_num, col["outreach_status"] + 1, "contacted")
                 leads_ws.update_cell(row_num, col["date_contacted"] + 1, today)
             sent_count += 1
         else:
-            send_status = "failed"
-            error_message = resp.text[:200]
-            if not TEST_MODE:
-                # Don't keep retrying the same address every run
-                status_updates.append((row_num, "send_failed"))
+            consecutive_failures += 1
+            if is_retryable:
+                send_status = "soft_bounce"
+                print(f"⚠️  Soft failure for {email} (status {status_code}). Will retry next run.")
+            else:
+                send_status = "hard_bounce"
+                print(f"❌ Hard failure for {email} (status {status_code}): {error_message[:100]}")
+                if not TEST_MODE:
+                    # Don't retry hard failures
+                    status_updates.append((row_num, "send_failed"))
+
+            error_message = f"[{status_code}] {error_message}"
 
         log_rows.append([
             str(uuid.uuid4())[:8],
@@ -352,5 +444,8 @@ if __name__ == "__main__":
             for r, st in status_updates
         ])
 
-    print(f"Sent {sent_count} email(s) this run. Logged {len(log_rows)} attempt(s). "
-          f"Skipped {skipped_invalid} invalid address(es).")
+    summary = f"Sent {sent_count} email(s) this run. Logged {len(log_rows)} attempt(s). Skipped {skipped_invalid} invalid address(es)."
+    print(summary)
+
+    if consecutive_failures >= MAX_FAILURES_PER_RUN:
+        print(f"⚠️  WARNING: Run ended due to {consecutive_failures} consecutive failures.")
