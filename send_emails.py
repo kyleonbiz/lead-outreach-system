@@ -26,8 +26,12 @@ TEST_EMAIL = os.environ.get("TEST_EMAIL", "")
 RAMP_START_DATE = "2026-09-29"
 RAMP_START_CAP = 150
 RAMP_STEP = 25
-RAMP_MAX_CAP = 300
+RAMP_MAX_CAP = 400
 RUNS_PER_DAY = 9  # spread the daily cap over ~9 of the hourly runs (leaves slack for skipped runs)
+
+# Split daily cap: 200 leads + 200 referrals
+LEADS_MAX_PER_RUN = 200
+REFERRALS_MAX_PER_RUN = 200
 
 LOGO_PATH = "logo.png"
 TEMPLATE_VERSION = "v2_intro"
@@ -313,6 +317,7 @@ if __name__ == "__main__":
 
     sheet = get_sheets_with_retry()
     leads_ws = sheet.worksheet("Leads")
+    referrals_ws = sheet.worksheet("Referrals")
     log_ws = sheet.worksheet("Outreach_Log")
 
     today = datetime.date.today().isoformat()
@@ -341,20 +346,40 @@ if __name__ == "__main__":
         if run_cap == 0:
             print("Daily cap already reached — nothing to send this run.")
 
-    rows = leads_ws.get_all_values()
-    header = rows[0]
-    col = {name: i for i, name in enumerate(header)}
+    # Prepare rows from both Leads and Referrals sheets
+    leads_rows = leads_ws.get_all_values()
+    referrals_rows = referrals_ws.get_all_values()
+
+    leads_header = leads_rows[0]
+    referrals_header = referrals_rows[0]
+    leads_col = {name: i for i, name in enumerate(leads_header)}
+    referrals_col = {name: i for i, name in enumerate(referrals_header)}
+
+    # Combine rows with source tracking
+    combined_rows = []
+    for row_num, row in enumerate(leads_rows[1:], start=2):
+        combined_rows.append(("leads", row_num, row, leads_col, leads_ws))
+    for row_num, row in enumerate(referrals_rows[1:], start=2):
+        combined_rows.append(("referrals", row_num, row, referrals_col, referrals_ws))
 
     sent_count = 0
+    leads_sent = 0
+    referrals_sent = 0
     log_rows = []
     status_updates = []
     skipped_invalid = 0
     consecutive_failures = 0
     domain_send_count = defaultdict(int)  # Track sends per domain
 
-    for row_num, row in enumerate(rows[1:], start=2):
+    for source, row_num, row, col, worksheet in combined_rows:
         if sent_count >= run_cap:
             break
+
+        # Check source-specific caps
+        if source == "leads" and leads_sent >= LEADS_MAX_PER_RUN:
+            continue
+        if source == "referrals" and referrals_sent >= REFERRALS_MAX_PER_RUN:
+            continue
 
         # GUARDRAIL: Stop if too many consecutive failures
         if consecutive_failures >= MAX_FAILURES_PER_RUN:
@@ -404,9 +429,13 @@ if __name__ == "__main__":
             send_status = "sent_test" if TEST_MODE else "sent"
             consecutive_failures = 0
             if not TEST_MODE:
-                leads_ws.update_cell(row_num, col["outreach_status"] + 1, "contacted")
-                leads_ws.update_cell(row_num, col["date_contacted"] + 1, today)
+                worksheet.update_cell(row_num, col["outreach_status"] + 1, "contacted")
+                worksheet.update_cell(row_num, col["date_contacted"] + 1, today)
             sent_count += 1
+            if source == "leads":
+                leads_sent += 1
+            else:
+                referrals_sent += 1
         else:
             consecutive_failures += 1
             if is_retryable:
@@ -435,6 +464,7 @@ if __name__ == "__main__":
             city,
             state,
             f"{city}, {state}",
+            source,  # Track which source this email came from
         ])
 
         time.sleep(3)
@@ -449,7 +479,7 @@ if __name__ == "__main__":
             for r, st in status_updates
         ])
 
-    summary = f"Sent {sent_count} email(s) this run. Logged {len(log_rows)} attempt(s). Skipped {skipped_invalid} invalid address(es)."
+    summary = f"Sent {sent_count} email(s) this run ({leads_sent} leads + {referrals_sent} referrals). Logged {len(log_rows)} attempt(s). Skipped {skipped_invalid} invalid address(es)."
     print(summary)
 
     if consecutive_failures >= MAX_FAILURES_PER_RUN:
