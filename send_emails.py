@@ -181,7 +181,17 @@ BAD_PREFIXES = {
     "example", "test", "user", "name", "email", "your", "yourname", "youremail",
 }
 BLOCKED_DOMAINS = {
-    "aol.com", "aolmail.com", "aol.co.uk", "verizon.net", "mail.com",
+    # AOL / Verizon
+    "aol.com", "aolmail.com", "aol.co.uk", "verizon.net",
+    # Mail.com and variants
+    "mail.com", "mail.co.uk", "mail.de",
+    # GMX
+    "gmx.com", "gmx.de", "gmx.net", "gmx.fr", "gmx.es", "gmx.co.uk", "gmx.at", "gmx.ch",
+    # Yahoo
+    "yahoo.com", "ymail.com", "rocketmail.com", "yahoo.co.uk", "yahoo.de", "yahoo.fr",
+    # ISP-tied accounts
+    "comcast.net", "cox.net", "att.net", "bellsouth.net", "charter.net", "earthlink.net",
+    "frontier.com", "sbcglobal.net", "windstream.net", "centurytel.net", "qwest.net",
 }
 JUNK_TLDS = {"png", "jpg", "jpeg", "gif", "svg", "webp", "css", "js", "pdf"}
 _domain_cache = {}
