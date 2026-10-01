@@ -36,7 +36,7 @@ REFERRALS_MAX_PER_RUN = 20
 LOGO_PATH = "logo.png"
 TEMPLATE_VERSION = "v2_intro"
 
-SUBJECT_TEMPLATE = "Quick intro"
+SUBJECT_TEMPLATE = "{business_name} + Administrative Support"
 
 NAVY = "#1B2A5A"
 
@@ -67,13 +67,13 @@ SIGNATURE_HTML = (
 
 BODY_TEMPLATE = (
     "<div style=\"font-family:Arial,Helvetica,sans-serif;font-size:14px;line-height:1.5;color:#222222;\">"
-    "Hi there,<br><br>"
-    "I'm Kyle with Aurum Ventura.<br><br>"
-    "We provide human-led administrative support at a fraction of the cost of hiring in-house, "
-    "handling the back-office work so you can stay focused on your customers.<br><br>"
-    "No contracts. Just administrative support when you need it.<br><br>"
-    "I'm simply reaching out to make you aware we exist.<br><br>"
-    "<a href=\"https://aurumventura.net\">aurumventura.net</a><br><br>"
+    "Hi,<br><br>"
+    "I came across {{business_name}} and wanted to introduce myself.<br><br>"
+    "I'm Kyle with Aurum Ventura. We provide back-office administrative support for growing businesses — "
+    "the documents, invoices, records, tracking, data, and other routine work that keeps things moving but can easily become a distraction from the business itself.<br><br>"
+    "We're not looking to replace your team or change how you operate. We simply provide additional administrative capacity "
+    "when there's more work than your current team has time to handle.<br><br>"
+    "I'd be glad to learn a little about {{business_name}} and see if there's anywhere we could be useful.<br><br>"
     "Best,<br><br>"
     + SIGNATURE_HTML +
     "<br><span style=\"font-size:11px;color:#888888;\">"
@@ -416,8 +416,8 @@ if __name__ == "__main__":
             continue
         domain_send_count[domain] += 1
 
-        subject = SUBJECT_TEMPLATE
-        body = BODY_TEMPLATE.format(logo_html=logo_html)
+        subject = SUBJECT_TEMPLATE.format(business_name=business_name)
+        body = BODY_TEMPLATE.format(business_name=business_name, logo_html=logo_html)
         recipient = TEST_EMAIL if TEST_MODE else email
 
         if TEST_MODE:
