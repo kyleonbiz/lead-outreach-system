@@ -26,12 +26,12 @@ TEST_EMAIL = os.environ.get("TEST_EMAIL", "")
 RAMP_START_DATE = "2026-09-29"
 RAMP_START_CAP = 150
 RAMP_STEP = 25
-RAMP_MAX_CAP = 400
+RAMP_MAX_CAP = 320
 RUNS_PER_DAY = 9  # spread the daily cap over ~9 of the hourly runs (leaves slack for skipped runs)
 
-# Split daily cap: 200 leads + 200 referrals
-LEADS_MAX_PER_RUN = 200
-REFERRALS_MAX_PER_RUN = 200
+# Split daily cap: 300 leads + 20 referral partners
+LEADS_MAX_PER_RUN = 300
+REFERRALS_MAX_PER_RUN = 20
 
 LOGO_PATH = "logo.png"
 TEMPLATE_VERSION = "v2_intro"
