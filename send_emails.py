@@ -36,9 +36,35 @@ REFERRALS_MAX_PER_RUN = 20
 LOGO_PATH = "logo.png"
 TEMPLATE_VERSION = "v2_intro"
 
-SUBJECT_TEMPLATE = "{business_name} + Administrative Support"
-
 NAVY = "#1B2A5A"
+
+# Email templates for Leads
+LEADS_SUBJECT_TEMPLATE = "{business_name} + Administrative Support"
+LEADS_BODY_TEMPLATE = (
+    "<div style=\"font-family:Arial,Helvetica,sans-serif;font-size:14px;line-height:1.5;color:#222222;\">"
+    "Hi,<br><br>"
+    "I came across {{business_name}} and wanted to introduce myself.<br><br>"
+    "I'm Kyle with Aurum Ventura. We provide back-office administrative support for growing businesses — "
+    "the documents, invoices, records, tracking, data, and other routine work that keeps things moving but can easily become a distraction from the business itself.<br><br>"
+    "We're not looking to replace your team or change how you operate. We simply provide additional administrative capacity "
+    "when there's more work than your current team has time to handle.<br><br>"
+    "I'd be glad to learn a little about {{business_name}} and see if there's anywhere we could be useful.<br><br>"
+    "Best,<br><br>"
+)
+
+# Email templates for Referrals
+REFERRALS_SUBJECT_TEMPLATE = "Exploring a connection"
+REFERRALS_BODY_TEMPLATE = (
+    "<div style=\"font-family:Arial,Helvetica,sans-serif;font-size:14px;line-height:1.5;color:#222222;\">"
+    "Hi,<br><br>"
+    "I'm Kyle with Aurum Ventura. I came across {{business_name}} and wanted to introduce myself.<br><br>"
+    "We provide back-office administrative support for businesses, and I'm interested in connecting with professionals and businesses "
+    "whose work may naturally complement ours.<br><br>"
+    "I'm not reaching out with a sales pitch. I'd simply like to learn more about what you do, learn more about your business, "
+    "and see if there may be an opportunity for us to be a resource to one another.<br><br>"
+    "If you're open to connecting, I'd be glad to hear from you.<br><br>"
+    "Best,<br><br>"
+)
 
 # ==== GUARDRAILS ====
 MAX_FAILURES_PER_RUN = 5  # Stop if >5 consecutive failures
@@ -416,8 +442,22 @@ if __name__ == "__main__":
             continue
         domain_send_count[domain] += 1
 
-        subject = SUBJECT_TEMPLATE.format(business_name=business_name)
-        body = BODY_TEMPLATE.format(business_name=business_name, logo_html=logo_html)
+        # Select template based on source (leads or referrals)
+        if source == "leads":
+            subject = LEADS_SUBJECT_TEMPLATE.format(business_name=business_name)
+            body_base = LEADS_BODY_TEMPLATE
+        else:
+            subject = REFERRALS_SUBJECT_TEMPLATE
+            body_base = REFERRALS_BODY_TEMPLATE
+
+        # Format body with business name and logo
+        body = (body_base.format(business_name=business_name) +
+                SIGNATURE_HTML +
+                "<br><span style=\"font-size:11px;color:#888888;\">"
+                "Aurum Ventura Enterprise LLC, Nashville, TN<br>"
+                "Don't want to hear from us again? Just reply \"UNSUBSCRIBE\" and we'll take you off the list."
+                "</span>"
+                "</div>")
         recipient = TEST_EMAIL if TEST_MODE else email
 
         if TEST_MODE:
