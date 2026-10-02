@@ -43,12 +43,12 @@ LEADS_SUBJECT_TEMPLATE = "{business_name} + Administrative Support"
 LEADS_BODY_TEMPLATE = (
     "<div style=\"font-family:Arial,Helvetica,sans-serif;font-size:14px;line-height:1.5;color:#222222;\">"
     "Hi,<br><br>"
-    "I came across {{business_name}} and wanted to introduce myself.<br><br>"
+    "I came across {business_name} and wanted to introduce myself.<br><br>"
     "I'm Kyle with Aurum Ventura. We provide back-office administrative support for growing businesses — "
     "the documents, invoices, records, tracking, data, and other routine work that keeps things moving but can easily become a distraction from the business itself.<br><br>"
     "We're not looking to replace your team or change how you operate. We simply provide additional administrative capacity "
     "when there's more work than your current team has time to handle.<br><br>"
-    "I'd be glad to learn a little about {{business_name}} and see if there's anywhere we could be useful.<br><br>"
+    "I'd be glad to learn a little about {business_name} and see if there's anywhere we could be useful.<br><br>"
     "Best,<br><br>"
 )
 
@@ -57,7 +57,7 @@ REFERRALS_SUBJECT_TEMPLATE = "Exploring a connection"
 REFERRALS_BODY_TEMPLATE = (
     "<div style=\"font-family:Arial,Helvetica,sans-serif;font-size:14px;line-height:1.5;color:#222222;\">"
     "Hi,<br><br>"
-    "I'm Kyle with Aurum Ventura. I came across {{business_name}} and wanted to introduce myself.<br><br>"
+    "I'm Kyle with Aurum Ventura. I came across {business_name} and wanted to introduce myself.<br><br>"
     "We provide back-office administrative support for businesses, and I'm interested in connecting with professionals and businesses "
     "whose work may naturally complement ours.<br><br>"
     "I'm not reaching out with a sales pitch. I'd simply like to learn more about what you do, learn more about your business, "
