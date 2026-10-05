@@ -22,11 +22,6 @@ jobs:
         with:
           workload_identity_provider: ${{ secrets.WORKLOAD_IDENTITY_PROVIDER }}
           service_account: ${{ secrets.SERVICE_ACCOUNT_EMAIL }}
-      - name: Discord start notification
-        env:
-          DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
-        run: |
-          curl -s -H "Content-Type: application/json" -X POST -d "{\"content\": \"🧪 Test email starting → ${{ inputs.test_email }}\"}" "$DISCORD_WEBHOOK_URL"
       - name: Send one test email
         env:
           SHEET_ID: ${{ secrets.SHEET_ID }}
@@ -37,9 +32,3 @@ jobs:
           TEST_MODE: 'true'
           TEST_EMAIL: ${{ inputs.test_email }}
         run: python send_emails.py
-      - name: Discord completion notification
-        if: always()
-        env:
-          DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
-        run: |
-          curl -s -H "Content-Type: application/json" -X POST -d "{\"content\": \"✅ Test email sent to ${{ inputs.test_email }}\"}" "$DISCORD_WEBHOOK_URL"
