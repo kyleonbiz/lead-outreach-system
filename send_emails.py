@@ -327,6 +327,43 @@ def check_bounce_rate(bounce_stats):
 
     return True, f"Bounce rate OK ({bounce_rate:.1f}%)"
 
+def send_discord_notification(sent_count, leads_sent, referrals_sent, skipped_invalid, log_rows):
+    """Send summary to Discord with email details."""
+    webhook_url = os.environ.get("DISCORD_WEBHOOK_URL")
+    if not webhook_url:
+        return
+
+    # Build email list from log_rows
+    emails_sent = []
+    for row in log_rows:
+        if len(row) > 8 and row[8] == "sent":  # status is at index 8
+            emails_sent.append(row[4])  # email is at index 4
+
+    # Create Discord message
+    email_list = "\n".join(emails_sent[:10]) if emails_sent else "None"
+    if len(emails_sent) > 10:
+        email_list += f"\n... and {len(emails_sent) - 10} more"
+
+    message = {
+        "content": f"✅ Outreach run complete: {sent_count} sent ({leads_sent} leads, {referrals_sent} referrals)",
+        "embeds": [{
+            "title": "Email Summary",
+            "fields": [
+                {"name": "Total Sent", "value": str(sent_count), "inline": True},
+                {"name": "Leads", "value": str(leads_sent), "inline": True},
+                {"name": "Referrals", "value": str(referrals_sent), "inline": True},
+                {"name": "Skipped Invalid", "value": str(skipped_invalid), "inline": True},
+                {"name": "Emails Sent", "value": f"```\n{email_list}\n```", "inline": False},
+            ],
+            "color": 3066993
+        }]
+    }
+
+    try:
+        requests.post(webhook_url, json=message)
+    except Exception as e:
+        print(f"Failed to send Discord notification: {e}")
+
 if __name__ == "__main__":
     required = {
         "MS_TENANT_ID": TENANT_ID, "MS_CLIENT_ID": CLIENT_ID,
@@ -531,6 +568,9 @@ if __name__ == "__main__":
 
     summary = f"Sent {sent_count} email(s) this run ({leads_sent} leads + {referrals_sent} referrals). Logged {len(log_rows)} attempt(s). Skipped {skipped_invalid} invalid address(es)."
     print(summary)
+
+    # Send Discord notification with email details
+    send_discord_notification(sent_count, leads_sent, referrals_sent, skipped_invalid, log_rows)
 
     if consecutive_failures >= MAX_FAILURES_PER_RUN:
         print(f"⚠️  WARNING: Run ended due to {consecutive_failures} consecutive failures.")
