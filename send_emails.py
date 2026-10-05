@@ -327,6 +327,31 @@ def check_bounce_rate(bounce_stats):
 
     return True, f"Bounce rate OK ({bounce_rate:.1f}%)"
 
+def send_bounce_rate_alert(bounce_rate):
+    """Send Discord alert when bounce rate exceeds threshold."""
+    webhook_url = os.environ.get("DISCORD_WEBHOOK_URL")
+    if not webhook_url:
+        return
+
+    message = {
+        "content": f"⚠️ CRITICAL: Bounce rate at {bounce_rate:.1f}% (threshold: 5%)",
+        "embeds": [{
+            "title": "Bounce Rate Alert",
+            "description": "Email sending has been STOPPED due to high bounce rate.",
+            "fields": [
+                {"name": "Current Rate", "value": f"{bounce_rate:.1f}%", "inline": True},
+                {"name": "Threshold", "value": "5%", "inline": True},
+                {"name": "Action", "value": "STOPPED - Review bounces in Outreach_Log", "inline": False},
+            ],
+            "color": 16711680  # Red
+        }]
+    }
+
+    try:
+        requests.post(webhook_url, json=message)
+    except Exception as e:
+        print(f"Failed to send bounce rate alert: {e}")
+
 def send_discord_notification(sent_count, leads_sent, referrals_sent, skipped_invalid, log_rows):
     """Send summary to Discord with email details."""
     webhook_url = os.environ.get("DISCORD_WEBHOOK_URL")
@@ -409,6 +434,11 @@ if __name__ == "__main__":
         bounce_ok, bounce_msg = check_bounce_rate(bounce_stats)
         print(f"📊 {bounce_msg}")
         if not bounce_ok:
+            # Send Discord alert
+            sent = bounce_stats.get("sent", 0)
+            hard_bounces = bounce_stats.get("hard", 0)
+            bounce_rate = (hard_bounces / sent) * 100 if sent > 0 else 0
+            send_bounce_rate_alert(bounce_rate)
             raise SystemExit(f"STOPPING: {bounce_msg}. Review bounces in Outreach_Log before resuming.")
 
         daily_cap, per_run_cap = todays_caps(prior_days)
