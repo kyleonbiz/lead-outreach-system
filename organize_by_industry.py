@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Organize leads by industry into separate sheets."""
+"""Organize leads by industry into a separate Google Sheet."""
 
 import os
 import gspread
@@ -21,8 +21,10 @@ def organize_by_industry():
 
     try:
         gc = get_sheets_client()
-        sheet = gc.open_by_key(SHEET_ID)
-        leads_ws = sheet.worksheet("Leads")
+
+        # Read from existing sheet
+        source_sheet = gc.open_by_key(SHEET_ID)
+        leads_ws = source_sheet.worksheet("Leads")
 
         # Read all data
         rows = leads_ws.get_all_values()
@@ -44,7 +46,6 @@ def organize_by_industry():
 
         # Group by industry
         industries = defaultdict(list)
-        industries["All Leads"] = [header]  # Start with header
 
         for row in rows[1:]:
             if len(row) > industry_idx:
@@ -54,44 +55,46 @@ def organize_by_industry():
                         industries[industry] = [header]
                     industries[industry].append(row)
 
-        print(f"Found {len(industries) - 1} industries")
-        print("\nCreating/updating sheets...")
+        print(f"Found {len(industries)} industries")
+        print("\nCreating new Google Sheet...")
 
-        # Get existing sheets to avoid recreating
-        existing_sheets = {ws.title for ws in sheet.worksheets()}
+        # Create NEW sheet for organized leads
+        new_sheet = gc.create("Leads by Industry")
+        new_sheet.share(None, perm_type='anyone', role='writer')
 
-        # Create/update sheet for each industry
+        print(f"✅ Created new sheet: {new_sheet.url}")
+
+        # Remove default sheet
+        try:
+            default_ws = new_sheet.sheet1
+            new_sheet.del_worksheet(default_ws)
+        except:
+            pass
+
+        print("\nAdding industry tabs...")
         created_count = 0
-        updated_count = 0
 
+        # Create sheet for each industry
         for industry, data in sorted(industries.items()):
             sheet_name = industry[:31]  # Google Sheets limit is 31 chars
             count = len(data) - 1  # Exclude header
 
             try:
-                if sheet_name in existing_sheets:
-                    # Update existing sheet
-                    ws = sheet.worksheet(sheet_name)
-                    ws.clear()
-                    ws.append_rows(data, value_input_option="USER_ENTERED")
-                    print(f"  ✅ Updated '{sheet_name}' ({count} leads)")
-                    updated_count += 1
-                else:
-                    # Create new sheet
-                    ws = sheet.add_worksheet(title=sheet_name, rows=len(data), cols=len(header))
-                    ws.append_rows(data, value_input_option="USER_ENTERED")
-                    print(f"  ✨ Created '{sheet_name}' ({count} leads)")
-                    created_count += 1
+                ws = new_sheet.add_worksheet(title=sheet_name, rows=len(data) + 100, cols=len(header))
+                ws.append_rows(data, value_input_option="USER_ENTERED")
+                print(f"  ✨ '{sheet_name}' ({count} leads)")
+                created_count += 1
             except gspread.exceptions.APIError as e:
                 print(f"  ❌ Error with '{sheet_name}': {e}")
 
-        print("\n" + "=" * 50)
-        print(f"Created: {created_count} sheets")
-        print(f"Updated: {updated_count} sheets")
-        print(f"Total industries: {len(industries) - 1}")
-        print("=" * 50)
-        print("\n✅ Organization complete!")
-        print(f"\nEach industry now has its own tab with all relevant leads.")
+        print("\n" + "=" * 60)
+        print(f"✅ NEW SHEET CREATED!")
+        print("=" * 60)
+        print(f"Industries: {len(industries)}")
+        print(f"Total leads: {sum(len(data) - 1 for data in industries.values())}")
+        print(f"\nSheet URL: {new_sheet.url}")
+        print("\n✅ Share this link to sell the leads by industry!")
+        print("=" * 60)
 
     except Exception as e:
         print(f"Error: {e}")
