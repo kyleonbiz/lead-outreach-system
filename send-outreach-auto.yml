@@ -2,7 +2,7 @@ name: Send Outreach (Auto)
 on:
   workflow_dispatch: {}
   schedule:
-    - cron: '0 8-15 * * 1-5'
+    - cron: '0 8-14 * * 1-5'
 permissions:
   contents: read
   id-token: write
