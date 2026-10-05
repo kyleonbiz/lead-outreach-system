@@ -336,8 +336,8 @@ def send_discord_notification(sent_count, leads_sent, referrals_sent, skipped_in
     # Build email list from log_rows
     emails_sent = []
     for row in log_rows:
-        if len(row) > 8 and row[8] == "sent":  # status is at index 8
-            emails_sent.append(row[4])  # email is at index 4
+        if len(row) > 7 and row[7] == "sent":  # status is at index 7
+            emails_sent.append(row[3])  # email is at index 3
 
     # Create Discord message
     email_list = "\n".join(emails_sent[:10]) if emails_sent else "None"
