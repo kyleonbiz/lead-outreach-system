@@ -67,13 +67,39 @@ REFERRALS_BODY_TEMPLATE = (
 )
 
 # ==== GUARDRAILS ====
+# NO automatic retries exist anywhere in this file: every recipient gets at most one send attempt.
 MAX_FAILURES_PER_RUN = 5  # Stop if >5 consecutive failures
-MAX_RETRYABLE_FAILURES = 3  # Retry soft fails max 3 times before marking as failed
-RETRY_BACKOFF_MULTIPLIER = 2  # Exponential backoff for retries
 MAX_BOUNCE_RATE_PERCENT = 5  # Alarm if >5% of sends are hard bounces
 MAX_EMAILS_PER_DOMAIN = 10  # Don't send >10 emails to same domain per run
-MAX_CONSECUTIVE_RETRIES = 2  # Only retry failures once before moving on
-MICROSECOND_GRAPH_RATE_LIMIT_WAIT = 65  # If 429 from MS Graph, wait this long
+SEND_TIMEOUT = (10, 60)  # (connect, read) seconds; a timeout is recorded as UNKNOWN, never resent
+
+# Per-lead state kept in the existing outreach_status column (only "new" is ever eligible to send).
+STATUS_NEW = "new"
+STATUS_PENDING = "sending"        # PENDING: written BEFORE the network call
+STATUS_SENT = "contacted"         # SENT: provider returned 202
+STATUS_FAILED = "send_failed"     # FAILED: rejected / error / not accepted
+STATUS_UNKNOWN = "send_unknown"   # UNKNOWN: outcome ambiguous; manual investigation only
+
+# Outreach_Log statuses that count as a real send attempt (for the daily cap and dedupe).
+ATTEMPT_LOG_STATUSES = {"sent", "hard_bounce", "soft_bounce", "failed", "unknown"}
+# Log statuses that permanently block an address from automatic sending, in every campaign.
+# To authorize a new attempt manually, change the log row's status to "retry_approved"
+# and set the lead's outreach_status back to "new".
+BLOCKING_LOG_STATUSES = ATTEMPT_LOG_STATUSES | {"invalid_email"}
+SUPPRESSED_LEAD_STATUSES = {"unsubscribed", "opted_out", "do_not_contact", "suppressed", "invalid_email"}
+
+CAMPAIGN_ID = os.environ.get("CAMPAIGN_ID") or TEMPLATE_VERSION
+EMAIL_SENDING_ENABLED = os.environ.get("EMAIL_SENDING_ENABLED", "true").lower() == "true"
+
+# Outcome categories (sanitized; never contain response bodies or credentials)
+OK = "confirmed_submission"
+PERMANENT = "permanent_rejection"
+TEMPORARY = "temporary_provider_error"
+AUTH_RESTRICTION = "auth_or_account_restriction"
+CONNECTION = "connection_failure"
+UNCERTAIN = "uncertain_delivery"
+# Outcomes that mean the provider/account is the problem: stop the whole campaign.
+STOP_CAMPAIGN = {TEMPORARY, AUTH_RESTRICTION, CONNECTION, UNCERTAIN}
 
 SIGNATURE_HTML = (
     "<table cellpadding=\"0\" cellspacing=\"0\" border=\"0\" style=\"border-collapse:collapse;margin-top:8px;\">"
@@ -128,12 +154,32 @@ def get_graph_token():
     resp.raise_for_status()
     return resp.json()["access_token"]
 
-def send_email(token, to_email, subject, html_body, logo_b64=None, retry_count=0):
-    """Send email with exponential backoff on rate limits.
+RESTRICTION_MARKERS = (
+    "quota", "throttl", "suspend", "restrict", "blocked", "spam", "5.7.", "senddenied",
+    "sendas", "accessdenied", "mailboxnotenabled", "authentication", "unauthorized",
+)
 
-    Returns (status_code, error_message, is_retryable).
-    - status_code 202: success
-    - is_retryable True: indicates soft failure (rate limit, temp unavailable)
+def classify_response(status_code, body_text=""):
+    """Map a Graph sendMail response to (outcome_category, log_status, lead_status)."""
+    if status_code == 202:
+        return OK, "sent", STATUS_SENT
+    text = (body_text or "").lower()
+    if status_code in (401, 403) or (status_code >= 400 and any(m in text for m in RESTRICTION_MARKERS)):
+        return AUTH_RESTRICTION, "failed", STATUS_FAILED
+    if status_code in (429, 503):
+        return TEMPORARY, "failed", STATUS_FAILED
+    if status_code >= 500:
+        # 500/502/504 etc: the server may or may not have accepted it. Never resend.
+        return UNCERTAIN, "unknown", STATUS_UNKNOWN
+    if 400 <= status_code < 500:
+        return PERMANENT, "hard_bounce", STATUS_FAILED
+    return UNCERTAIN, "unknown", STATUS_UNKNOWN
+
+def send_email(token, to_email, subject, html_body, logo_b64=None):
+    """Make exactly ONE send attempt. Never retries.
+
+    Returns (outcome_category, log_status, lead_status, http_status).
+    http_status is None for network-level failures. Response bodies are not returned.
     """
     url = f"https://graph.microsoft.com/v1.0/users/{SENDER_EMAIL}/sendMail"
     headers = {
@@ -157,21 +203,16 @@ def send_email(token, to_email, subject, html_body, logo_b64=None, retry_count=0
             }
         ]
     payload = {"message": message, "saveToSentItems": "true"}
-    resp = requests.post(url, headers=headers, json=payload)
-
-    # Classify error as retryable or permanent
-    is_retryable = resp.status_code in [429, 503, 504, 500]  # Rate limit, unavailable, gateway timeout
-    error_msg = resp.text[:200] if resp.status_code != 202 else ""
-
-    # Handle rate limiting with exponential backoff
-    if resp.status_code == 429:
-        retry_after = int(resp.headers.get("Retry-After", MICROSECOND_GRAPH_RATE_LIMIT_WAIT))
-        if retry_count < MAX_CONSECUTIVE_RETRIES:
-            print(f"⚠️  Rate limited (429). Waiting {retry_after}s before retry...")
-            time.sleep(retry_after)
-            return send_email(token, to_email, subject, html_body, logo_b64, retry_count + 1)
-
-    return resp.status_code, error_msg, is_retryable
+    try:
+        resp = requests.post(url, headers=headers, json=payload, timeout=SEND_TIMEOUT)
+    except requests.exceptions.ConnectTimeout:
+        # Connection was never established, so nothing was submitted. Still not retried.
+        return CONNECTION, "failed", STATUS_FAILED, None
+    except Exception:
+        # Read timeout / dropped connection after sending: delivery status is unknowable.
+        return UNCERTAIN, "unknown", STATUS_UNKNOWN, None
+    category, log_status, lead_status = classify_response(resp.status_code, resp.text[:500])
+    return category, log_status, lead_status, resp.status_code
 
 # ---------- Email checks (protect sender reputation) ----------
 EMAIL_RE = re.compile(r"^[a-z0-9._%+-]+@[a-z0-9-]+(\.[a-z0-9-]+)*\.[a-z]{2,}$")
@@ -257,9 +298,9 @@ def get_sheets_client():
     return gspread.authorize(credentials)
 
 def sending_stats(log_ws, today):
-    """How many we've sent today, and how many earlier days we've sent on since the ramp began."""
+    """Attempts made today, earlier send days since the ramp began, and bounce stats."""
     rows = log_ws.get_all_values()
-    sent_today = 0
+    attempts_today = 0
     prior_days = set()
     bounce_stats = {"hard": 0, "soft": 0, "sent": 0}
 
@@ -267,23 +308,70 @@ def sending_stats(log_ws, today):
         date_sent = row[4] if len(row) > 4 else ""
         status = row[7] if len(row) > 7 else ""
 
+        if status in ATTEMPT_LOG_STATUSES:
+            # Failed/unknown attempts count toward the cap too: they may have used provider quota.
+            if date_sent == today:
+                attempts_today += 1
+            elif RAMP_START_DATE <= date_sent < today and status == "sent":
+                prior_days.add(date_sent)
         if status == "sent":
             bounce_stats["sent"] += 1
-            if date_sent == today:
-                sent_today += 1
-            elif RAMP_START_DATE <= date_sent < today:
-                prior_days.add(date_sent)
         elif status in ["hard_bounce", "invalid_email"]:
             bounce_stats["hard"] += 1
         elif status == "soft_bounce":
             bounce_stats["soft"] += 1
 
-    return sent_today, len(prior_days), bounce_stats
+    return attempts_today, len(prior_days), bounce_stats
 
 def todays_caps(prior_days):
+    """Ramp-up cap, lowered (never raised) by the DAILY_SEND_CAP / PER_RUN_CAP settings."""
     daily_cap = min(RAMP_MAX_CAP, RAMP_START_CAP + RAMP_STEP * prior_days)
+    configured = os.environ.get("DAILY_SEND_CAP", "").strip()
+    if configured:
+        daily_cap = min(daily_cap, max(0, int(configured)))
     per_run_cap = math.ceil(daily_cap / RUNS_PER_DAY)
+    per_run_cfg = os.environ.get("PER_RUN_CAP", "").strip()
+    if per_run_cfg:
+        per_run_cap = min(per_run_cap, max(0, int(per_run_cfg)))
     return daily_cap, per_run_cap
+
+def normalize_email(email):
+    e = (email or "").strip().lower()
+    if e.startswith("mailto:"):
+        e = e[7:]
+    return e.strip(" <>\t\r\n")
+
+def load_suppression(sheet):
+    """Optional 'Suppression' worksheet: first column holds emails, or bare domains / @domain."""
+    emails, domains = set(), set()
+    try:
+        ws = sheet.worksheet("Suppression")
+    except Exception:
+        return emails, domains
+    for row in ws.get_all_values()[1:]:
+        v = normalize_email(row[0]) if row else ""
+        if not v:
+            continue
+        if "@" in v and not v.startswith("@"):
+            emails.add(v)
+        else:
+            domains.add(v.lstrip("@"))
+    return emails, domains
+
+def load_log_blocklists(log_ws, campaign_id):
+    """(attempted_in_this_campaign, blocked_in_any_campaign) email sets from Outreach_Log."""
+    attempted, blocked = set(), set()
+    for row in log_ws.get_all_values()[1:]:
+        recipient = normalize_email(row[3]) if len(row) > 3 else ""
+        status = row[7] if len(row) > 7 else ""
+        template = row[6] if len(row) > 6 else ""
+        if not recipient:
+            continue
+        if status in BLOCKING_LOG_STATUSES:
+            blocked.add(recipient)
+        if status in ATTEMPT_LOG_STATUSES and template == campaign_id:
+            attempted.add(recipient)
+    return attempted, blocked
 
 def get_sheets_with_retry(max_retries=3):
     """Retry Google Sheets connection up to 3 times"""
@@ -299,19 +387,6 @@ def get_sheets_with_retry(max_retries=3):
                 time.sleep(wait_time)
             else:
                 raise SystemExit(f"Failed to connect to Google Sheets after {max_retries} attempts: {e}")
-
-def verify_sender_auth(token):
-    """Test that sender can actually send emails before bulk send."""
-    test_subject = "[AUTH TEST] Aurum Ventura - Ignore this message"
-    test_body = "<p>This is an authentication test. You can safely delete this email.</p>"
-
-    status, error, _ = send_email(token, SENDER_EMAIL, test_subject, test_body)
-    if status == 202:
-        print("✅ Authentication verified: sender can send emails")
-        return True
-    else:
-        print(f"❌ Authentication test failed (status {status}): {error}")
-        return False
 
 def check_bounce_rate(bounce_stats):
     """Check if bounce rate exceeds safety threshold."""
@@ -389,7 +464,186 @@ def send_discord_notification(sent_count, leads_sent, referrals_sent, skipped_in
     except Exception as e:
         print(f"Failed to send Discord notification: {e}")
 
-if __name__ == "__main__":
+def build_message(source, business_name, logo_html, test_mode):
+    if source == "leads":
+        subject = LEADS_SUBJECT_TEMPLATE.format(business_name=business_name)
+        body_base = LEADS_BODY_TEMPLATE
+    else:
+        subject = REFERRALS_SUBJECT_TEMPLATE
+        body_base = REFERRALS_BODY_TEMPLATE
+    body = (body_base.format(business_name=business_name) +
+            SIGNATURE_HTML +
+            "<br><span style=\"font-size:11px;color:#888888;\">"
+            "Aurum Ventura Enterprise LLC, Nashville, TN<br>"
+            "Don't want to hear from us again? Just reply \"UNSUBSCRIBE\" and we'll take you off the list."
+            "</span>"
+            "</div>")
+    if test_mode:
+        subject = "[TEST] " + subject
+    return subject, body
+
+def run_campaign(leads_ws, referrals_ws, log_ws, token, logo_html, logo_b64, today,
+                 run_cap, suppressed_emails, suppressed_domains, attempted, blocked,
+                 test_mode=False, test_email="", campaign_id=CAMPAIGN_ID):
+    """Send at most one attempt per eligible recipient. Returns a stats dict.
+
+    Order for every send: eligibility checks -> write PENDING to the sheet -> ONE network
+    attempt -> record the final outcome. A crash anywhere after PENDING leaves the lead
+    out of the queue ('sending' is never eligible), so a restart cannot resend it.
+    """
+    stats = defaultdict(int)
+    stats["stopped_reason"] = ""
+    leads_rows = leads_ws.get_all_values()
+    referrals_rows = referrals_ws.get_all_values()
+    leads_col = {name: i for i, name in enumerate(leads_rows[0])}
+    referrals_col = {name: i for i, name in enumerate(referrals_rows[0])}
+
+    combined_rows = []
+    for row_num, row in enumerate(leads_rows[1:], start=2):
+        combined_rows.append(("leads", row_num, row, leads_col, leads_ws))
+    for row_num, row in enumerate(referrals_rows[1:], start=2):
+        combined_rows.append(("referrals", row_num, row, referrals_col, referrals_ws))
+
+    log_rows = []
+    invalid_rows = {"leads": [], "referrals": []}  # invalid_email markers (never sends)
+    consecutive_failures = 0
+    domain_send_count = defaultdict(int)
+    seen = set(attempted)
+
+    try:
+        for source, row_num, row, col, worksheet in combined_rows:
+            if stats["attempted"] >= run_cap:
+                stats["stopped_reason"] = "cap_reached"
+                break
+            if source == "leads" and stats["leads_attempted"] >= LEADS_MAX_PER_RUN:
+                continue
+            if source == "referrals" and stats["referrals_attempted"] >= REFERRALS_MAX_PER_RUN:
+                continue
+            if consecutive_failures >= MAX_FAILURES_PER_RUN:
+                stats["stopped_reason"] = "consecutive_failures"
+                print(f"STOP: {MAX_FAILURES_PER_RUN} consecutive failures. Review errors.")
+                break
+
+            def get(field):
+                idx = col.get(field)
+                return row[idx] if idx is not None and idx < len(row) else ""
+
+            if get("outreach_status") != STATUS_NEW or not get("email"):
+                continue
+            email = normalize_email(get("email"))
+            business_name = get("business_name")
+            lead_id = get("lead_id")
+            city = get("city").strip()
+            state = get("state").strip()
+            domain = email.split("@")[-1]
+
+            if email in seen:
+                stats["skipped_duplicate"] += 1
+                continue
+            if email in suppressed_emails or domain in suppressed_domains or email in blocked:
+                stats["skipped_suppressed"] += 1
+                continue
+
+            ok, reason = check_email(email)
+            if ok is None:
+                continue  # DNS check unavailable; leave as "new", it is not a send
+            if not ok:
+                invalid_rows[source].append(row_num)
+                stats["skipped_invalid"] += 1
+                continue
+
+            if domain_send_count[domain] >= MAX_EMAILS_PER_DOMAIN:
+                continue
+
+            subject, body = build_message(source, business_name, logo_html, test_mode)
+            recipient = test_email if test_mode else email
+
+            # 1. Record the attempt BEFORE the network call. If this fails, do not send.
+            if not test_mode:
+                try:
+                    worksheet.update_cell(row_num, col["outreach_status"] + 1, STATUS_PENDING)
+                except Exception as e:
+                    stats["stopped_reason"] = "state_store_unavailable"
+                    print(f"STOP: could not record PENDING state ({type(e).__name__}); nothing sent for this lead.")
+                    break
+            seen.add(email)
+            domain_send_count[domain] += 1
+            stats["attempted"] += 1
+            stats[f"{source}_attempted"] += 1
+
+            # 2. Exactly one send attempt. No retry of any kind.
+            category, log_status, lead_status, http_status = send_email(token, recipient, subject, body, logo_b64)
+            stats[category] += 1
+            print(f"[{source} row {row_num}] outcome={category} http={http_status}")
+
+            if category == OK:
+                consecutive_failures = 0
+                stats["sent"] += 1
+                stats[f"{source}_sent"] += 1
+            else:
+                consecutive_failures += 1
+                stats["unknown" if lead_status == STATUS_UNKNOWN else "failed"] += 1
+
+            # 3. Record the final outcome (if this write fails the lead stays 'sending': never resent).
+            if not test_mode:
+                try:
+                    worksheet.update_cell(row_num, col["outreach_status"] + 1, lead_status)
+                    if category == OK:
+                        worksheet.update_cell(row_num, col["date_contacted"] + 1, today)
+                except Exception as e:
+                    print(f"WARNING: could not store final status ({type(e).__name__}); lead remains '{STATUS_PENDING}' and will not be resent.")
+            log_row = [
+                str(uuid.uuid4())[:8], lead_id, business_name, recipient, today, subject,
+                campaign_id, "sent_test" if (test_mode and category == OK) else log_status,
+                "", "", "",
+                f"{category}|http={http_status}" if category != OK else "",
+                city, state, f"{city}, {state}", source,
+            ]
+            log_rows.append(log_row)
+            try:
+                log_ws.append_rows([log_row], value_input_option="USER_ENTERED")
+            except Exception as e:
+                print(f"WARNING: could not append log row ({type(e).__name__}); lead status already recorded.")
+
+            if category in STOP_CAMPAIGN:
+                stats["stopped_reason"] = category
+                print(f"STOP: provider-level outcome '{category}'. Campaign halted; no further sends this run.")
+                break
+
+            time.sleep(3)
+    finally:
+        if not test_mode:
+            try:
+                apply_invalid_markers(leads_ws, referrals_ws, invalid_rows)
+            except Exception as e:
+                print(f"WARNING: could not mark invalid addresses ({type(e).__name__}).")
+    stats["log_rows"] = log_rows
+    return stats
+
+def apply_invalid_markers(leads_ws, referrals_ws, rows_by_source):
+    """Persist 'invalid_email' for addresses that failed the format/DNS checks (never sent)."""
+    for ws, rows in ((leads_ws, rows_by_source.get("leads", [])), (referrals_ws, rows_by_source.get("referrals", []))):
+        if not rows:
+            continue
+        header = ws.row_values(1)
+        status_col = header.index("outreach_status") + 1
+        ws.batch_update([{"range": rowcol_to_a1(r, status_col), "values": [["invalid_email"]]} for r in rows])
+
+def write_step_summary(lines):
+    path = os.environ.get("GITHUB_STEP_SUMMARY")
+    if not path:
+        return
+    try:
+        with open(path, "a") as f:
+            f.write("\n".join(lines) + "\n")
+    except OSError:
+        pass
+
+def main():
+    if not EMAIL_SENDING_ENABLED:
+        print("Email sending is disabled (EMAIL_SENDING_ENABLED=false). Nothing sent; lead discovery is unaffected.")
+        write_step_summary(["### Outreach", "Email sending disabled by `EMAIL_SENDING_ENABLED`."])
+        return
     required = {
         "MS_TENANT_ID": TENANT_ID, "MS_CLIENT_ID": CLIENT_ID,
         "MS_CLIENT_SECRET": CLIENT_SECRET, "SENDER_EMAIL": SENDER_EMAIL,
@@ -401,7 +655,7 @@ if __name__ == "__main__":
     if TEST_MODE and not TEST_EMAIL:
         raise SystemExit("TEST_MODE is on but no TEST_EMAIL was provided.")
 
-    print(f"Running in {'TEST' if TEST_MODE else 'LIVE'} mode.")
+    print(f"Running in {'TEST' if TEST_MODE else 'LIVE'} mode. Campaign: {CAMPAIGN_ID}")
 
     logo_b64 = load_logo_base64()
     if logo_b64:
@@ -417,190 +671,58 @@ if __name__ == "__main__":
     leads_ws = sheet.worksheet("Leads")
     referrals_ws = sheet.worksheet("Referrals")
     log_ws = sheet.worksheet("Outreach_Log")
-
     today = datetime.date.today().isoformat()
 
-    # GUARDRAIL: Verify auth before mass send
-    token = get_graph_token()
-    if not verify_sender_auth(token):
-        raise SystemExit("Cannot proceed: sender authentication failed.")
+    # Authentication check = obtaining a token. No test email is sent.
+    try:
+        token = get_graph_token()
+    except Exception as e:
+        raise SystemExit(f"Cannot proceed: could not obtain Microsoft Graph token ({type(e).__name__}).")
+
+    suppressed_emails, suppressed_domains = load_suppression(sheet)
+    attempted, blocked = load_log_blocklists(log_ws, CAMPAIGN_ID)
 
     if TEST_MODE:
         run_cap = 1
     else:
-        already_sent_today, prior_days, bounce_stats = sending_stats(log_ws, today)
-
-        # GUARDRAIL: Check bounce rate
+        attempts_today, prior_days, bounce_stats = sending_stats(log_ws, today)
         bounce_ok, bounce_msg = check_bounce_rate(bounce_stats)
         print(f"📊 {bounce_msg}")
         if not bounce_ok:
-            # Send Discord alert
             sent = bounce_stats.get("sent", 0)
-            hard_bounces = bounce_stats.get("hard", 0)
-            bounce_rate = (hard_bounces / sent) * 100 if sent > 0 else 0
-            send_bounce_rate_alert(bounce_rate)
+            rate = (bounce_stats.get("hard", 0) / sent) * 100 if sent > 0 else 0
+            send_bounce_rate_alert(rate)
             raise SystemExit(f"STOPPING: {bounce_msg}. Review bounces in Outreach_Log before resuming.")
-
         daily_cap, per_run_cap = todays_caps(prior_days)
-        remaining_daily = max(0, daily_cap - already_sent_today)
+        remaining_daily = max(0, daily_cap - attempts_today)
         run_cap = min(per_run_cap, remaining_daily)
         print(f"Ramp day {prior_days + 1}: today's cap is {daily_cap}.")
-        print(f"Already sent {already_sent_today}/{daily_cap} today. This run will send up to {run_cap} more.")
+        print(f"Already attempted {attempts_today}/{daily_cap} today. This run will send up to {run_cap} more.")
         if run_cap == 0:
-            print("Daily cap already reached — nothing to send this run.")
+            print("Daily cap reached — nothing to send this run.")
 
-    # Prepare rows from both Leads and Referrals sheets
-    leads_rows = leads_ws.get_all_values()
-    referrals_rows = referrals_ws.get_all_values()
+    stats = run_campaign(leads_ws, referrals_ws, log_ws, token, logo_html, logo_b64, today,
+                         run_cap, suppressed_emails, suppressed_domains, attempted, blocked,
+                         test_mode=TEST_MODE, test_email=TEST_EMAIL)
 
-    leads_header = leads_rows[0]
-    referrals_header = referrals_rows[0]
-    leads_col = {name: i for i, name in enumerate(leads_header)}
-    referrals_col = {name: i for i, name in enumerate(referrals_header)}
-
-    # Combine rows with source tracking
-    combined_rows = []
-    for row_num, row in enumerate(leads_rows[1:], start=2):
-        combined_rows.append(("leads", row_num, row, leads_col, leads_ws))
-    for row_num, row in enumerate(referrals_rows[1:], start=2):
-        combined_rows.append(("referrals", row_num, row, referrals_col, referrals_ws))
-
-    sent_count = 0
-    leads_sent = 0
-    referrals_sent = 0
-    log_rows = []
-    status_updates = []
-    skipped_invalid = 0
-    consecutive_failures = 0
-    domain_send_count = defaultdict(int)  # Track sends per domain
-
-    for source, row_num, row, col, worksheet in combined_rows:
-        if sent_count >= run_cap:
-            break
-
-        # Check source-specific caps
-        if source == "leads" and leads_sent >= LEADS_MAX_PER_RUN:
-            continue
-        if source == "referrals" and referrals_sent >= REFERRALS_MAX_PER_RUN:
-            continue
-
-        # GUARDRAIL: Stop if too many consecutive failures
-        if consecutive_failures >= MAX_FAILURES_PER_RUN:
-            print(f"⛔ Stopping: {MAX_FAILURES_PER_RUN} consecutive failures detected. Review errors.")
-            break
-
-        def get(field):
-            idx = col.get(field)
-            return row[idx] if idx is not None and idx < len(row) else ""
-
-        outreach_status = get("outreach_status")
-        email = get("email")
-        business_name = get("business_name")
-        lead_id = get("lead_id")
-        city = get("city").strip()
-        state = get("state").strip()
-
-        if outreach_status != "new" or not email:
-            continue
-
-        ok, reason = check_email(email)
-        if ok is None:
-            continue  # couldn't check right now; leave it as "new" for a later run
-        if not ok:
-            status_updates.append((row_num, "invalid_email"))
-            skipped_invalid += 1
-            print(f"Skipping {email}: {reason}")
-            continue
-
-        # GUARDRAIL: Per-domain rate limiting
-        domain = email.split("@")[1]
-        if domain_send_count[domain] >= MAX_EMAILS_PER_DOMAIN:
-            print(f"Skipping {email}: already sent {MAX_EMAILS_PER_DOMAIN} to {domain} this run")
-            continue
-        domain_send_count[domain] += 1
-
-        # Select template based on source (leads or referrals)
-        if source == "leads":
-            subject = LEADS_SUBJECT_TEMPLATE.format(business_name=business_name)
-            body_base = LEADS_BODY_TEMPLATE
-        else:
-            subject = REFERRALS_SUBJECT_TEMPLATE
-            body_base = REFERRALS_BODY_TEMPLATE
-
-        # Format body with business name and logo
-        body = (body_base.format(business_name=business_name) +
-                SIGNATURE_HTML +
-                "<br><span style=\"font-size:11px;color:#888888;\">"
-                "Aurum Ventura Enterprise LLC, Nashville, TN<br>"
-                "Don't want to hear from us again? Just reply \"UNSUBSCRIBE\" and we'll take you off the list."
-                "</span>"
-                "</div>")
-        recipient = TEST_EMAIL if TEST_MODE else email
-
-        if TEST_MODE:
-            subject = "[TEST] " + subject
-
-        status_code, error_message, is_retryable = send_email(token, recipient, subject, body, logo_b64)
-
-        if status_code == 202:
-            send_status = "sent_test" if TEST_MODE else "sent"
-            consecutive_failures = 0
-            if not TEST_MODE:
-                worksheet.update_cell(row_num, col["outreach_status"] + 1, "contacted")
-                worksheet.update_cell(row_num, col["date_contacted"] + 1, today)
-            sent_count += 1
-            if source == "leads":
-                leads_sent += 1
-            else:
-                referrals_sent += 1
-        else:
-            consecutive_failures += 1
-            if is_retryable:
-                send_status = "soft_bounce"
-                print(f"⚠️  Soft failure for {email} (status {status_code}). Will retry next run.")
-            else:
-                send_status = "hard_bounce"
-                print(f"❌ Hard failure for {email} (status {status_code}): {error_message[:100]}")
-                if not TEST_MODE:
-                    # Don't retry hard failures
-                    status_updates.append((row_num, "send_failed"))
-
-            error_message = f"[{status_code}] {error_message}"
-
-        log_rows.append([
-            str(uuid.uuid4())[:8],
-            lead_id,
-            business_name,
-            recipient,
-            today,
-            subject,
-            TEMPLATE_VERSION,
-            send_status,
-            "", "", "",
-            error_message,
-            city,
-            state,
-            f"{city}, {state}",
-            source,  # Track which source this email came from
-        ])
-
-        time.sleep(3)
-
-    if log_rows:
-        log_ws.append_rows(log_rows, value_input_option="USER_ENTERED")
-
-    if status_updates and not TEST_MODE:
-        status_col = col["outreach_status"] + 1
-        leads_ws.batch_update([
-            {"range": rowcol_to_a1(r, status_col), "values": [[st]]}
-            for r, st in status_updates
-        ])
-
-    summary = f"Sent {sent_count} email(s) this run ({leads_sent} leads + {referrals_sent} referrals). Logged {len(log_rows)} attempt(s). Skipped {skipped_invalid} invalid address(es)."
+    sent = stats["sent"]
+    summary = (f"Sent {sent} email(s) this run ({stats['leads_sent']} leads + {stats['referrals_sent']} referrals). "
+               f"Logged {len(stats['log_rows'])} attempt(s). Skipped {stats['skipped_invalid']} invalid address(es).")
     print(summary)
+    write_step_summary([
+        "### Outreach run", f"- Campaign: `{CAMPAIGN_ID}` ({'TEST' if TEST_MODE else 'LIVE'})",
+        f"- Confirmed submitted: {sent}", f"- Failed (not retried): {stats['failed']}",
+        f"- Uncertain / UNKNOWN (not retried, review manually): {stats['unknown']}",
+        f"- Skipped duplicates: {stats['skipped_duplicate']}",
+        f"- Skipped suppressed/previously failed: {stats['skipped_suppressed']}",
+        f"- Skipped invalid: {stats['skipped_invalid']}",
+        f"- Stopped early: {stats['stopped_reason'] or 'no'}",
+    ])
+    send_discord_notification(sent, stats["leads_sent"], stats["referrals_sent"], stats["skipped_invalid"], stats["log_rows"])
 
-    # Send Discord notification with email details
-    send_discord_notification(sent_count, leads_sent, referrals_sent, skipped_invalid, log_rows)
+    if stats["stopped_reason"] in STOP_CAMPAIGN:
+        # Fail the job loudly so you notice. Nothing is retried automatically (see workflows).
+        raise SystemExit(f"Campaign halted: {stats['stopped_reason']}. Investigate before resuming.")
 
-    if consecutive_failures >= MAX_FAILURES_PER_RUN:
-        print(f"⚠️  WARNING: Run ended due to {consecutive_failures} consecutive failures.")
+if __name__ == "__main__":
+    main()

@@ -55,6 +55,11 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           for workflow in ${{ steps.check.outputs.failed_workflows }}; do
+            # Never auto-rerun the email sender: failed/uncertain emails are not retried automatically.
+            if [ "$workflow" = "send-outreach-auto" ]; then
+              echo "Skipping auto-retry of $workflow (sending is never retried automatically)."
+              continue
+            fi
             echo "Retrying $workflow..."
             gh workflow run "$workflow.yml"
           done

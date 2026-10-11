@@ -9,9 +9,13 @@ on:
 permissions:
   contents: read
   id-token: write
+concurrency:
+  group: outreach-sending
+  cancel-in-progress: false
 jobs:
   send-test:
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5

@@ -7,9 +7,14 @@ on:
 permissions:
   contents: read
   id-token: write
+# Only one sending job at a time, across scheduled and manual runs. Queued runs wait; they are not cancelled mid-send.
+concurrency:
+  group: outreach-sending
+  cancel-in-progress: false
 jobs:
   send-outreach:
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -28,6 +33,11 @@ jobs:
           MS_CLIENT_SECRET: ${{ secrets.MS_CLIENT_SECRET }}
           SENDER_EMAIL: ${{ secrets.SENDER_EMAIL }}
           TEST_MODE: 'false'
+          # Repository variables (Settings > Secrets and variables > Actions > Variables)
+          DAILY_SEND_CAP: ${{ vars.DAILY_SEND_CAP }}
+          PER_RUN_CAP: ${{ vars.PER_RUN_CAP }}
+          CAMPAIGN_ID: ${{ vars.CAMPAIGN_ID }}
+          EMAIL_SENDING_ENABLED: ${{ vars.EMAIL_SENDING_ENABLED || 'true' }}
         run: |
           set -o pipefail
           python send_emails.py | tee send_output.txt
