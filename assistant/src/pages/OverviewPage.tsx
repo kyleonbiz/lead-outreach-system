@@ -7,6 +7,7 @@ import { useOrg } from '@/features/org/OrgProvider'
 import { useTasks } from '@/features/tasks/api'
 import { useIntegrations, useRecentActivity, useWorkflowSummary } from '@/features/activity/api'
 import { usePendingApprovalList } from '@/features/assistant/api'
+import { useLatestBriefing } from '@/features/workflows/api'
 import { StatusBadge } from '@/features/activity/StatusBadge'
 import { ApprovalCard } from '@/features/assistant/ApprovalCard'
 import { PROVIDERS } from '@/features/integrations/providers'
@@ -29,6 +30,7 @@ export default function OverviewPage() {
   const approvals = usePendingApprovalList(orgId)
   const integrations = useIntegrations(orgId)
   const workflows = useWorkflowSummary(orgId)
+  const briefing = useLatestBriefing(orgId)
 
   const gmail = integrations.data?.find((i) => i.provider === 'google_gmail' && i.status === 'connected')
   const calendar = integrations.data?.find((i) => i.provider === 'google_calendar' && i.status === 'connected')
@@ -57,6 +59,21 @@ export default function OverviewPage() {
           <Button type="submit" variant="primary" disabled={!cmd.trim()}><Send className="h-4 w-4" /> Ask</Button>
         </div>
       </form>
+
+      <Section title="Daily briefing" action={<More to="/workflows">Workflows</More>}>
+        {briefing.isLoading ? <Spinner /> : !briefing.data?.exists ? (
+          <Muted>Not set up. <Link className="text-accent hover:underline" to="/workflows">Turn on the daily briefing</Link> to get your agenda, important email and overdue tasks each weekday morning.</Muted>
+        ) : !briefing.data.run ? (
+          <Muted>{briefing.data.enabled ? 'No briefing has run yet. The first one arrives at the next scheduled time.' : 'The daily briefing is switched off.'}</Muted>
+        ) : briefing.data.run.status === 'succeeded' && briefing.data.run.output?.text ? (
+          <div>
+            <p className="whitespace-pre-wrap break-words text-sm">{briefing.data.run.output.text}</p>
+            <p className="mt-2 text-xs text-muted">Generated {format(new Date(briefing.data.run.finished_at ?? briefing.data.run.created_at), 'EEE MMM d, h:mm a')}</p>
+          </div>
+        ) : briefing.data.run.status === 'failed' ? (
+          <Muted>The last briefing failed: {briefing.data.run.error}</Muted>
+        ) : <Muted>The latest briefing is {briefing.data.run.status.replace('_', ' ')}.</Muted>}
+      </Section>
 
       <div className="grid gap-6 lg:grid-cols-2">
         <Section title="Today's agenda" action={<More to="/calendar">Calendar</More>}>

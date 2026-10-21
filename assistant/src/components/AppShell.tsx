@@ -8,6 +8,7 @@ import { cn } from '@/lib/utils'
 import { Logo } from './Logo'
 import { useAuth } from '@/features/auth/AuthProvider'
 import { useOrg } from '@/features/org/OrgProvider'
+import { NotificationsBell } from '@/features/notifications/NotificationsBell'
 
 export const NAV = [
   { to: '/', label: 'Overview', icon: LayoutDashboard, end: true },
@@ -67,7 +68,7 @@ export function AppShell() {
 
   const sidebar = (
     <div className="flex h-full flex-col gap-6 p-4">
-      <div className="px-2 pt-1"><Logo /></div>
+      <div className="flex items-center justify-between px-2 pt-1"><Logo /><span className="hidden lg:block"><NotificationsBell /></span></div>
       <div className="px-2">
         {memberships.length > 1 ? (
           <select
@@ -99,9 +100,12 @@ export function AppShell() {
 
       <header className="sticky top-0 z-30 flex h-12 items-center justify-between border-b border-line bg-surface px-4 lg:hidden">
         <Logo />
-        <button onClick={() => setOpen(true)} aria-label="Open menu" className="rounded p-2 text-muted hover:bg-sunken">
-          <Menu className="h-5 w-5" />
-        </button>
+        <div className="flex items-center gap-1">
+          <NotificationsBell />
+          <button onClick={() => setOpen(true)} aria-label="Open menu" className="rounded p-2 text-muted hover:bg-sunken">
+            <Menu className="h-5 w-5" />
+          </button>
+        </div>
       </header>
 
       {open && (

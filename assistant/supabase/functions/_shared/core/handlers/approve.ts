@@ -14,7 +14,12 @@ export interface ApprovalRow extends ApprovedAction {
   status: string
   summary: string
   requested_by: string | null
+  workflow_run_id?: string | null
+  workflow_step_key?: string | null
 }
+
+/** Approval that only gates a workflow step: approving it runs nothing. */
+export const WORKFLOW_GATE = 'workflow.gate'
 
 export interface ApproveDeps {
   userId: string | null
@@ -28,8 +33,10 @@ export interface ApproveDeps {
   claim(id: string): Promise<boolean>
   finish(id: string, r: { status: 'executed' | 'failed'; error?: string }): Promise<void>
   /** execution runtime bound to the approving user */
-  runtime(orgId: string): Promise<{ store: Store; tools: ToolRegistry; ctx: ToolContext }>
+  runtime(orgId: string, actor?: 'assistant' | 'workflow'): Promise<{ store: Store; tools: ToolRegistry; ctx: ToolContext }>
   appendMessage(conversationId: string, text: string, kind: string): Promise<void>
+  /** wakes the paused workflow run once its approval step has been decided */
+  resumeWorkflow?(row: ApprovalRow, r: { status: 'succeeded' | 'failed'; output?: unknown; error?: string }): Promise<void>
 }
 
 export async function handleDecision(d: ApproveDeps, raw: unknown): Promise<HandlerResult> {
@@ -48,17 +55,24 @@ export async function handleDecision(d: ApproveDeps, raw: unknown): Promise<Hand
     return fail(403, 'You are not allowed to decide this request, or it was already decided')
   }
 
+  const wakes = !!(row.workflow_run_id && row.workflow_step_key && d.resumeWorkflow)
+
   if (decision === 'rejected') {
+    if (wakes) await d.resumeWorkflow!(row, { status: 'failed', error: 'Rejected by the user' })
     if (row.conversation_id) await d.appendMessage(row.conversation_id, approvalOutcomeMessage('rejected', undefined, row.summary), 'approval_outcome')
     return ok({ status: 'rejected' })
   }
 
   if (!(await d.claim(approval_id))) return fail(409, 'This action is already being executed')
 
-  const rt = await d.runtime(row.org_id)
   let result: ApprovalExecution
   try {
-    result = await executeApproval(rt.store, rt.tools, rt.ctx, row, d.now())
+    if (row.action_type === WORKFLOW_GATE) {
+      result = { status: 'executed', output: null, summary: row.summary }
+    } else {
+      const rt = await d.runtime(row.org_id, row.workflow_run_id ? 'workflow' : 'assistant')
+      result = await executeApproval(rt.store, rt.tools, rt.ctx, row, d.now())
+    }
   } catch (e) {
     result = { status: 'failed', error: e instanceof Error ? e.message : String(e), summary: row.summary }
   }
@@ -66,6 +80,11 @@ export async function handleDecision(d: ApproveDeps, raw: unknown): Promise<Hand
   if (result.status === 'executed') await d.finish(approval_id, { status: 'executed' })
   else if (result.status === 'failed' || result.status === 'invalid') {
     await d.finish(approval_id, { status: 'failed', error: result.status === 'failed' ? result.error : result.error })
+  }
+  if (wakes && result.status !== 'duplicate') {
+    await d.resumeWorkflow!(row, result.status === 'executed'
+      ? { status: 'succeeded', output: result.output }
+      : { status: 'failed', error: result.status === 'failed' || result.status === 'invalid' ? result.error : 'Unknown outcome' })
   }
   if (row.conversation_id) {
     await d.appendMessage(row.conversation_id, approvalOutcomeMessage('approved', result, row.summary), 'approval_outcome')

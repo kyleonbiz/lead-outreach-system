@@ -144,3 +144,48 @@ Secrets in docs/SETUP.md: `GOOGLE_OAUTH_CLIENT_ID`, `GOOGLE_OAUTH_CLIENT_SECRET`
 
 ## Needed to go live
 Deploy `document-process`; `ANTHROPIC_API_KEY` for summaries (optional: documents work without it).
+
+---
+
+# Phase 6 status (workflows, background execution, notifications)
+
+## Built
+* **Declarative definitions only:** step types `tool`, `summarize`, `approval`, `notify`; conditions are structured
+  (no expression language); templates are pure data lookups (`{{steps.x.output.y}}`, `{{time.today_start}}`), with
+  prototype/constructor access blocked. Tools must exist in the registry. No scripting, no arbitrary HTTP, no eval.
+* **Server-validated saves:** clients cannot insert workflows/versions or edit trigger/definition columns (privileges revoked);
+  `workflow-save` validates (structure, unknown tools, forward references, cron) and versions every change.
+* **Engine:** ordered execution with conditions, per-step retries with exponential backoff (permanent "not connected"
+  errors are not retried), `on_failure: continue`, sensitive tool steps + explicit approval steps (run pauses, resumes after the
+  decision; rejection fails the step), **at-most-once side effects** (idempotency key per run/step/attempt; a crashed worker's
+  half-finished step is failed, never repeated), summary step that is told which sections failed.
+* **Durable queue (Postgres):** idempotent enqueue (`UNIQUE(workflow, key)`), `FOR UPDATE SKIP LOCKED` claiming with leases
+  (crashed runs are reclaimed), retry scheduling, approval resume, event dispatch (`task.overdue`, `document.ready`).
+* **Triggers:** manual (`workflow-run`), schedule (cron evaluated in the org time zone, DST-safe, catch-up lookback),
+  event. `workflow-tick` is authenticated by a constant-time-compared `CRON_SECRET`.
+* **Notifications:** workflow failures and approval requests (bell in the app shell, mark read).
+* **UI:** workflow list, enable/disable, run now, visual step flow, run history with per-step status/errors/summary text,
+  validated editor (add/remove/reorder steps, schedule presets), daily-briefing template, briefing card on the dashboard.
+* **Migration 0006** + `supabase/cron.example.sql`.
+
+## Verified
+* 195 passed (195) frontend/core tests; DB: 140 assertions (new: duplicate-run prevention, skip-locked claiming and lease reclaim,
+  retry timing, approval resume, event dedupe/fan-out only to enabled listeners in the same org, client privilege revocations,
+  tenant isolation of runs/events/steps).
+* Engine tested for: ordering, templating, conditions, failure stop/continue, retry/backoff, approvals (approve/reject/gate),
+  crash at-most-once, AI-not-configured, transient AI errors; cron incl. DST; hostile definitions and templates.
+* `deno check` passes for 10 functions.
+
+## NOT verified
+* **The scheduler has never fired**: pg_cron/pg_net wiring is documentation only (project-specific), and no edge function has run.
+  The SQL queue functions are tested on plain Postgres 16, not on Supabase.
+* Run-time of long workflows against the edge function wall-clock limit is untested; each tick processes at most 3 runs.
+* Per-user (not per-org) workflow notifications are not implemented; notifications are org-wide.
+* The email.received / calendar-change event triggers are NOT implemented (would need Gmail push / webhooks); only
+  `task.overdue` and `document.ready` exist.
+* Visual editing is a form-based step list, not a drag-and-drop canvas.
+* Workflow versions are stored but there is no UI to browse or roll back to an older version.
+
+## Needed to go live
+`CRON_SECRET`; deploy `workflow-save`, `workflow-run`, `workflow-tick`; run `supabase/cron.example.sql` with pg_cron + pg_net + Vault enabled;
+`ANTHROPIC_API_KEY` for summary steps (the briefing fails visibly without it).

@@ -103,7 +103,7 @@ export function buildApproveDeps(opts: { userId: string | null; client: Supabase
     },
     async loadApproval(id) {
       const { data } = await client.from('approval_requests')
-        .select('id, org_id, action_type, payload, conversation_id, expires_at, status, summary, requested_by').eq('id', id).maybeSingle()
+        .select('id, org_id, action_type, payload, conversation_id, expires_at, status, summary, requested_by, workflow_run_id, workflow_step_key').eq('id', id).maybeSingle()
       return data as ReturnType<ApproveDeps['loadApproval']> extends Promise<infer R> ? R : never
     },
     async decide(id, decision, note) {
@@ -120,14 +120,21 @@ export function buildApproveDeps(opts: { userId: string | null; client: Supabase
     async finish(id, r) {
       await svc.from('approval_requests').update({ status: r.status, error: r.error ?? null }).eq('id', id)
     },
-    async runtime(orgId) {
+    async runtime(orgId, actor = 'assistant') {
       const { data } = await client.from('organization_settings').select('timezone').eq('org_id', orgId).maybeSingle()
-      const ports = buildPorts(client, svc, orgId, 'assistant', userId)
+      const ports = buildPorts(client, svc, orgId, actor, userId)
       return {
         store: new SupabaseStore(svc, orgId, userId, null),
         tools: buildRegistry(extraTools()),
-        ctx: { orgId, userId, actor: 'assistant' as const, timezone: (data?.timezone as string) ?? 'UTC', now: () => new Date(), ports },
+        ctx: { orgId, userId, actor, timezone: (data?.timezone as string) ?? 'UTC', now: () => new Date(), ports },
       }
+    },
+    async resumeWorkflow(row, r) {
+      const { error } = await svc.rpc('resume_workflow_step', {
+        p_run: row.workflow_run_id, p_step: row.workflow_step_key, p_status: r.status,
+        p_output: r.output === undefined ? null : r.output, p_error: r.error ?? null,
+      })
+      if (error) console.error('resume workflow failed', error.message)
     },
     async appendMessage(conversationId, text, kind) {
       const { data } = await svc.from('assistant_conversations').select('org_id').eq('id', conversationId).maybeSingle()

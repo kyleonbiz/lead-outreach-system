@@ -5,3 +5,7 @@ project_id = "ai-business-assistant"
 # HMAC-signed `state` parameter instead (see core/crypto.ts and handlers/oauth.ts).
 [functions.google-oauth-callback]
 verify_jwt = false
+
+# Called every minute by pg_cron; authenticated by the CRON_SECRET header instead of a JWT.
+[functions.workflow-tick]
+verify_jwt = false

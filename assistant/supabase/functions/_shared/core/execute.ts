@@ -10,7 +10,7 @@ export interface Store {
   reserveAction(e: ActionLogEntry): Promise<{ id: string } | null>
   finishAction(id: string, patch: { status: 'success' | 'failure'; output?: unknown; error?: string | null; duration_ms: number }): Promise<void>
   createApproval(a: {
-    org_id: string; requested_by: string | null; conversation_id: string | null; workflow_run_id?: string | null
+    org_id: string; requested_by: string | null; conversation_id: string | null; workflow_run_id?: string | null; workflow_step_key?: string | null
     action_type: string; summary: string; payload: unknown; risk: 'low' | 'medium' | 'high'
   }): Promise<{ id: string }>
   recordUsage(u: { kind: 'llm_input_tokens' | 'llm_output_tokens' | 'tool_call'; quantity: number; model?: string }): Promise<void>
