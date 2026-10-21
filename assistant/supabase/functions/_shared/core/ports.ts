@@ -78,4 +78,6 @@ export interface Ports {
   documents: DocumentPort
   email(): Promise<EmailProvider>
   calendar(): Promise<CalendarProvider>
+  /** organization-configured urgent-mail rules (raw JSON; parsed with parseRules) */
+  emailRules?(): Promise<unknown>
 }

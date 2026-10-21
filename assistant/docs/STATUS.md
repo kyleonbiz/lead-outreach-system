@@ -71,3 +71,41 @@ The Assistant, Calendar, Email, Documents and Workflows pages are labelled place
 ## Needed to go live
 Supabase Edge Function secrets: `ANTHROPIC_API_KEY` (required), `ASSISTANT_DEFAULT_MODEL` (optional),
 `ASSISTANT_MESSAGES_PER_MINUTE` (optional, default 12), `APP_URL`. Deploy: `supabase functions deploy assistant-chat assistant-approve`.
+
+---
+
+# Phase 4 status (Gmail + Google Calendar)
+
+## Built
+* **Provider-neutral ports** (`EmailProvider`, `CalendarProvider`): Gmail and Google Calendar are adapters behind
+  them; Outlook can be added without touching tools, handlers or UI.
+* **OAuth:** least-privilege scopes (no full-mailbox scope), offline access, HMAC-signed 10-min `state`,
+  callback re-checks that the initiator is still an admin, rejects missing refresh token / partially granted scopes,
+  every failure is redirected to the UI with a plain-language reason and written to the audit log.
+* **Credentials:** AES-256-GCM, bound to the integration row (AAD), stored only in `integration_credentials`
+  (no client access at all), refreshed centrally (one refresh under concurrency), `needs_reauth` on revoked tokens.
+* **Disconnect:** revokes at Google, deletes stored credentials, marks revoked, audits; reports honestly if Google
+  did not confirm revocation.
+* **MIME builder** blocks header injection (CR/LF), base64 bodies.
+* **Tools:** `email.search/get_thread/triage/create_draft`, `email.send` (approval), `calendar.list_events/free_busy`,
+  `calendar.create_event` / `update_event` (approval; explicit time zone + attendee list required).
+* **Rules:** transparent urgent/needs-reply classification with reasons; org-configurable keywords, VIP and ignore lists.
+* **UI:** working Connect/Disconnect, Email triage page, Calendar agenda page, email-rules settings.
+* **Edge functions:** `google-oauth-start`, `google-oauth-callback`, `integration-disconnect`, `provider-data`.
+
+## Verified
+* 119 passed (119) frontend/core tests total; DB: 83 assertions (new: credentials unreadable by any client role,
+  integration state not client-editable, email-rules authorization).
+* `deno check` passes for all 6 functions.
+* Adapters and OAuth helpers are tested against **mocked HTTP only**.
+
+## NOT verified
+* **Nothing has talked to Google.** Real request/response shapes, consent-screen behavior, token refresh and
+  revocation, Gmail threading headers and Calendar invitations are untested against the live APIs.
+* Google restricted-scope verification (Gmail) is an external process not started.
+* Reminders for follow-ups are expressed as tasks (via `tasks.create`); there is no separate "snooze until reply" mechanism.
+* Meeting prep/summaries are produced by the assistant from `calendar.*` + `email.*` results; no dedicated feature.
+
+## Needed to go live
+Secrets in docs/SETUP.md: `GOOGLE_OAUTH_CLIENT_ID`, `GOOGLE_OAUTH_CLIENT_SECRET`, `GOOGLE_OAUTH_REDIRECT_URI`,
+`TOKEN_ENCRYPTION_KEY`, `APP_URL`; a Google Cloud project with the two APIs enabled and an OAuth web client.

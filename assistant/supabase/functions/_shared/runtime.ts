@@ -14,6 +14,9 @@ export function corsHeaders(): Record<string, string> {
 }
 
 export function json(r: HandlerResult): Response {
+  if (r.status === 302 && typeof r.body.location === 'string') {
+    return new Response(null, { status: 302, headers: { Location: r.body.location } })
+  }
   return new Response(JSON.stringify(r.body), { status: r.status, headers: { ...corsHeaders(), 'Content-Type': 'application/json' } })
 }
 

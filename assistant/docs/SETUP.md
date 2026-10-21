@@ -43,11 +43,36 @@ npm run typecheck && npm test      # frontend
 npm run test:db                    # migrations + 56 tenancy/RLS assertions
 ```
 
-## Server-side secrets (needed from Phase 3/4)
-Set these as **Supabase Edge Function secrets** (not in `.env.local`, not in Vercel's
-browser-exposed variables): `ANTHROPIC_API_KEY`, `GOOGLE_OAUTH_CLIENT_ID`,
-`GOOGLE_OAUTH_CLIENT_SECRET`, `TOKEN_ENCRYPTION_KEY`. See `.env.example` for descriptions.
-OAuth configuration steps are added with the Gmail/Calendar integration in Phase 4.
+## Server-side secrets
+Set these as **Supabase Edge Function secrets** (`supabase secrets set NAME=value`), never in `.env.local`
+and never in a `VITE_` variable:
+
+| Secret | Needed for | Notes |
+|---|---|---|
+| `ANTHROPIC_API_KEY` | assistant | https://console.anthropic.com |
+| `ASSISTANT_DEFAULT_MODEL` | optional | model id; per-org override in `organization_settings.ai_model` |
+| `ASSISTANT_MESSAGES_PER_MINUTE` | optional | per-user rate limit, default 12 |
+| `GOOGLE_OAUTH_CLIENT_ID` / `GOOGLE_OAUTH_CLIENT_SECRET` | Gmail, Calendar | see below |
+| `GOOGLE_OAUTH_REDIRECT_URI` | Gmail, Calendar | `https://<project-ref>.supabase.co/functions/v1/google-oauth-callback` |
+| `TOKEN_ENCRYPTION_KEY` | Gmail, Calendar | 32 random bytes, base64: `openssl rand -base64 32`. **Back it up**; losing it means every user must reconnect. Rotating it invalidates stored tokens. |
+| `APP_URL` | OAuth redirect, CORS | e.g. `https://app.example.com` |
+
+`SUPABASE_URL`, `SUPABASE_ANON_KEY` and `SUPABASE_SERVICE_ROLE_KEY` are injected automatically.
+
+Deploy: `supabase functions deploy assistant-chat assistant-approve google-oauth-start google-oauth-callback integration-disconnect provider-data`
+(`supabase/config.toml` already sets `verify_jwt = false` for the callback only; it is authenticated by an HMAC-signed `state`).
+
+## Google OAuth (Gmail + Calendar)
+1. https://console.cloud.google.com → create/select a project.
+2. **APIs & Services → Library**: enable *Gmail API* and *Google Calendar API*.
+3. **OAuth consent screen**: user type *External*; app name, support email; add scopes
+   `openid`, `email`, `.../auth/gmail.readonly`, `.../auth/gmail.compose`, `.../auth/calendar.events`, `.../auth/calendar.freebusy`.
+   While the app is in *Testing* only listed test users can connect and refresh tokens expire after 7 days.
+   `gmail.readonly`/`gmail.compose` are **restricted scopes**: serving real customers requires Google's app
+   verification (and typically a third-party security assessment). Plan for that before launch.
+4. **Credentials → Create OAuth client ID → Web application**. Authorized redirect URI = your
+   `GOOGLE_OAUTH_REDIRECT_URI`. Copy the client id/secret into the secrets above.
+5. In the app: Integrations → Connect. Disconnecting revokes the token at Google and deletes our copy.
 
 ## Deployment (frontend)
 Vercel: import the repo, set **Root Directory** to `assistant`, framework preset *Vite*, and add

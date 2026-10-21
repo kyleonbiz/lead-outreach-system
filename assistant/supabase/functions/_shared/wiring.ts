@@ -21,8 +21,9 @@ export function buildPorts(
     tasks: new SupabaseTasks(client, orgId, actor),
     knowledge: new SupabaseKnowledge(client, orgId),
     documents: provider.documents(client),
-    email: async () => provider.email(),
-    calendar: async () => provider.calendar(),
+    email: () => provider.email(),
+    calendar: () => provider.calendar(),
+    emailRules: provider.emailRules,
   }
 }
 

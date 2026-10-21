@@ -1,0 +1,7 @@
+# Supabase CLI configuration (only the settings this project depends on).
+project_id = "ai-business-assistant"
+
+# Google redirects the browser here without a Supabase JWT; the request is authenticated by the
+# HMAC-signed `state` parameter instead (see core/crypto.ts and handlers/oauth.ts).
+[functions.google-oauth-callback]
+verify_jwt = false

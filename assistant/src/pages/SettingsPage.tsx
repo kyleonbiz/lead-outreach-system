@@ -1,5 +1,5 @@
 import { useState, type FormEvent } from 'react'
-import { useMutation } from '@tanstack/react-query'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Badge, Button, Field, Input, Notice, PageHeader, Section } from '@/components/ui'
 import { db } from '@/lib/supabase'
 import { useOrg } from '@/features/org/OrgProvider'
@@ -56,6 +56,8 @@ export default function SettingsPage() {
           </Section>
         </form>
 
+        <EmailRulesSection />
+
         <Section title="Approvals & permissions">
           <div className="space-y-2 text-sm">
             <p>
@@ -77,5 +79,47 @@ export default function SettingsPage() {
         </Section>
       </div>
     </>
+  )
+}
+
+function EmailRulesSection() {
+  const { orgId, isAdmin } = useOrg()
+  const qc = useQueryClient()
+  const rules = useQuery({
+    queryKey: ['email-rules', orgId],
+    queryFn: async () => {
+      const { data, error } = await db().from('organization_settings').select('email_rules').eq('org_id', orgId).maybeSingle()
+      if (error) throw error
+      return (data?.email_rules ?? {}) as { urgent_keywords?: string[]; vip_senders?: string[]; ignore_senders?: string[] }
+    },
+  })
+  const [msg, setMsg] = useState<{ tone: 'ok' | 'danger'; text: string } | null>(null)
+  const save = useMutation({
+    mutationFn: async (v: { urgent_keywords: string[]; vip_senders: string[]; ignore_senders: string[] }) => {
+      const { error } = await db().from('organization_settings').update({ email_rules: v }).eq('org_id', orgId)
+      if (error) throw error
+    },
+    onSuccess: () => { setMsg({ tone: 'ok', text: 'Saved.' }); qc.invalidateQueries({ queryKey: ['email-rules'] }); qc.invalidateQueries({ queryKey: ['email-triage'] }) },
+    onError: (e: Error) => setMsg({ tone: 'danger', text: e.message }),
+  })
+  const list = (v: FormDataEntryValue | null) => String(v ?? '').split(/[\n,]/).map((x) => x.trim()).filter(Boolean)
+  const show = (a?: string[]) => (a ?? []).join(', ')
+
+  return (
+    <Section title="Email rules">
+      <form key={JSON.stringify(rules.data)} className="space-y-4" onSubmit={(e) => {
+        e.preventDefault(); const f = new FormData(e.currentTarget); setMsg(null)
+        save.mutate({ urgent_keywords: list(f.get('kw')), vip_senders: list(f.get('vip')), ignore_senders: list(f.get('ign')) })
+      }}>
+        <p className="text-sm text-muted">Decide what counts as urgent. Separate entries with commas. Senders can be an address or a whole domain like <code className="font-mono">@bigclient.com</code>.</p>
+        <Field label="Urgent keywords" hint="Added to built-ins like “urgent”, “overdue”, “deadline”.">
+          {(id) => <Input id={id} name="kw" disabled={!isAdmin} defaultValue={show(rules.data?.urgent_keywords)} />}
+        </Field>
+        <Field label="VIP senders">{(id) => <Input id={id} name="vip" disabled={!isAdmin} defaultValue={show(rules.data?.vip_senders)} />}</Field>
+        <Field label="Ignore senders">{(id) => <Input id={id} name="ign" disabled={!isAdmin} defaultValue={show(rules.data?.ignore_senders)} />}</Field>
+        {msg && <Notice tone={msg.tone}>{msg.text}</Notice>}
+        <Button type="submit" variant="primary" disabled={!isAdmin} loading={save.isPending}>Save rules</Button>
+      </form>
+    </Section>
   )
 }
