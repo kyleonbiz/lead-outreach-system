@@ -88,6 +88,8 @@ export interface TickDeps {
   listScheduled(): Promise<Array<{ id: string; cron: string; timezone: string }>>
   enqueue(workflowId: string, source: 'schedule', key: string): Promise<string | null>
   dispatchEvents(): Promise<number>
+  /** marks overdue approvals expired and fails workflow steps still waiting on them */
+  expireApprovals(): Promise<number>
   processNow(limit: number): Promise<RunSummary[]>
 }
 
@@ -107,7 +109,8 @@ export async function handleTick(d: TickDeps): Promise<HandlerResult> {
       if (await d.enqueue(w.id, 'schedule', `sched:${w.id}:${localParts(at, w.timezone).key}`)) scheduled++
     }
   }
+  const expired = await d.expireApprovals()
   const fromEvents = await d.dispatchEvents()
   const runs = await d.processNow(3)
-  return ok({ scheduled, from_events: fromEvents, processed: runs.length, runs })
+  return ok({ scheduled, from_events: fromEvents, expired_approvals: expired, processed: runs.length, runs })
 }

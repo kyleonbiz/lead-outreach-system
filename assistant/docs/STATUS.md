@@ -189,3 +189,32 @@ Deploy `document-process`; `ANTHROPIC_API_KEY` for summaries (optional: document
 ## Needed to go live
 `CRON_SECRET`; deploy `workflow-save`, `workflow-run`, `workflow-tick`; run `supabase/cron.example.sql` with pg_cron + pg_net + Vault enabled;
 `ANTHROPIC_API_KEY` for summary steps (the briefing fails visibly without it).
+
+---
+
+# Phase 7 status (hardening, tests, polish, deployment docs)
+
+## Built
+* **Gap review fixes:** (1) approvals that expire now also fail any workflow step waiting on them (`expire_approvals()`, run by the tick);
+  (2) per-organization **daily AI token budget** (`ASSISTANT_DAILY_TOKEN_LIMIT`) with a clear `usage_limit` error; (3) request bodies capped at
+  1 MB, CORS/error-boundary helpers extracted into pure, tested code (`core/http.ts`) so unexpected errors never leak details.
+* **Security headers:** strict CSP (no inline script, no eval), `frame-ancestors 'none'`, HSTS, nosniff, referrer/permissions policies in
+  `vercel.json`; the inline theme script moved to `public/theme-init.js`; Zod JIT disabled in the browser so it never attempts `eval`.
+* **Integration tests:** an authorization matrix over all 9 endpoints × 5 kinds of caller (anonymous, outsider, member, admin, owner), a full
+  chat → approval → execution loop (queued, not run, approved, run once, double-submit rejected, audit trail), and a full
+  tick → workflow → approval pause → approve → resume → completion flow with duplicate-trigger protection.
+* **Accessibility/responsive:** fixed WCAG AA contrast failures in the design tokens (muted, warn, ok), non-color link affordance in text,
+  and a cramped mobile Documents row.
+* **Docs:** `DEPLOYMENT.md` (ordered rollout with checks, smoke test, cost controls, operations/incident notes) and `KNOWN_LIMITATIONS.md`.
+
+## Verified
+* 218 passed (218) in 21 passed (21) files; DB: 148 assertions; `deno check` on 10 functions; production build.
+* **Real-browser audit of the production build** served with the exact headers from `vercel.json`, over a fake API, for all 10 pages at
+  390 / 768 / 1280 px (30 combinations): **0 CSP violations, 0 horizontal overflow, 0 axe-core WCAG 2 A/AA violations**.
+  (This proves the UI under the CSP and its accessibility on stubbed data — not backend behavior.)
+
+## NOT verified
+* Everything listed in `KNOWN_LIMITATIONS.md` → "Never run against live services". In particular the CSP was tested with a fake Supabase
+  host matching `https://*.supabase.co`; a custom Supabase domain needs `connect-src` updated.
+* Screen-reader behavior beyond automated axe rules and keyboard use of the custom dialogs/popovers was not manually tested.
+* No load/performance testing.

@@ -150,6 +150,7 @@ export function tickDeps(svc: SupabaseClient, authorized: boolean): TickDeps {
     },
     async enqueue(id, source, key) { return ((await svc.rpc('enqueue_workflow_run', { p_workflow: id, p_source: source, p_key: key })).data as string | null) ?? null },
     async dispatchEvents() { return ((await svc.rpc('dispatch_workflow_events', { p_limit: 50 })).data as number) ?? 0 },
+    async expireApprovals() { return ((await svc.rpc('expire_approvals')).data as number) ?? 0 },
     processNow: processNow(svc),
   }
 }

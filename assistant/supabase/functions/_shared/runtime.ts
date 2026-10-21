@@ -1,28 +1,14 @@
 // Deno runtime helpers shared by every edge function. Contains no business logic.
 import { createClient, type SupabaseClient } from '@supabase/supabase-js'
 import type { HandlerResult } from './core/handlers/common.ts'
+import { guard, readJson, toResponse } from './core/http.ts'
 
 export const env = (k: string): string | undefined => Deno.env.get(k) || undefined
 
-export function corsHeaders(): Record<string, string> {
-  return {
-    'Access-Control-Allow-Origin': env('APP_URL') ?? '*',
-    'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-    'Access-Control-Allow-Methods': 'POST, GET, OPTIONS',
-    'Vary': 'Origin',
-  }
-}
+const origin = () => env('APP_URL')
 
-export function json(r: HandlerResult): Response {
-  if (r.status === 302 && typeof r.body.location === 'string') {
-    return new Response(null, { status: 302, headers: { Location: r.body.location } })
-  }
-  return new Response(JSON.stringify(r.body), { status: r.status, headers: { ...corsHeaders(), 'Content-Type': 'application/json' } })
-}
-
-export function preflight(req: Request): Response | null {
-  return req.method === 'OPTIONS' ? new Response('ok', { headers: corsHeaders() }) : null
-}
+export const json = (r: HandlerResult): Response => toResponse(r, origin())
+export { readJson }
 
 function requireEnv(k: string): string {
   const v = env(k)
@@ -52,20 +38,5 @@ export async function verifiedUserId(client: SupabaseClient, req: Request): Prom
   return error ? null : data.user?.id ?? null
 }
 
-export async function readJson(req: Request): Promise<unknown> {
-  try { return await req.json() } catch { return null }
-}
-
-/** Wraps a handler so unexpected errors become a generic 500 (details go to logs, never to the client). */
-export function guarded(fn: (req: Request) => Promise<Response>): (req: Request) => Promise<Response> {
-  return async (req) => {
-    const pre = preflight(req)
-    if (pre) return pre
-    try {
-      return await fn(req)
-    } catch (e) {
-      console.error('unhandled', e instanceof Error ? e.stack : e)
-      return json({ status: 500, body: { error: 'Internal error' } })
-    }
-  }
-}
+/** Wraps a handler: CORS preflight and a generic 500 for unexpected errors. */
+export const guarded = (fn: (req: Request) => Promise<Response>) => guard(fn, origin)

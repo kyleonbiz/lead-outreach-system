@@ -63,6 +63,13 @@ export function buildChatDeps(opts: {
         .eq('org_id', orgId).eq('role', 'user').gte('created_at', since).eq('assistant_conversations.user_id', userId!)
       return (data ?? []).map((r) => Date.parse(r.created_at as string))
     },
+    dailyTokenLimit: Number(env('ASSISTANT_DAILY_TOKEN_LIMIT') ?? 500_000),
+    async tokensUsedToday(orgId) {
+      const start = new Date(); start.setUTCHours(0, 0, 0, 0)
+      const { data } = await svc.from('usage_records').select('quantity').eq('org_id', orgId)
+        .in('kind', ['llm_input_tokens', 'llm_output_tokens']).gte('created_at', start.toISOString()).limit(5000)
+      return (data ?? []).reduce((n, r) => n + Number(r.quantity), 0)
+    },
     missingConfig: () => (env('ANTHROPIC_API_KEY') ? [] : ['ANTHROPIC_API_KEY']),
     loadOrg: (orgId) => orgContext(client, orgId),
     async createConversation(orgId, title) {

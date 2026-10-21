@@ -13,15 +13,18 @@ tools, and asks before anything sensitive.
 
 | Phase | Scope | State |
 |---|---|---|
-| 1 | Repo inspection, plan | ✅ `docs/PHASE1_REPORT.md` |
-| 2 | Shell, auth, schema + RLS, dashboard, tasks, activity | ✅ built and tested — see [Phase 2 status](docs/STATUS.md) |
-| 3 | Assistant orchestration, tool layer, approvals | ⬜ not started |
-| 4 | Gmail + Google Calendar (OAuth) | ⬜ not started |
-| 5 | Documents, knowledge base, generation | ⬜ not started |
-| 6 | Workflows, background jobs, notifications | ⬜ not started |
-| 7 | Hardening, integration tests, deployment guide | ⬜ not started |
+| 1 | Repo inspection, plan | built — `docs/PHASE1_REPORT.md` |
+| 2 | Shell, auth, schema + RLS, dashboard, tasks, activity | built and tested |
+| 3 | Assistant orchestration, tool registry, approvals | built and tested (mocked model) |
+| 4 | Gmail + Google Calendar (OAuth) | built; **mocked HTTP only** |
+| 5 | Documents, knowledge base, search, generation | built and tested |
+| 6 | Workflows, durable queue, scheduler, notifications | built and tested; **scheduler never fired** |
+| 7 | Hardening, integration + authorization tests, CSP, a11y, deployment docs | built and tested |
 
-Sections of the UI whose phase has not been built say so explicitly. Nothing is simulated.
+**Nothing has run against live Supabase / Anthropic / Google yet** — read [docs/KNOWN_LIMITATIONS.md](docs/KNOWN_LIMITATIONS.md) and per-phase
+status in [docs/STATUS.md](docs/STATUS.md) before trusting it. Sections of the UI whose backend is not configured say so; nothing is simulated.
+
+Tests: 218 passed (218) in 21 passed (21) files (Vitest) plus 148 database assertions (`npm run test:db`).
 
 ## Quick start
 
@@ -33,7 +36,7 @@ npm run dev
 ```
 
 Without those variables the app shows a setup screen rather than failing. Full instructions
-(creating the Supabase project, applying migrations, auth settings): **[docs/SETUP.md](docs/SETUP.md)**.
+(creating the Supabase project, applying migrations, auth settings): **[docs/SETUP.md](docs/SETUP.md)**. Production rollout: **[docs/DEPLOYMENT.md](docs/DEPLOYMENT.md)**.
 
 ## Scripts
 
@@ -42,15 +45,17 @@ Without those variables the app shows a setup screen rather than failing. Full i
 | `npm run dev` | Vite dev server |
 | `npm run build` | Typecheck + production build |
 | `npm test` | Frontend unit/component tests (Vitest) |
-| `npm run test:db` | Applies all migrations to a throwaway Postgres and runs the RLS/tenancy test suite |
+| `npm run test:db` | Applies all migrations to a throwaway Postgres and runs the RLS/tenancy/queue test suites |
+| `npm run check:functions` | Type-checks every edge function with Deno |
 
 ## Layout
 
 ```
 src/                  React + TypeScript + Tailwind app
-  features/           auth, org (tenancy), tasks, activity, integrations
+  features/           auth, org (tenancy), tasks, assistant, documents, workflows, integrations, notifications
   pages/              one file per nav item
-supabase/migrations/  schema, RLS, grants, storage policies (source of truth)
+supabase/functions/   edge functions (thin) + _shared/core (pure TypeScript: tools, policy, orchestrator, workflow engine, adapters)
+supabase/migrations/  schema, RLS, grants, queue functions, storage policies (source of truth)
 supabase/tests/       SQL tests run by scripts/test-db.sh
-docs/                 setup, architecture & security model, status
+docs/                 setup, deployment, architecture & security model, status, known limitations
 ```

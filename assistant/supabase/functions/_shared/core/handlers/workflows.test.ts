@@ -83,7 +83,7 @@ describe('workflow-tick', () => {
     const d: TickDeps = {
       authorized: true, now: () => new Date('2026-10-21T13:00:20Z'),
       listScheduled: async () => [{ id: 'w1', cron: '0 8 * * 1-5', timezone: 'America/Chicago' }, { id: 'w2', cron: '30 9 * * *', timezone: 'UTC' }],
-      enqueue: enq, dispatchEvents: async () => 2, processNow: async () => [{ runId: 'r', status: 'succeeded' }], ...o,
+      enqueue: enq, dispatchEvents: async () => 2, expireApprovals: async () => 1, processNow: async () => [{ runId: 'r', status: 'succeeded' }], ...o,
     }
     return { d, enq }
   }
@@ -96,7 +96,7 @@ describe('workflow-tick', () => {
     const { d, enq } = tick()
     const r = await handleTick(d)
     expect(enq.mock.calls).toEqual([['w1', 'schedule', 'sched:w1:202610210800']])   // 08:00 Chicago = 13:00Z
-    expect(r.body).toMatchObject({ scheduled: 1, from_events: 2, processed: 1 })
+    expect(r.body).toMatchObject({ scheduled: 1, from_events: 2, expired_approvals: 1, processed: 1 })
   })
   it('catches up after a delayed tick (lookback) and is safe to repeat: duplicates are rejected by key', async () => {
     const { d, enq } = tick({ now: () => new Date('2026-10-21T13:03:10Z') })   // tick arrived 3 minutes late

@@ -16,6 +16,7 @@ function chatDeps(over: Partial<ChatDeps> = {}): ChatDeps & { store: MemoryStore
     userId: USER, now: () => new Date('2026-10-21T15:00:00Z'), rateLimit: { max: 3, windowMs: 60_000 },
     getRole: async (o) => (o === ORG ? 'member' : null),
     recentUserMessageTimes: async () => [],
+    dailyTokenLimit: 0, tokensUsedToday: async () => 0,
     missingConfig: () => [],
     loadOrg: async () => ({ orgName: 'Acme', timezone: 'America/Chicago', model: null, policy: { auto_approve: [] } }),
     createConversation: async () => CONV,
@@ -55,6 +56,14 @@ describe('POST assistant-chat: authorization & guards', () => {
     const r = await handleChat(chatDeps({ recentUserMessageTimes: async () => [now - 1000, now - 2000, now - 3000] }), body)
     expect(r.status).toBe(429)
     expect(r.body.retry_after_seconds).toBeGreaterThan(0)
+  })
+  it('429 usage_limit once the org has spent its daily AI token budget — before any model call', async () => {
+    const d = chatDeps({ dailyTokenLimit: 1000, tokensUsedToday: async () => 1000 })
+    const r = await handleChat(d, body)
+    expect(r).toMatchObject({ status: 429, body: { code: 'usage_limit' } })
+    expect(d.provider.requests).toHaveLength(0)
+    expect((await handleChat(chatDeps({ dailyTokenLimit: 1000, tokensUsedToday: async () => 999 }), body)).status).toBe(200)
+    expect((await handleChat(chatDeps({ dailyTokenLimit: 0, tokensUsedToday: async () => 10 ** 9 }), body)).status).toBe(200) // 0 = unlimited
   })
   it("404 for someone else's / another org's conversation", async () => {
     expect((await handleChat(chatDeps(), { ...body, conversation_id: '55555555-5555-4555-8555-555555555555' })).status).toBe(404)

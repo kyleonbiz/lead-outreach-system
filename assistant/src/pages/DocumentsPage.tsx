@@ -110,7 +110,7 @@ function DocItem({ d, canDelete, confirming, onConfirm, onCancel, onDelete, onDo
     <li className="px-4 py-3.5">
       <div className="flex flex-wrap items-start gap-3">
         <FileText className="mt-0.5 h-4 w-4 shrink-0 text-muted" aria-hidden />
-        <div className="min-w-0 flex-1">
+        <div className="min-w-0 flex-1 basis-56">
           <p className="break-words text-sm font-medium">{d.name} {d.source === 'generated' && <Badge tone="accent" className="ml-1">Created by assistant</Badge>}</p>
           <p className="text-xs text-muted">{format(new Date(d.created_at), 'MMM d, yyyy')}{d.size_bytes ? ` · ${fmtSize(d.size_bytes)}` : ''}</p>
           {d.summary && <p className="mt-1.5 text-sm">{d.summary}</p>}
@@ -118,13 +118,15 @@ function DocItem({ d, canDelete, confirming, onConfirm, onCancel, onDelete, onDo
           {!!x.action_items?.length && <p className="mt-1 text-xs text-muted"><strong className="font-medium text-ink">Action items:</strong> {x.action_items.join('; ')}</p>}
           {d.error && <p className={cn('mt-1 text-xs', d.status === 'failed' ? 'text-danger' : 'text-muted')}>{d.error}</p>}
         </div>
-        <Badge tone={statusTone[d.status]}>{statusLabel[d.status]}</Badge>
-        <div className="flex gap-1">
-          <Button variant="ghost" onClick={onDownload} aria-label={`Download ${d.name}`}><Download className="h-4 w-4" /></Button>
-          {d.source === 'generated' && <Button variant="ghost" onClick={onExport}>Word</Button>}
-          {canDelete && (confirming
-            ? <><Button variant="danger" onClick={onDelete}>Delete</Button><Button onClick={onCancel}>Keep</Button></>
-            : <Button variant="ghost" onClick={onConfirm} aria-label={`Delete ${d.name}`}><Trash2 className="h-4 w-4" /></Button>)}
+        <div className="ml-7 flex items-center gap-2 sm:ml-0">
+          <Badge tone={statusTone[d.status]}>{statusLabel[d.status]}</Badge>
+          <div className="flex gap-1">
+            <Button variant="ghost" onClick={onDownload} aria-label={`Download ${d.name}`}><Download className="h-4 w-4" /></Button>
+            {d.source === 'generated' && <Button variant="ghost" onClick={onExport}>Word</Button>}
+            {canDelete && (confirming
+              ? <><Button variant="danger" onClick={onDelete}>Delete</Button><Button onClick={onCancel}>Keep</Button></>
+              : <Button variant="ghost" onClick={onConfirm} aria-label={`Delete ${d.name}`}><Trash2 className="h-4 w-4" /></Button>)}
+          </div>
         </div>
       </div>
     </li>

@@ -26,6 +26,10 @@ export interface ChatDeps {
   /** membership is read with the USER's token, so RLS decides; null = not a member of that org */
   getRole(orgId: string): Promise<Role | null>
   recentUserMessageTimes(orgId: string): Promise<number[]>
+  /** daily AI token budget per organization; 0 disables the cap */
+  dailyTokenLimit: number
+  /** LLM tokens (input + output) used by the organization since 00:00 UTC */
+  tokensUsedToday(orgId: string): Promise<number>
   /** which required server-side settings are missing (e.g. ANTHROPIC_API_KEY) */
   missingConfig(): string[]
   loadOrg(orgId: string): Promise<OrgContext>
@@ -51,6 +55,10 @@ export async function handleChat(d: ChatDeps, raw: unknown): Promise<HandlerResu
 
   const limited = checkRateLimit(await d.recentUserMessageTimes(req.org_id), d.now().getTime(), d.rateLimit)
   if (!limited.ok) return fail(429, 'You are sending messages too quickly', { retry_after_seconds: limited.retryAfterSeconds })
+
+  if (d.dailyTokenLimit > 0 && (await d.tokensUsedToday(req.org_id)) >= d.dailyTokenLimit) {
+    return fail(429, 'Your organization has reached today\'s AI usage limit. It resets at midnight UTC.', { code: 'usage_limit' })
+  }
 
   let history: Awaited<ReturnType<ChatDeps['loadHistory']>> = []
   let conversationId = req.conversation_id

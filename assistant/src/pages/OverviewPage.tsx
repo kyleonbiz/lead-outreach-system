@@ -62,7 +62,7 @@ export default function OverviewPage() {
 
       <Section title="Daily briefing" action={<More to="/workflows">Workflows</More>}>
         {briefing.isLoading ? <Spinner /> : !briefing.data?.exists ? (
-          <Muted>Not set up. <Link className="text-accent hover:underline" to="/workflows">Turn on the daily briefing</Link> to get your agenda, important email and overdue tasks each weekday morning.</Muted>
+          <Muted>Not set up. <Link className="text-accent underline underline-offset-2" to="/workflows">Turn on the daily briefing</Link> to get your agenda, important email and overdue tasks each weekday morning.</Muted>
         ) : !briefing.data.run ? (
           <Muted>{briefing.data.enabled ? 'No briefing has run yet. The first one arrives at the next scheduled time.' : 'The daily briefing is switched off.'}</Muted>
         ) : briefing.data.run.status === 'succeeded' && briefing.data.run.output?.text ? (
@@ -78,7 +78,7 @@ export default function OverviewPage() {
       <div className="grid gap-6 lg:grid-cols-2">
         <Section title="Today's agenda" action={<More to="/calendar">Calendar</More>}>
           {calendar ? <Muted>Calendar sync arrives in Phase 4.</Muted>
-            : <Muted>Google Calendar isn't connected. <Link className="text-accent hover:underline" to="/integrations">Set it up</Link> to see your day here.</Muted>}
+            : <Muted>Google Calendar isn't connected. <Link className="text-accent underline underline-offset-2" to="/integrations">Set it up</Link> to see your day here.</Muted>}
         </Section>
 
         <Section title="Tasks due soon" action={<More to="/tasks">All tasks</More>}>
@@ -99,7 +99,7 @@ export default function OverviewPage() {
 
         <Section title="Important communications" action={<More to="/email">Email</More>}>
           {gmail ? <Muted>Email triage arrives in Phase 4.</Muted>
-            : <Muted>Gmail isn't connected. <Link className="text-accent hover:underline" to="/integrations">Set it up</Link> to see what needs a reply.</Muted>}
+            : <Muted>Gmail isn't connected. <Link className="text-accent underline underline-offset-2" to="/integrations">Set it up</Link> to see what needs a reply.</Muted>}
         </Section>
 
         <Section title="Pending approvals">
