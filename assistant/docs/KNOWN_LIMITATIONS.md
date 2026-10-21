@@ -20,7 +20,12 @@ Plain list of what is **not** done or **not proven**. Nothing here is hidden beh
   today. Task assignment columns exist; assignment UI does not.
 * Task attachments, usage dashboards/billing, per-document sharing, search in languages other than English.
 * No account deletion / data export flow, no audit-log export.
-* Notifications are in-app only (no email/push).
+* Notifications: in-app, e-mail (Resend) and Slack/Teams webhooks. No push/SMS. E-mail needs a Resend account and a verified sending domain.
+  **Never run against Resend, Slack or Teams**: request shapes follow their public docs and are tested against mocked HTTP only. The Teams card uses the
+  Adaptive Card format used by Teams Workflows; if a tenant's webhook rejects it, the failure is shown on the channel and in Recent deliveries.
+* Webhook SSRF protection is an exact provider-host allow-list plus a public-address DNS check. The DNS check is separate from `fetch`, so it cannot
+  fully rule out DNS rebinding, and it is skipped (the allow-list still applies) on runtimes without `Deno.resolveDns`.
+* Delivery depends on the scheduler (`workflow-tick`) running every minute. Delivery records are pruned after 30 days (90 for failures).
 
 ## Security notes / follow-ups
 * Google "restricted" Gmail scopes require Google's verification (and usually a security assessment) before serving the public.
@@ -31,5 +36,5 @@ Plain list of what is **not** done or **not proven**. Nothing here is hidden beh
 * Recurring tasks use UTC interval arithmetic (a DST change can shift local time by an hour).
 
 ## Reasonable next integrations
-Outlook mail/calendar adapters · Gmail push → `email.received` workflow trigger · Slack/Teams notifications · accounting (QuickBooks/Xero,
+Outlook mail/calendar adapters · Gmail push → `email.received` workflow trigger · accounting (QuickBooks/Xero,
 read-only first) · e-signature (always behind approval) · SMS/phone reminders · pgvector semantic search.

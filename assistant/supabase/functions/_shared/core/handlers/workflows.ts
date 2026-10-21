@@ -91,6 +91,12 @@ export interface TickDeps {
   /** marks overdue approvals expired and fails workflow steps still waiting on them */
   expireApprovals(): Promise<number>
   processNow(limit: number): Promise<RunSummary[]>
+  /** announces newly overdue tasks as notifications; returns how many tasks were announced */
+  notifyOverdue?(): Promise<number>
+  /** sends queued e-mail / Slack / Teams deliveries */
+  dispatchNotifications?(): Promise<{ claimed: number; sent: number; failed: number; retried: number; skipped: number }>
+  /** deletes old delivery records */
+  pruneNotifications?(): Promise<number>
 }
 
 /**
@@ -112,5 +118,16 @@ export async function handleTick(d: TickDeps): Promise<HandlerResult> {
   const expired = await d.expireApprovals()
   const fromEvents = await d.dispatchEvents()
   const runs = await d.processNow(3)
-  return ok({ scheduled, from_events: fromEvents, expired_approvals: expired, processed: runs.length, runs })
+
+  // Notification delivery must never break workflow processing: failures are reported, not thrown.
+  const notifications: Record<string, unknown> = {}
+  const safely = async (name: string, fn?: () => Promise<unknown>) => {
+    if (!fn) return
+    try { notifications[name] = await fn() } catch (e) { notifications[`${name}_error`] = (e as Error).message.slice(0, 200) }
+  }
+  await safely('overdue_announced', d.notifyOverdue)
+  await safely('deliveries', d.dispatchNotifications)
+  if (now.getUTCMinutes() === 0) await safely('pruned', d.pruneNotifications)
+
+  return ok({ scheduled, from_events: fromEvents, expired_approvals: expired, processed: runs.length, runs, notifications })
 }

@@ -247,3 +247,30 @@ Each item below was built and tested without any live service. "Verified" means 
 * The broad-domain list is best-effort (common free-mail providers and public suffixes), not the full Public Suffix List. An admin can still
   list a company domain they do not control; the rule only ever applies to addresses on that exact domain (not subdomains).
 * Not exercised against a real Supabase RPC call.
+
+## 2. Notifications: e-mail + Slack / Teams
+### Built
+* **Delivery outbox** (migration `0009`): every in-app notification fans out (DB trigger) to e-mail deliveries and subscribed channels; the existing
+  1-minute `workflow-tick` claims due deliveries (leased, `FOR UPDATE SKIP LOCKED`), sends, retries with back-off (1 m, 5 m, 30 m, 2 h; 5 attempts) and records the outcome.
+  Duplicate protection by unique `dedupe_key`; a crashed worker's lease lapses and is retried or failed, never lost or doubled.
+* **Hooks:** failed workflows and workflow approvals (already produced by the engine), **chat approvals** (new trigger), **overdue tasks** (new sweep: one summary per
+  organization, each task announced once, re-armed when the due date changes or the task is reopened).
+* **Per-user preferences** (workflow failed / approval needed / overdue; overdue defaults to off). E-mail goes **only to the member's own confirmed sign-in address**.
+* **Slack & Teams webhooks** managed by owners/admins via the `notification-channels` function (create, update, pause, delete, **send test** that reports the real result).
+  URLs are validated (https, exact provider hosts, port 443, no credentials/IPs/redirects), encrypted at rest (AES-GCM bound to the channel) and never returned to the browser.
+* **Resend** HTTP adapter behind a provider-neutral `Mailer`, with an idempotency key per delivery. Missing configuration is reported as *skipped (missing: …)*, never faked.
+* Settings UI: personal e-mail toggles; channel management; Recent deliveries log for admins.
+* Messages neutralize untrusted text (Slack `<!channel>`/forged links, Teams markdown links/HTML, e-mail header injection) and only link to internal app paths.
+### Verified
+* 62 new SQL assertions (`80_notifications.test.sql`): fan-out rules, preferences, dedupe, claim/lease/complete/retry/give-up, unconfirmed addresses never returned,
+  secrets unreadable by every client role, cross-organization isolation, hooks, overdue sweep, pruning.
+* 150+ unit tests: URL/SSRF validation (every range and bypass tried; two mutation checks confirmed the tests catch regressions), formatting/injection,
+  Resend and webhook HTTP behavior and status classification, dispatcher isolation/retry, handler authorization, tick isolation, 10 UI tests.
+* A real bug was found by the tests and fixed: Slack's plain-text `text` fallback field was not escaped.
+### NOT verified
+* No message was ever sent to Resend, Slack or Teams. Whether each service accepts our payloads is untested (mocked HTTP only).
+* The migration's SQL ran on plain PostgreSQL 16 with a stub of Supabase's `auth` schema; `auth.users.email_confirmed_at` behavior on a real project is assumed.
+* `Deno.resolveDns` availability on the hosted edge runtime is unknown (the layer is skipped if absent).
+### Setup you must do
+`supabase secrets set RESEND_API_KEY=... NOTIFY_FROM_EMAIL=...` (e-mail only), deploy `notification-channels`, and apply migration `0009`. See DEPLOYMENT.md → Notifications.
+

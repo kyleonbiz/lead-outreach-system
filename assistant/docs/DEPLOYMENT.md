@@ -13,7 +13,7 @@ Do the steps in order; each ends with a check.
 
 ## 1. Supabase project
 1. Create the project; note the **project ref**, **URL**, **anon key**. Keep the **service_role key** secret.
-2. Apply migrations: `supabase link --project-ref <ref> && supabase db push` (applies `0001`…`0007` in order).
+2. Apply migrations: `supabase link --project-ref <ref> && supabase db push` (applies every file in `supabase/migrations`, currently `0001`…`0009`, in order).
 3. **Check:** SQL editor → `select count(*) from information_schema.tables where table_schema='public'` returns 25+; and as a test,
    `select * from public.integration_credentials` using the anon key must fail with *permission denied* (it is closed to every client role).
 4. Authentication → Providers → Email: keep **Confirm email** ON. URL Configuration: Site URL = your Vercel URL; add it and
@@ -29,6 +29,8 @@ supabase secrets set \
   TOKEN_ENCRYPTION_KEY=$(openssl rand -base64 32) \
   CRON_SECRET=$(openssl rand -hex 32)
 ```
+Optional, for **e-mail notifications**: `RESEND_API_KEY` and `NOTIFY_FROM_EMAIL` (see *Notifications* below). Without them, e-mails are
+recorded as *skipped* in Settings → Recent deliveries (never silently dropped); in-app, Slack and Teams notifications still work.
 Optional: `ASSISTANT_DEFAULT_MODEL`, `ASSISTANT_MESSAGES_PER_MINUTE` (default 12), `ASSISTANT_DAILY_TOKEN_LIMIT` (per org, default 500000, `0` = unlimited).
 **Back up `TOKEN_ENCRYPTION_KEY` in a password manager.** If it is lost, every connected Google account must be reconnected.
 `APP_URL` also sets the CORS origin; leave it unset only in local development (it then allows `*`).
@@ -37,7 +39,7 @@ Optional: `ASSISTANT_DEFAULT_MODEL`, `ASSISTANT_MESSAGES_PER_MINUTE` (default 12
 ```bash
 cd assistant
 supabase functions deploy assistant-chat assistant-approve google-oauth-start google-oauth-callback \
-  integration-disconnect provider-data document-process workflow-save workflow-run workflow-tick
+  integration-disconnect provider-data document-process workflow-save workflow-run workflow-tick notification-channels
 ```
 `supabase/config.toml` marks `google-oauth-callback` and `workflow-tick` as `verify_jwt = false` (they authenticate with a signed
 OAuth `state` and the `CRON_SECRET` respectively). Every other function requires a valid user JWT **and** re-checks organization
@@ -47,6 +49,16 @@ membership server-side.
 ## 4. Scheduler
 Enable `pg_cron`, `pg_net`, `supabase_vault`; store the secret and schedule the tick using `supabase/cron.example.sql`.
 **Check:** `select * from cron.job_run_details order by start_time desc limit 5` shows `succeeded` each minute.
+
+### Notifications (e-mail, Slack, Teams)
+* **How it works:** anything that creates an in-app notification (workflow failure, approval needed, overdue tasks) is queued for delivery by a
+  database trigger; the minute-by-minute `workflow-tick` sends it. No extra cron job is needed — if the scheduler is not running, nothing is delivered.
+* **E-mail:** create a Resend account, verify a sending domain, then `supabase secrets set RESEND_API_KEY=... NOTIFY_FROM_EMAIL="Aide <notifications@yourdomain.com>"`.
+  E-mails go only to each member's own **confirmed** sign-in address, and each person chooses what they get in Settings.
+* **Slack / Teams:** an owner or admin adds a channel in Settings → *Slack & Microsoft Teams*. Slack: Incoming Webhooks app. Teams: a channel Workflow
+  "Post to a channel when a webhook request is received" (or a legacy `*.webhook.office.com` connector). Only these provider hosts are accepted, over https.
+  The URL is encrypted with `TOKEN_ENCRYPTION_KEY` and never shown again. Use **Send test** to confirm it works.
+* **Check:** Send test on a channel → message appears; Settings → Recent deliveries shows `sent`.
 
 ## 5. Google OAuth client
 See SETUP.md → *Google OAuth*. Authorized redirect URI must equal `GOOGLE_OAUTH_REDIRECT_URI` exactly.

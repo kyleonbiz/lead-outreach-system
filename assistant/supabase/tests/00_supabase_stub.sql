@@ -9,6 +9,7 @@ create schema auth;
 create table auth.users (
   id uuid primary key default gen_random_uuid(),
   email text,
+  email_confirmed_at timestamptz default now(),
   raw_user_meta_data jsonb default '{}'::jsonb
 );
 -- same lookup Supabase uses

@@ -5,6 +5,7 @@ import { db } from '@/lib/supabase'
 import { useOrg } from '@/features/org/OrgProvider'
 import { useAuth } from '@/features/auth/AuthProvider'
 import { ApprovalRulesSection } from '@/features/approvals/ApprovalRulesSection'
+import { NotificationSettings } from '@/features/notifications/NotificationSettings'
 
 export default function SettingsPage() {
   const { orgId, orgName, role, isAdmin, settings, profile, refresh } = useOrg()
@@ -60,6 +61,8 @@ export default function SettingsPage() {
         <EmailRulesSection />
 
         <ApprovalRulesSection />
+
+        <NotificationSettings />
 
         <Section title="Account">
           <dl className="grid grid-cols-[8rem_1fr] gap-y-2 text-sm">

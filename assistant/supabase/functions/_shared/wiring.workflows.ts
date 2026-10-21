@@ -1,3 +1,4 @@
+import { notifyTickDeps } from './wiring.notify.ts'
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { AnthropicProvider } from './core/llm/anthropic.ts'
 import { buildRegistry } from './core/tools/index.ts'
@@ -152,5 +153,6 @@ export function tickDeps(svc: SupabaseClient, authorized: boolean): TickDeps {
     async dispatchEvents() { return ((await svc.rpc('dispatch_workflow_events', { p_limit: 50 })).data as number) ?? 0 },
     async expireApprovals() { return ((await svc.rpc('expire_approvals')).data as number) ?? 0 },
     processNow: processNow(svc),
+    ...notifyTickDeps(svc),
   }
 }
