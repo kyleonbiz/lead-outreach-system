@@ -32,8 +32,8 @@ export default function OverviewPage() {
   const workflows = useWorkflowSummary(orgId)
   const briefing = useLatestBriefing(orgId)
 
-  const gmail = integrations.data?.find((i) => i.provider === 'google_gmail' && i.status === 'connected')
-  const calendar = integrations.data?.find((i) => i.provider === 'google_calendar' && i.status === 'connected')
+  const mail = integrations.data?.find((i) => (i.provider === 'google_gmail' || i.provider === 'microsoft_mail') && i.status === 'connected')
+  const calendar = integrations.data?.find((i) => (i.provider === 'google_calendar' || i.provider === 'microsoft_calendar') && i.status === 'connected')
   const dueSoon = (tasks.data ?? []).filter((t) => {
     if (!isOpen(t) || !t.due_at) return false
     return Date.parse(t.due_at) < Date.now() + 3 * 86_400_000
@@ -77,8 +77,8 @@ export default function OverviewPage() {
 
       <div className="grid gap-6 lg:grid-cols-2">
         <Section title="Today's agenda" action={<More to="/calendar">Calendar</More>}>
-          {calendar ? <Muted>Calendar sync arrives in Phase 4.</Muted>
-            : <Muted>Google Calendar isn't connected. <Link className="text-accent underline underline-offset-2" to="/integrations">Set it up</Link> to see your day here.</Muted>}
+          {calendar ? <Muted>{calendar.external_account} is connected. <Link className="text-accent underline underline-offset-2" to="/calendar">See today's agenda</Link>.</Muted>
+            : <Muted>No calendar is connected. <Link className="text-accent underline underline-offset-2" to="/integrations">Set it up</Link> to see your day here.</Muted>}
         </Section>
 
         <Section title="Tasks due soon" action={<More to="/tasks">All tasks</More>}>
@@ -98,8 +98,8 @@ export default function OverviewPage() {
         </Section>
 
         <Section title="Important communications" action={<More to="/email">Email</More>}>
-          {gmail ? <Muted>Email triage arrives in Phase 4.</Muted>
-            : <Muted>Gmail isn't connected. <Link className="text-accent underline underline-offset-2" to="/integrations">Set it up</Link> to see what needs a reply.</Muted>}
+          {mail ? <Muted>{mail.external_account} is connected. <Link className="text-accent underline underline-offset-2" to="/email">See what needs a reply</Link>.</Muted>
+            : <Muted>No email account is connected. <Link className="text-accent underline underline-offset-2" to="/integrations">Set it up</Link> to see what needs a reply.</Muted>}
         </Section>
 
         <Section title="Pending approvals">

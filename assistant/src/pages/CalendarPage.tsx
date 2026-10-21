@@ -24,8 +24,8 @@ export default function CalendarPage() {
         } />
       {q.isLoading && <Spinner label="Loading agenda" />}
       {isNotConnected(q.error) && (
-        <EmptyState title="Google Calendar isn't connected" action={<Link to="/integrations"><Button variant="primary">Set up Calendar</Button></Link>}>
-          Connect your calendar to see your agenda. Nothing is shown until it is connected.
+        <EmptyState title="No calendar is connected" action={<Link to="/integrations"><Button variant="primary">Set up Calendar</Button></Link>}>
+          Connect Google Calendar or Outlook Calendar to see your agenda. Nothing is shown until it is connected.
         </EmptyState>
       )}
       {q.isError && !isNotConnected(q.error) && <Notice tone="danger" title="Couldn't load your calendar">{(q.error as Error).message}</Notice>}

@@ -6,6 +6,10 @@ project_id = "ai-business-assistant"
 [functions.google-oauth-callback]
 verify_jwt = false
 
+# Same for Microsoft (the handler is shared; the signed state names the provider).
+[functions.microsoft-oauth-callback]
+verify_jwt = false
+
 # Called every minute by pg_cron; authenticated by the CRON_SECRET header instead of a JWT.
 [functions.workflow-tick]
 verify_jwt = false

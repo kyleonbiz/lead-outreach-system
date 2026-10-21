@@ -54,14 +54,16 @@ and never in a `VITE_` variable:
 | `ASSISTANT_MESSAGES_PER_MINUTE` | optional | per-user rate limit, default 12 |
 | `GOOGLE_OAUTH_CLIENT_ID` / `GOOGLE_OAUTH_CLIENT_SECRET` | Gmail, Calendar | see below |
 | `GOOGLE_OAUTH_REDIRECT_URI` | Gmail, Calendar | `https://<project-ref>.supabase.co/functions/v1/google-oauth-callback` |
-| `TOKEN_ENCRYPTION_KEY` | Gmail, Calendar | 32 random bytes, base64: `openssl rand -base64 32`. **Back it up**; losing it means every user must reconnect. Rotating it invalidates stored tokens. |
+| `MICROSOFT_OAUTH_CLIENT_ID` / `MICROSOFT_OAUTH_CLIENT_SECRET` / `MICROSOFT_OAUTH_REDIRECT_URI` / `MICROSOFT_OAUTH_TENANT` (optional) | Outlook mail, calendar | Entra app registration: see DEPLOYMENT.md → Microsoft |
+| `RESEND_API_KEY` / `NOTIFY_FROM_EMAIL` | e-mail notifications, invitations | optional; see DEPLOYMENT.md → Notifications |
+| `TOKEN_ENCRYPTION_KEY` | Gmail, Outlook, Calendar, Slack/Teams webhooks | 32 random bytes, base64: `openssl rand -base64 32`. **Back it up**; losing it means every user must reconnect. Rotating it invalidates stored tokens. |
 | `APP_URL` | OAuth redirect, CORS | e.g. `https://app.example.com` |
 | `CRON_SECRET` | workflows | long random string; the scheduler sends it in `x-cron-secret`: `openssl rand -hex 32` |
 
 `SUPABASE_URL`, `SUPABASE_ANON_KEY` and `SUPABASE_SERVICE_ROLE_KEY` are injected automatically.
 
-Deploy: `supabase functions deploy assistant-chat assistant-approve google-oauth-start google-oauth-callback integration-disconnect provider-data document-process workflow-save workflow-run workflow-tick`
-(`supabase/config.toml` already sets `verify_jwt = false` for the callback only; it is authenticated by an HMAC-signed `state`).
+Deploy: `supabase functions deploy assistant-chat assistant-approve oauth-start google-oauth-callback microsoft-oauth-callback integration-disconnect provider-data document-process workflow-save workflow-run workflow-tick notification-channels invite-member`
+(`supabase/config.toml` already sets `verify_jwt = false` for the two OAuth callbacks and the scheduler tick only; it is authenticated by an HMAC-signed `state`).
 
 ## Scheduler for workflows (pg_cron)
 Scheduled and event-triggered workflows are started by a once-a-minute call to the `workflow-tick` function.

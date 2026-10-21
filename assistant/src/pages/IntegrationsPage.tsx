@@ -3,7 +3,7 @@ import { useSearchParams } from 'react-router-dom'
 import { Badge, Button, Notice, PageHeader, Spinner } from '@/components/ui'
 import { useOrg } from '@/features/org/OrgProvider'
 import { useIntegrations } from '@/features/activity/api'
-import { CONNECT_ERRORS, PROVIDERS } from '@/features/integrations/providers'
+import { connectError, PROVIDERS } from '@/features/integrations/providers'
 import { useConnect, useDisconnect } from '@/features/integrations/api'
 import { FunctionError } from '@/features/assistant/api'
 
@@ -26,13 +26,13 @@ export default function IntegrationsPage() {
       <PageHeader title="Integrations" description="Accounts the assistant is allowed to act on. You can disconnect any of them at any time." />
       <div className="mb-4 space-y-3">
         {connected && <Notice tone="ok" title="Connected">Your {PROVIDERS.find((p) => p.id === connected)?.name ?? 'account'} is ready.</Notice>}
-        {error && <Notice tone="danger" title="Couldn't connect">{CONNECT_ERRORS[error] ?? 'Something went wrong. Please try again.'}</Notice>}
+        {error && <Notice tone="danger" title="Couldn't connect">{connectError(error, params.get('provider'))}</Notice>}
         {connectErr && (connectErr.body.code === 'not_configured'
           ? <Notice tone="warn" title="Server setup required">Missing: <code className="font-mono">{(connectErr.body.missing as string[]).join(', ')}</code>. See docs/SETUP.md.</Notice>
           : <Notice tone="danger">{connectErr.message}</Notice>)}
         {disconnect.data && (
           <Notice tone={disconnect.data.provider_revoked ? 'ok' : 'warn'} title="Disconnected">
-            {disconnect.data.provider_revoked ? 'Access was revoked at Google and our copy of the credentials was deleted.' : disconnect.data.note}
+            {disconnect.data.provider_revoked ? 'Access was revoked with the provider and our copy of the credentials was deleted.' : disconnect.data.note}
           </Notice>
         )}
         {disconnect.error && <Notice tone="danger">{(disconnect.error as Error).message}</Notice>}

@@ -24,10 +24,11 @@ describe('Integrations page', () => {
     wrap(<IntegrationsPage />, '/integrations?error=missing_scopes')
     expect(screen.getByText(/Some requested permissions were not granted/)).toBeInTheDocument()
   })
-  it('lets admins connect Gmail and Calendar, but Outlook is clearly not available', () => {
+  it('lets admins connect Gmail, Google Calendar, Outlook Mail and Outlook Calendar', () => {
     wrap(<IntegrationsPage />)
-    expect(screen.getAllByRole('button', { name: 'Connect' }).filter((b) => !(b as HTMLButtonElement).disabled)).toHaveLength(2)
-    expect(screen.getAllByText(/Not available · Planned/)).toHaveLength(2)
+    expect(screen.getAllByRole('button', { name: 'Connect' }).filter((b) => !(b as HTMLButtonElement).disabled)).toHaveLength(4)
+    expect(screen.getByText('Outlook Mail')).toBeInTheDocument()
+    expect(screen.queryByText(/Not available/)).not.toBeInTheDocument()
   })
   it('disables connect/disconnect for non-admins and says why', () => {
     orgState.isAdmin = false
@@ -45,10 +46,10 @@ describe('Integrations page', () => {
 })
 
 describe('Email page', () => {
-  it('shows a setup state — and no fake mail — when Gmail is not connected', async () => {
+  it('shows a setup state — and no fake mail — when no email account is connected', async () => {
     invoke.mockResolvedValue({ data: null, error: { message: 'x', context: new Response(JSON.stringify({ error: 'Gmail is not connected', code: 'not_connected' }), { status: 409 }) } })
     wrap(<EmailPage />)
-    expect(await screen.findByText("Gmail isn't connected")).toBeInTheDocument()
+    expect(await screen.findByText('No email account is connected')).toBeInTheDocument()
     expect(screen.queryByRole('list')).not.toBeInTheDocument()
   })
   it('lists urgent mail first with the reasons it was flagged', async () => {
@@ -66,5 +67,22 @@ describe('Email page', () => {
     invoke.mockResolvedValue({ data: null, error: new FunctionError('boom', 502, {}) })
     wrap(<EmailPage />)
     expect(await screen.findByText(/Couldn't load your inbox/, {}, { timeout: 4000 })).toBeInTheDocument() // one retry (~1s backoff) first
+  })
+})
+
+describe('connect errors are worded for the provider being connected', () => {
+  it('Microsoft failures never point people at Google settings (and vice versa)', async () => {
+    const { connectError } = await import('./providers')
+    expect(connectError('no_refresh_token', 'microsoft_mail')).toMatch(/myapps\.microsoft\.com/)
+    expect(connectError('no_refresh_token', 'microsoft_mail')).not.toMatch(/google/i)
+    expect(connectError('no_refresh_token', 'google_gmail')).toMatch(/myaccount\.google\.com/)
+    expect(connectError('microsoft_error', 'microsoft_calendar')).toBe('Microsoft reported an error. Please try again.')
+    expect(connectError('not_configured', 'microsoft_mail')).toBe('Microsoft connections are not configured on the server yet.')
+    expect(connectError('missing_scopes', 'microsoft_mail')).toMatch(/admin can also restrict/)
+    expect(connectError('something_new', null)).toBe('Something went wrong. Please try again.')
+  })
+  it('shows a Microsoft-specific message when returning from a failed Microsoft connection', () => {
+    wrap(<IntegrationsPage />, '/integrations?error=exchange_failed&provider=microsoft_mail')
+    expect(screen.getByText('Microsoft did not complete the connection. Please try again.')).toBeInTheDocument()
   })
 })

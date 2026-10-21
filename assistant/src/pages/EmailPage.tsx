@@ -16,8 +16,8 @@ export default function EmailPage() {
         actions={<Button onClick={() => ask('Summarize my unread emails and tell me which need a reply today.')}>Summarize with assistant</Button>} />
       {q.isLoading && <Spinner label="Reading your inbox" />}
       {isNotConnected(q.error) && (
-        <EmptyState title="Gmail isn't connected" action={<Link to="/integrations"><Button variant="primary">Set up Gmail</Button></Link>}>
-          Connect your account to see what needs a reply. Nothing is shown until it is connected.
+        <EmptyState title="No email account is connected" action={<Link to="/integrations"><Button variant="primary">Set up email</Button></Link>}>
+          Connect Gmail or Outlook to see what needs a reply. Nothing is shown until it is connected.
         </EmptyState>
       )}
       {q.isError && !isNotConnected(q.error) && <Notice tone="danger" title="Couldn't load your inbox">{(q.error as Error).message}</Notice>}

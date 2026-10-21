@@ -15,7 +15,14 @@ Plain list of what is **not** done or **not proven**. Nothing here is hidden beh
   scanned pages is indexed with a note listing how many pages were left out. Password-protected PDFs, damaged files and PDFs over 300 pages also fail with a reason.
   Layout is flattened to reading-order text (tables lose their grid). Hosted edge functions have CPU-time limits that were never exercised: a very large or complex PDF
   may fail there with the timeout message (our own limit is 25 s) even though it parses locally.
-* Email: Gmail only (adapter interface ready for Outlook). No attachments, labels or folder management; reminders/follow-ups are tasks.
+* Email: Gmail and Outlook (Microsoft Graph). No attachments, labels/categories or folder management; reminders/follow-ups are tasks.
+  **Outlook search uses a small shared query language** (`from:`, `to:`, `subject:`, `is:unread|read`, `in:inbox|sent|drafts|trash`, `newer_than:`, `older_than:`, `after:`, `before:`, words and quoted
+  phrases). Gmail-only operators, `OR`, parentheses and `-` exclusions return an explicit error for Outlook rather than silently returning wrong results. Text searches in Outlook can't be combined
+  with Graph filters, so read-state/date limits are applied after fetching (up to 100 messages), which can return fewer results than asked for.
+* Outlook sending creates a draft and then sends that draft (Graph's one-call send returns no message id); if the send step fails the draft remains in Drafts. Replies keep the thread but not the quoted history.
+* Outlook calendar events are created as **UTC instants** (same moment, displayed in each person's own zone) rather than named zones, so Outlook's "time zone" field will read UTC. All-day events are turned
+  back into dates using the organization's time zone, which is wrong if the mailbox uses a different zone. Free/busy is derived from the calendar view (no `getSchedule`), primary calendar only.
+* Microsoft cannot be revoked remotely (see DEPLOYMENT.md); a connected Gmail **and** Outlook account means the most recently connected one is used.
 * Calendar: primary calendar only; no recurring-event creation or room/resource handling.
 * Workflows: form-based editor (no drag-and-drop canvas); events limited to `task.overdue` and `document.ready`; no version history UI;
   each tick runs at most 3 runs (long workflows may need the edge-function time limit raised or the run split).
@@ -40,5 +47,5 @@ Plain list of what is **not** done or **not proven**. Nothing here is hidden beh
 * Recurring tasks use UTC interval arithmetic (a DST change can shift local time by an hour).
 
 ## Reasonable next integrations
-Outlook mail/calendar adapters · Gmail push → `email.received` workflow trigger · accounting (QuickBooks/Xero,
+Gmail push → `email.received` workflow trigger · accounting (QuickBooks/Xero,
 read-only first) · e-signature (always behind approval) · SMS/phone reminders · pgvector semantic search.

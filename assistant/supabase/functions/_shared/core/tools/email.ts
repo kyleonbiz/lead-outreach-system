@@ -6,7 +6,7 @@ const emails = z.array(z.email()).min(1).max(20)
 
 export const emailSearch: ToolDef = {
   name: 'email.search',
-  description: 'Search the connected mailbox using Gmail search syntax (e.g. "is:unread newer_than:2d", "from:acme.com invoice"). Returns message summaries.',
+  description: 'Search the connected mailbox (Gmail or Outlook). Supported terms: from:, to:, subject:, is:unread, is:read, in:inbox|sent|drafts|trash, newer_than:7d (d/m/y), older_than:, after:YYYY/MM/DD, before:, plain words and "quoted phrases" (e.g. "is:unread newer_than:2d", "from:acme.com invoice"). Other operators, OR, parentheses and - exclusions are not supported and return an error. Returns message summaries.',
   risk: 'read', untrusted: true,
   input: z.object({ query: z.string().min(1).max(300), limit: z.number().int().min(1).max(25).default(10) }),
   summarize: (i) => `Search email for "${i.query}"`,

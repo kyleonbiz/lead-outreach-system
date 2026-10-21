@@ -4,7 +4,7 @@ import { callFunction } from '@/features/assistant/api'
 export function useConnect(orgId: string) {
   return useMutation({
     mutationFn: async (provider: string) => {
-      const r = await callFunction<{ url: string }>('google-oauth-start', { org_id: orgId, provider })
+      const r = await callFunction<{ url: string }>('oauth-start', { org_id: orgId, provider })
       window.location.assign(r.url)
     },
   })

@@ -38,7 +38,7 @@ Optional: `ASSISTANT_DEFAULT_MODEL`, `ASSISTANT_MESSAGES_PER_MINUTE` (default 12
 ## 3. Deploy functions
 ```bash
 cd assistant
-supabase functions deploy assistant-chat assistant-approve google-oauth-start google-oauth-callback \
+supabase functions deploy assistant-chat assistant-approve oauth-start google-oauth-callback microsoft-oauth-callback \
   integration-disconnect provider-data document-process workflow-save workflow-run workflow-tick notification-channels invite-member
 ```
 `supabase/config.toml` marks `google-oauth-callback` and `workflow-tick` as `verify_jwt = false` (they authenticate with a signed
@@ -71,6 +71,20 @@ Enable `pg_cron`, `pg_net`, `supabase_vault`; store the secret and schedule the 
 ## 5. Google OAuth client
 See SETUP.md → *Google OAuth*. Authorized redirect URI must equal `GOOGLE_OAUTH_REDIRECT_URI` exactly.
 Until Google verifies the app, only listed *test users* can connect and refresh tokens last 7 days.
+
+### Microsoft (Outlook mail and calendar) — optional
+1. Microsoft Entra admin center → **App registrations → New registration**. Name it, choose **Accounts in any organizational directory and personal Microsoft accounts**
+   (multi-tenant + personal; use *single tenant* only if every user is in your own tenant, and then set `MICROSOFT_OAUTH_TENANT` to your tenant id).
+2. Redirect URI (type **Web**): `https://<ref>.supabase.co/functions/v1/microsoft-oauth-callback`.
+3. **API permissions → Microsoft Graph → Delegated**: `User.Read`, `offline_access`, `Mail.ReadWrite`, `Mail.Send`, `Calendars.ReadWrite` (plus `openid`, `email`). All are user-consentable;
+   a tenant admin can still restrict them, in which case connecting reports "some permissions were not granted".
+4. **Certificates & secrets → New client secret.** Copy the secret **Value** immediately (it is shown once) — not the Secret ID. Secrets expire (max 24 months): put the date in your calendar.
+5. `supabase secrets set MICROSOFT_OAUTH_CLIENT_ID=... MICROSOFT_OAUTH_CLIENT_SECRET=... MICROSOFT_OAUTH_REDIRECT_URI=https://<ref>.supabase.co/functions/v1/microsoft-oauth-callback`
+   (add `MICROSOFT_OAUTH_TENANT=...` only if not "common"), then deploy `oauth-start` and `microsoft-oauth-callback` (already in the deploy list above).
+6. **Check:** Integrations → Connect Outlook Mail → sign in → Email page lists unread mail → "draft a reply" creates a draft in Outlook, sends nothing.
+* If an organization connects **both** Gmail and Outlook, the most recently connected working account is used for email (and likewise for calendar); disconnect the other to avoid surprises.
+* **Disconnecting Outlook only deletes our copy of the credentials.** Microsoft gives apps no way to revoke a refresh token remotely, so the UI says so and points to
+  myapps.microsoft.com / account.microsoft.com/privacy/app-access. Publisher verification (to remove the "unverified" prompt for other tenants) is a separate Microsoft process.
 
 ## 6. Frontend on Vercel
 1. Import the repository; **Root Directory = `assistant`**; framework preset **Vite**; build `npm run build`, output `dist`.

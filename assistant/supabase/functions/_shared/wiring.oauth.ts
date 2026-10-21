@@ -4,12 +4,16 @@ import type { ProviderDataDeps } from './core/handlers/providerData.ts'
 import type { Role } from './core/handlers/common.ts'
 import type { ActionLogEntry } from './core/types.ts'
 import { env } from './runtime.ts'
-import { calendarFor, gmailFor } from './adapters/google.ts'
+import { anyCalendarFor, emailFor } from './adapters/select.ts'
 
 export const oauthConfig = (): OAuthConfig => ({
   clientId: env('GOOGLE_OAUTH_CLIENT_ID'), clientSecret: env('GOOGLE_OAUTH_CLIENT_SECRET'),
   redirectUri: env('GOOGLE_OAUTH_REDIRECT_URI'), encryptionKey: env('TOKEN_ENCRYPTION_KEY'),
   appUrl: env('APP_URL') ?? 'http://localhost:5173',
+  microsoft: {
+    clientId: env('MICROSOFT_OAUTH_CLIENT_ID'), clientSecret: env('MICROSOFT_OAUTH_CLIENT_SECRET'),
+    redirectUri: env('MICROSOFT_OAUTH_REDIRECT_URI'), tenant: env('MICROSOFT_OAUTH_TENANT'),
+  },
 })
 
 const roleOf = (client: SupabaseClient, userId: string | null) => async (orgId: string): Promise<Role | null> => {
@@ -76,7 +80,7 @@ export function providerDataDeps(userId: string | null, client: SupabaseClient, 
     async emailRules(orgId) {
       return (await client.from('organization_settings').select('email_rules').eq('org_id', orgId).maybeSingle()).data?.email_rules ?? {}
     },
-    email: (orgId) => gmailFor(svc, orgId),
-    calendar: (orgId) => calendarFor(svc, orgId),
+    email: (orgId) => emailFor(svc, orgId),
+    calendar: (orgId) => anyCalendarFor(svc, orgId),
   }
 }

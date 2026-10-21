@@ -91,7 +91,7 @@ Supabase Edge Function secrets: `ANTHROPIC_API_KEY` (required), `ASSISTANT_DEFAU
   `calendar.create_event` / `update_event` (approval; explicit time zone + attendee list required).
 * **Rules:** transparent urgent/needs-reply classification with reasons; org-configurable keywords, VIP and ignore lists.
 * **UI:** working Connect/Disconnect, Email triage page, Calendar agenda page, email-rules settings.
-* **Edge functions:** `google-oauth-start`, `google-oauth-callback`, `integration-disconnect`, `provider-data`.
+* **Edge functions:** `oauth-start` (renamed from `google-oauth-start` in round 2: it serves every provider), `google-oauth-callback`, `microsoft-oauth-callback`, `integration-disconnect`, `provider-data`.
 
 ## Verified
 * 119 passed (119) frontend/core tests total; DB: 83 assertions (new: credentials unreadable by any client role,
@@ -308,4 +308,25 @@ Each item below was built and tested without any live service. "Verified" means 
 * A real invitation round trip: sign-up -> e-mail confirmation -> accept on a live Supabase project, and Resend delivery. `auth.users.email_confirmed_at` is stubbed locally.
 * Concurrent acceptance is serialized by a row lock (`FOR UPDATE`) but was only tested sequentially (replay), not with two simultaneous sessions.
 * Ownership transfer is only "promote another member to owner, then leave".
+
+## 5. Outlook mail and calendar (Microsoft Graph)
+### Built
+* **OAuth** (Microsoft identity platform v2, delegated permissions, work/school and personal accounts): minimal scopes per capability (`Mail.ReadWrite`+`Mail.Send`; `Calendars.ReadWrite`),
+  account picker, signed state, encrypted credentials bound to the integration (the same AES-GCM code as Google), required-permission check, disconnect.
+* The OAuth handler was refactored around a per-provider strategy; **every existing Google test passes unchanged**. `google-oauth-start` became the provider-neutral `oauth-start`; a
+  `microsoft-oauth-callback` function was added. Credential loading/refresh was extracted into one shared adapter used by both providers (Microsoft rotates refresh tokens; this is stored).
+* **Mail adapter** behind the existing `EmailProvider`: search (a documented query language translated to Graph, unsupported operators refused), threads as plain text, drafts, in-thread reply drafts, send.
+  **Calendar adapter** behind `CalendarProvider`: agenda, free/busy, create/update (Graph sends the invitations; the existing approval rules still gate it).
+* Runtime picks the connected provider (`pickProvider`: working beats broken, newest wins). Integrations UI, Email/Calendar/Overview wording and connect errors are provider-neutral; the
+  Overview no longer says "arrives in Phase 4" for connected accounts (a leftover placeholder).
+### Verified
+* 77 new tests with mocked HTTP: auth URL/scopes/tenant validation, token and refresh behavior including rotation and re-auth, Graph error classification, id validation (no path/OData injection),
+  query parsing and planning (`$filter`/`$search` constraints), message/thread/draft/reply/send flows incl. cleanup of half-made drafts, calendar normalization/UTC/all-day, handler flows for start/callback/disconnect.
+* The tests found two real bugs, both fixed: an operator with no value (`from:`) was searched as a literal word, and the id validator allowed `/` and `.`. Two mutation checks confirm the injection tests bite.
+* `deno check` passes for all 13 functions.
+### NOT verified
+* **Nothing has talked to Microsoft.** Request shapes follow Microsoft's published Graph v1.0 documentation but were never exercised: in particular `$search` syntax, `createReply`, the `Prefer: outlook.timezone="UTC"`
+  behavior, calendarView paging, and consent behavior in tenants with admin restrictions. Expect small fixes on the first live run.
+* Personal (Outlook.com) vs work/school accounts differ in subtle ways (for example `mail` can be empty; handled by falling back to the sign-in name) and only one path was reasoned about, not run.
+* App-registration and publisher-verification steps are documented, not performed.
 

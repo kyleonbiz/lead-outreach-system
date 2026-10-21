@@ -14,7 +14,7 @@ export interface TokenSourceDeps {
 /** Hands out a valid access token, refreshing (once, even under concurrency) when it is about to expire. */
 export class TokenSource {
   private inflight: Promise<string> | null = null
-  constructor(private d: TokenSourceDeps, private skewMs = 60_000) {}
+  constructor(private d: TokenSourceDeps, private skewMs = 60_000, private providerName = 'Google') {}
 
   async getAccessToken(forceRefresh = false): Promise<string> {
     const creds = await this.d.load()
@@ -28,14 +28,14 @@ export class TokenSource {
       const t = await this.d.refresh(creds.refresh_token)
       await this.d.save({
         access_token: t.access_token,
-        refresh_token: t.refresh_token ?? creds.refresh_token, // Google usually omits it on refresh
+        refresh_token: t.refresh_token ?? creds.refresh_token, // Google omits it on refresh; Microsoft rotates it (always saved)
         expires_at: this.d.now() + t.expires_in * 1000,
         scope: t.scope ?? creds.scope,
       })
       return t.access_token
     } catch (e) {
       if (e instanceof ProviderError && e.kind === 'auth') {
-        await this.d.markNeedsReauth('Google rejected the saved credentials. Please reconnect this account.')
+        await this.d.markNeedsReauth(`${this.providerName} rejected the saved credentials. Please reconnect this account.`)
       }
       throw e
     }
