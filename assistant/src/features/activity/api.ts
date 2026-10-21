@@ -1,6 +1,6 @@
 import { useInfiniteQuery, useQuery } from '@tanstack/react-query'
 import { db } from '@/lib/supabase'
-import type { ActionLog, ApprovalRequest, ConnectedIntegration } from '@/lib/types'
+import type { ActionLog, ConnectedIntegration } from '@/lib/types'
 
 export const PAGE = 25
 
@@ -31,20 +31,6 @@ export function useRecentActivity(orgId: string, limit = 5) {
         .eq('org_id', orgId).neq('category', 'audit').order('created_at', { ascending: false }).limit(limit)
       if (error) throw error
       return (data ?? []) as ActionLog[]
-    },
-  })
-}
-
-export function usePendingApprovals(orgId: string) {
-  return useQuery({
-    queryKey: ['approvals-pending', orgId],
-    queryFn: async () => {
-      const { data, error } = await db().from('approval_requests')
-        .select('id, org_id, action_type, summary, risk, status, created_at')
-        .eq('org_id', orgId).eq('status', 'pending').gt('expires_at', new Date().toISOString())
-        .order('created_at', { ascending: false }).limit(20)
-      if (error) throw error
-      return (data ?? []) as ApprovalRequest[]
     },
   })
 }

@@ -35,3 +35,39 @@ The Assistant, Calendar, Email, Documents and Workflows pages are labelled place
 ## Known tooling items
 * `npm audit`: 7 findings, all in Tailwind 3's build-time toolchain (not shipped to users).
   Resolved by migrating to Tailwind 4, deferred.
+
+---
+
+# Phase 3 status (assistant orchestration)
+
+## Built
+* **Core (pure TS, runs under Vitest and Deno):** validated tool registry (zod → JSON schema), approval
+  policy engine, provider adapter interface with **Anthropic** (retry/backoff, error mapping) and a scripted
+  fake for tests, orchestrator loop (plan → validate → policy → execute/queue → report), shared
+  idempotent tool executor, approval execution (re-validates stored payload, enforces expiry, at-most-once),
+  rate limiter, log redaction, prompt-injection envelope.
+* **Tools:** `tasks.list/create/update/complete`, `tasks.delete` (always needs approval), `knowledge.search`.
+* **Endpoints (edge functions):** `assistant-chat`, `assistant-approve` — thin wrappers over tested handlers.
+* **DB:** migration `0003` — `agent_task_op()` (actor-attributed, org-scoped task operations).
+* **UI:** Assistant page (conversations, chat, inline approval cards, "needs setup" state), dashboard command
+  box → assistant, approve/decline from the dashboard.
+
+## Verified
+* 63 frontend/core tests (orchestrator honesty on tool failure & provider outage, approvals, injection wrapping,
+  policy lookalike-domain bypasses, handler authorization 401/403/404/409/410/429/503, Anthropic adapter against
+  mocked HTTP).
+* DB: 71 assertions incl. cross-tenant and service-role org-scoping of `agent_task_op`.
+* `deno check` passes for both edge functions (type-level only).
+
+## NOT verified
+* **No edge function has been run** (no Supabase project, no Deno serve), and the Anthropic adapter has never
+  spoken to the real API — only mocked HTTP. First live run may surface request-shape issues.
+* `knowledge.search` calls an RPC (`search_knowledge`) that is added in Phase 5; until then it returns an error
+  to the model (reported honestly).
+* Prompt-injection defenses are layered mitigations, validated with a scripted "obedient" model; real-model
+  resistance is untested.
+* Pre-authorization rules (Settings UI to edit them) are enforced server-side but have no editing UI yet.
+
+## Needed to go live
+Supabase Edge Function secrets: `ANTHROPIC_API_KEY` (required), `ASSISTANT_DEFAULT_MODEL` (optional),
+`ASSISTANT_MESSAGES_PER_MINUTE` (optional, default 12), `APP_URL`. Deploy: `supabase functions deploy assistant-chat assistant-approve`.

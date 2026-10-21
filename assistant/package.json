@@ -9,7 +9,8 @@
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "test:db": "bash scripts/test-db.sh",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "check:functions": "cd supabase/functions && npx --yes deno check */index.ts"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.118.0",

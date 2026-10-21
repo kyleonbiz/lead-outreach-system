@@ -1,11 +1,14 @@
-import { Link } from 'react-router-dom'
-import { format, formatDistanceToNow } from 'date-fns'
+import { useState } from 'react'
+import { Link, useNavigate } from 'react-router-dom'
+import { format } from 'date-fns'
 import { ArrowRight, Send } from 'lucide-react'
 import { Badge, Button, Section, Spinner, Textarea } from '@/components/ui'
 import { useOrg } from '@/features/org/OrgProvider'
 import { useTasks } from '@/features/tasks/api'
-import { useIntegrations, useRecentActivity, usePendingApprovals, useWorkflowSummary } from '@/features/activity/api'
+import { useIntegrations, useRecentActivity, useWorkflowSummary } from '@/features/activity/api'
+import { usePendingApprovalList } from '@/features/assistant/api'
 import { StatusBadge } from '@/features/activity/StatusBadge'
+import { ApprovalCard } from '@/features/assistant/ApprovalCard'
 import { PROVIDERS } from '@/features/integrations/providers'
 import { dueInfo, greeting, isOpen } from '@/lib/utils'
 
@@ -19,9 +22,11 @@ const Muted = ({ children }: { children: React.ReactNode }) => <p className="tex
 
 export default function OverviewPage() {
   const { orgId, profile } = useOrg()
+  const navigate = useNavigate()
+  const [cmd, setCmd] = useState('')
   const tasks = useTasks(orgId)
   const activity = useRecentActivity(orgId)
-  const approvals = usePendingApprovals(orgId)
+  const approvals = usePendingApprovalList(orgId)
   const integrations = useIntegrations(orgId)
   const workflows = useWorkflowSummary(orgId)
 
@@ -39,15 +44,19 @@ export default function OverviewPage() {
         <p className="mt-1 text-sm text-muted">{format(new Date(), 'EEEE, MMMM d')}</p>
       </div>
 
-      {/* Assistant command box: deliberately disabled until the orchestration layer exists. */}
-      <div className="rounded-lg border border-line bg-surface p-4">
+      <form
+        className="rounded-lg border border-line bg-surface p-4"
+        onSubmit={(e) => { e.preventDefault(); const p = cmd.trim(); if (p) navigate('/assistant', { state: { prompt: p } }) }}
+      >
         <label htmlFor="cmd" className="sr-only">Ask your assistant</label>
-        <Textarea id="cmd" disabled rows={2} className="resize-none" placeholder="Summarize my unread emails, schedule a meeting, find overdue tasks…" />
+        <Textarea id="cmd" rows={2} value={cmd} onChange={(e) => setCmd(e.target.value)} className="resize-none"
+          placeholder="Summarize my unread emails, schedule a meeting, find overdue tasks…"
+          onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); e.currentTarget.form?.requestSubmit() } }} />
         <div className="mt-3 flex items-center justify-between gap-3">
-          <p className="text-xs text-muted">The assistant isn't connected yet — it arrives in Phase 3, once an AI key is configured.</p>
-          <Button variant="primary" disabled><Send className="h-4 w-4" /> Send</Button>
+          <p className="text-xs text-muted">Sensitive actions always wait for your approval.</p>
+          <Button type="submit" variant="primary" disabled={!cmd.trim()}><Send className="h-4 w-4" /> Ask</Button>
         </div>
-      </div>
+      </form>
 
       <div className="grid gap-6 lg:grid-cols-2">
         <Section title="Today's agenda" action={<More to="/calendar">Calendar</More>}>
@@ -78,14 +87,9 @@ export default function OverviewPage() {
 
         <Section title="Pending approvals">
           {approvals.isLoading ? <Spinner /> : (approvals.data ?? []).length === 0 ? <Muted>Nothing is waiting for your approval.</Muted> : (
-            <ul className="-my-2 divide-y divide-line">
-              {approvals.data!.map((a) => (
-                <li key={a.id} className="py-2">
-                  <p className="text-sm">{a.summary}</p>
-                  <p className="text-xs text-muted">{a.action_type} · {formatDistanceToNow(new Date(a.created_at), { addSuffix: true })}</p>
-                </li>
-              ))}
-            </ul>
+            <div className="space-y-3">
+              {approvals.data!.map((a) => <ApprovalCard key={a.id} a={a} />)}
+            </div>
           )}
         </Section>
 
