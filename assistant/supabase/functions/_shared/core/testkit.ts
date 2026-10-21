@@ -78,6 +78,7 @@ export function makePorts(over: Partial<Ports> = {}): Ports & { tasksMem: Memory
     knowledge: { search: async (q) => [{ source: 'knowledge', id: 'k1', title: 'Policy', snippet: `about ${q}` }] },
     documents: {
       list: async () => [],
+      get: async (id) => ({ id, name: 'Doc', category: null, summary: 'sum', status: 'ready', created_at: new Date().toISOString(), extracted: {}, text: 'body' }),
       createGenerated: async (i) => ({ id: 'd1', name: i.title, category: i.category ?? null, summary: null, status: 'ready', created_at: new Date().toISOString() }),
     },
     email: async () => { throw new NotConfiguredError('Gmail') },

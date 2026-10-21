@@ -109,3 +109,38 @@ Supabase Edge Function secrets: `ANTHROPIC_API_KEY` (required), `ASSISTANT_DEFAU
 ## Needed to go live
 Secrets in docs/SETUP.md: `GOOGLE_OAUTH_CLIENT_ID`, `GOOGLE_OAUTH_CLIENT_SECRET`, `GOOGLE_OAUTH_REDIRECT_URI`,
 `TOKEN_ENCRYPTION_KEY`, `APP_URL`; a Google Cloud project with the two APIs enabled and an OAuth web client.
+
+---
+
+# Phase 5 status (documents, knowledge base, generation)
+
+## Built
+* **Upload → process → search:** files go to the private `documents` bucket under `<org_id>/…`; `document-process`
+  extracts text, splits it into searchable chunks (Postgres full-text search: no embedding service, no extra cost) and,
+  if an AI key is configured, produces a summary plus dates / obligations / action items.
+* **Formats:** .txt .md .csv .json .html .docx. **PDF is explicitly NOT supported** — it fails with that exact reason shown on the row.
+* **Knowledge base:** admin-editable entries (company, services, hours, policies, FAQs, guidelines, contacts, SOPs). A digest of the
+  trusted kinds is added to the assistant's system prompt; everything is also searchable via `knowledge.search`.
+* **Search:** `search_knowledge()` (SECURITY INVOKER, RLS-scoped) over KB + document chunks, with highlighted snippets, used by both the UI and the assistant.
+* **Generation/export:** `documents.generate` saves assistant-written Markdown as a document (indexed immediately);
+  download as Markdown or export to Word (.docx built in the browser).
+* **Tools:** `documents.list`, `documents.get`, `documents.generate`. Document text is always treated as untrusted
+  (nonce-delimited envelope; analysis runs with no tools).
+* **DB:** migration 0005 (chunks, tsvector indexes, search RPC, uploader-can-delete storage policy).
+
+## Verified
+* 145 passed (145) frontend/core tests total; DB: 102 assertions (new: search tenant isolation, chunks/summary/status are server-written only,
+  KB admin-only, storage delete rules).
+* DOCX round trip (generate → extract), chunk size limits, injection envelope around analysis, handler failure paths.
+* `deno check` passes for 7 functions.
+
+## NOT verified
+* Never run against real Supabase Storage / a real browser upload; the DOCX produced has not been opened in Microsoft Word
+  or LibreOffice (only parsed by our own extractor). Treat Word export as unverified until opened once.
+* The analysis prompt has never been run against a real model; output quality and JSON compliance are untested.
+* English-only stemming (`to_tsvector('english')`); other languages will search poorly.
+* No OCR; scanned documents and PDFs are unsupported. No per-document sharing controls (everything is org-wide).
+* "Task attachments" (linking documents to tasks) is not implemented.
+
+## Needed to go live
+Deploy `document-process`; `ANTHROPIC_API_KEY` for summaries (optional: documents work without it).

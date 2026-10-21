@@ -59,7 +59,7 @@ and never in a `VITE_` variable:
 
 `SUPABASE_URL`, `SUPABASE_ANON_KEY` and `SUPABASE_SERVICE_ROLE_KEY` are injected automatically.
 
-Deploy: `supabase functions deploy assistant-chat assistant-approve google-oauth-start google-oauth-callback integration-disconnect provider-data`
+Deploy: `supabase functions deploy assistant-chat assistant-approve google-oauth-start google-oauth-callback integration-disconnect provider-data document-process`
 (`supabase/config.toml` already sets `verify_jwt = false` for the callback only; it is authenticated by an HMAC-signed `state`).
 
 ## Google OAuth (Gmail + Calendar)

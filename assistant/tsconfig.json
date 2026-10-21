@@ -14,7 +14,7 @@
     "noEmit": true,
     "allowImportingTsExtensions": true,
     "types": ["node", "vite/client", "vitest/globals", "@testing-library/jest-dom"],
-    "paths": { "@/*": ["./src/*"] }
+    "paths": { "@/*": ["./src/*"], "@core/*": ["./supabase/functions/_shared/core/*"] }
   },
   "include": ["src", "vite.config.ts", "supabase/functions/_shared/core"]
 }

@@ -14,13 +14,13 @@ import { extraTools, makeProviderPorts } from './wiring.integrations.ts'
 export const DEFAULT_MODEL = 'claude-sonnet-5-5'
 
 export function buildPorts(
-  client: SupabaseClient, svc: SupabaseClient, orgId: string, actor: 'assistant' | 'workflow',
+  client: SupabaseClient, svc: SupabaseClient, orgId: string, actor: 'assistant' | 'workflow', userId: string | null = null,
 ): Ports {
   const provider = makeProviderPorts(svc, orgId)
   return {
     tasks: new SupabaseTasks(client, orgId, actor),
     knowledge: new SupabaseKnowledge(client, orgId),
-    documents: provider.documents(client),
+    documents: provider.documents(client, userId),
     email: () => provider.email(),
     calendar: () => provider.calendar(),
     emailRules: provider.emailRules,
@@ -79,7 +79,7 @@ export function buildChatDeps(opts: {
     },
     async makeRunner(org, conversationId) {
       const orgId = (await client.from('assistant_conversations').select('org_id').eq('id', conversationId).single()).data!.org_id as string
-      const ports = buildPorts(client, svc, orgId, 'assistant')
+      const ports = buildPorts(client, svc, orgId, 'assistant', userId)
       return {
         provider: new AnthropicProvider({ apiKey: env('ANTHROPIC_API_KEY')! }),
         model: org.model ?? env('ASSISTANT_DEFAULT_MODEL') ?? DEFAULT_MODEL,
@@ -122,7 +122,7 @@ export function buildApproveDeps(opts: { userId: string | null; client: Supabase
     },
     async runtime(orgId) {
       const { data } = await client.from('organization_settings').select('timezone').eq('org_id', orgId).maybeSingle()
-      const ports = buildPorts(client, svc, orgId, 'assistant')
+      const ports = buildPorts(client, svc, orgId, 'assistant', userId)
       return {
         store: new SupabaseStore(svc, orgId, userId, null),
         tools: buildRegistry(extraTools()),

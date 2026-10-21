@@ -65,8 +65,10 @@ export interface CalendarProvider {
 }
 
 export interface DocumentRecord { id: string; name: string; category: string | null; summary: string | null; status: string; created_at: string }
+export interface DocumentDetail extends DocumentRecord { extracted: unknown; text: string }
 export interface DocumentPort {
   list(limit: number): Promise<DocumentRecord[]>
+  get(id: string, maxChars: number): Promise<DocumentDetail>
   /** creates a generated document (markdown) in storage + the documents table */
   createGenerated(input: { title: string; markdown: string; category?: string }): Promise<DocumentRecord>
 }
