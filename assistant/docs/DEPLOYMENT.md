@@ -13,7 +13,7 @@ Do the steps in order; each ends with a check.
 
 ## 1. Supabase project
 1. Create the project; note the **project ref**, **URL**, **anon key**. Keep the **service_role key** secret.
-2. Apply migrations: `supabase link --project-ref <ref> && supabase db push` (applies every file in `supabase/migrations`, currently `0001`…`0011`, in order).
+2. Apply migrations: `supabase link --project-ref <ref> && supabase db push` (applies every file in `supabase/migrations`, currently `0001`…`0012`, in order).
 3. **Check:** SQL editor → `select count(*) from information_schema.tables where table_schema='public'` returns 25+; and as a test,
    `select * from public.integration_credentials` using the anon key must fail with *permission denied* (it is closed to every client role).
 4. Authentication → Providers → Email: keep **Confirm email** ON. URL Configuration: Site URL = your Vercel URL; add it and
@@ -31,7 +31,7 @@ supabase secrets set \
 ```
 Optional, for **e-mail notifications**: `RESEND_API_KEY` and `NOTIFY_FROM_EMAIL` (see *Notifications* below). Without them, e-mails are
 recorded as *skipped* in Settings → Recent deliveries (never silently dropped); in-app, Slack and Teams notifications still work.
-Optional: `ASSISTANT_DEFAULT_MODEL`, `ASSISTANT_MESSAGES_PER_MINUTE` (default 12), `ASSISTANT_DAILY_TOKEN_LIMIT` (per org, default 500000, `0` = unlimited).
+Optional: `ASSISTANT_DEFAULT_MODEL`, `ASSISTANT_MESSAGES_PER_MINUTE` (default 12), `ASSISTANT_DAILY_TOKEN_LIMIT` (per org, default 500000, `0` = unlimited; plain digits only — anything else, such as a typo, falls back to the default rather than removing the limit).
 **Back up `TOKEN_ENCRYPTION_KEY` in a password manager.** If it is lost, every connected Google account must be reconnected.
 `APP_URL` also sets the CORS origin; leave it unset only in local development (it then allows `*`).
 
@@ -39,7 +39,7 @@ Optional: `ASSISTANT_DEFAULT_MODEL`, `ASSISTANT_MESSAGES_PER_MINUTE` (default 12
 ```bash
 cd assistant
 supabase functions deploy assistant-chat assistant-approve oauth-start google-oauth-callback microsoft-oauth-callback \
-  integration-disconnect provider-data document-process workflow-save workflow-run workflow-tick notification-channels invite-member export-org-data delete-account
+  integration-disconnect provider-data document-process workflow-save workflow-run workflow-tick notification-channels invite-member export-org-data delete-account usage-summary
 ```
 `supabase/config.toml` marks `google-oauth-callback` and `workflow-tick` as `verify_jwt = false` (they authenticate with a signed
 OAuth `state` and the `CRON_SECRET` respectively). Every other function requires a valid user JWT **and** re-checks organization
@@ -96,6 +96,12 @@ Until Google verifies the app, only listed *test users* can connect and refresh 
   and acknowledging every organization that would be deleted with you (those where you are the only member, including their stored files). It disconnects the accounts *you* connected (Google is revoked automatically;
   Microsoft cannot be, see above), removes your e-mail address from the audit-log entries you created, then deletes the account. Each step is idempotent: if one fails nothing further is removed and the request can be repeated.
 * **Check (use a throwaway account):** create a second user with its own organization -> Delete my account -> the organization, its files and the user are gone; the first organization is untouched.
+
+### Usage screen
+* Settings → **Usage** (owners and admins): today's tokens against `ASSISTANT_DAILY_TOKEN_LIMIT` with a progress bar, tokens per day, tool calls, workflow runs, stored documents, top tools and tokens by model, for 7/30/90 days.
+  All days are UTC (the limit resets at midnight UTC). The same database aggregate (`tokens_used_today`) now enforces the cap and drives the screen, so they always agree.
+* It shows **no cost figure** (it depends on your AI provider's price list) and **no storage budget**, because no total storage limit is enforced (each file is limited to 25 MB by the bucket).
+* **Check:** send a few assistant messages; Usage shows the tokens within a minute; set `ASSISTANT_DAILY_TOKEN_LIMIT=1000`, redeploy `assistant-chat`, and the next message is refused with "reached today's AI usage limit".
 
 ## 6. Frontend on Vercel
 1. Import the repository; **Root Directory = `assistant`**; framework preset **Vite**; build `npm run build`, output `dist`.

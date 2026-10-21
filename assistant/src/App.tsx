@@ -22,6 +22,7 @@ const Workflows = lazy(() => import('@/pages/WorkflowsPage'))
 const Activity = lazy(() => import('@/pages/ActivityPage'))
 const Integrations = lazy(() => import('@/pages/IntegrationsPage'))
 const Settings = lazy(() => import('@/pages/SettingsPage'))
+const Usage = lazy(() => import('@/pages/UsagePage'))
 
 const queryClient = new QueryClient({
   defaultOptions: { queries: { staleTime: 15_000, retry: 1, refetchOnWindowFocus: true } },
@@ -48,6 +49,7 @@ function Gate() {
             <Route path="activity" element={<Activity />} />
             <Route path="integrations" element={<Integrations />} />
             <Route path="settings" element={<Settings />} />
+            <Route path="settings/usage" element={<Usage />} />
             <Route path="*" element={<Navigate to="/" replace />} />
           </Route>
         </Routes>

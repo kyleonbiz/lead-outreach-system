@@ -3,6 +3,7 @@ import type { SupabaseClient } from '@supabase/supabase-js'
 import { AnthropicProvider } from './core/llm/anthropic.ts'
 import { buildRegistry } from './core/tools/index.ts'
 import { parsePolicy } from './core/policy.ts'
+import { parseDailyTokenLimit } from './core/handlers/usage.ts'
 import type { ChatDeps } from './core/handlers/chat.ts'
 import type { ApproveDeps } from './core/handlers/approve.ts'
 import type { Ports } from './core/ports.ts'
@@ -63,12 +64,13 @@ export function buildChatDeps(opts: {
         .eq('org_id', orgId).eq('role', 'user').gte('created_at', since).eq('assistant_conversations.user_id', userId!)
       return (data ?? []).map((r) => Date.parse(r.created_at as string))
     },
-    dailyTokenLimit: Number(env('ASSISTANT_DAILY_TOKEN_LIMIT') ?? 500_000),
+    dailyTokenLimit: parseDailyTokenLimit(env('ASSISTANT_DAILY_TOKEN_LIMIT')),
+    // SQL aggregate (not "fetch rows and add them up"): that was capped at 5,000 rows and under-counted on busy days.
+    // If the count cannot be read the request fails; it never proceeds as if no tokens had been used.
     async tokensUsedToday(orgId) {
-      const start = new Date(); start.setUTCHours(0, 0, 0, 0)
-      const { data } = await svc.from('usage_records').select('quantity').eq('org_id', orgId)
-        .in('kind', ['llm_input_tokens', 'llm_output_tokens']).gte('created_at', start.toISOString()).limit(5000)
-      return (data ?? []).reduce((n, r) => n + Number(r.quantity), 0)
+      const { data, error } = await svc.rpc('tokens_used_today', { p_org: orgId })
+      if (error) throw new Error(`tokens_used_today: ${error.message}`)
+      return Number(data ?? 0)
     },
     missingConfig: () => (env('ANTHROPIC_API_KEY') ? [] : ['ANTHROPIC_API_KEY']),
     loadOrg: (orgId) => orgContext(client, orgId),

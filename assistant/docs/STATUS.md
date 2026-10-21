@@ -349,3 +349,18 @@ Each item below was built and tested without any live service. "Verified" means 
 * Whether Supabase refreshes `last_sign_in_at` on token refresh (which would weaken the "recent sign-in" gate) is assumed, not confirmed.
 * Concurrency: two simultaneous deletions or an export during a deletion were not tested.
 
+## 7. Usage screen (admins)
+### Built
+* Settings → **Usage** page: today's tokens against the daily limit (accessible progress bar, over-limit and no-limit states), stat tiles, a daily stacked bar chart (inline SVG, with a text alternative and a
+  screen-reader table), top tools with failures, tokens by model, 7/30/90-day range. Owners/admins only. Honest footnote: UTC days, no cost figure, no storage cap.
+* `usage_summary()` (migration `0012`, SECURITY INVOKER + explicit admin check) and the `usage-summary` function (adds the server's daily limit and the reset time).
+* **Two enforcement bugs found and fixed while building it:** (1) the daily cap summed at most 5,000 usage rows in application code and so under-counted on busy days; it now uses the `tokens_used_today()` SQL aggregate
+  (and fails the request, rather than proceeding as unlimited, if the count cannot be read); (2) `ASSISTANT_DAILY_TOKEN_LIMIT=abc` became `NaN`, which silently disabled the limit, and `0x10` became 16; the setting is now
+  parsed as plain digits and anything else falls back to the default.
+### Verified
+* 38 new SQL assertions (`97_usage.test.sql`): admin-only, exact daily/total/model/tool/workflow/storage numbers, window clamping, empty organizations, a 6,000-row day, and — via a person who administers two organizations —
+  that the explicit organization filter (not just RLS) keeps summaries apart (a mutation check proved the first version of the test could not tell; it was strengthened).
+* 23 handler tests (including 13 limit-parsing typos) and 13 UI tests.
+### NOT verified
+* The screen has not been rendered against real data in a browser in this round, and nothing ran against a live database. Usage numbers are only as complete as what the assistant records.
+

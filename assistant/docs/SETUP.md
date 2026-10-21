@@ -62,7 +62,7 @@ and never in a `VITE_` variable:
 
 `SUPABASE_URL`, `SUPABASE_ANON_KEY` and `SUPABASE_SERVICE_ROLE_KEY` are injected automatically.
 
-Deploy: `supabase functions deploy assistant-chat assistant-approve oauth-start google-oauth-callback microsoft-oauth-callback integration-disconnect provider-data document-process workflow-save workflow-run workflow-tick notification-channels invite-member export-org-data delete-account`
+Deploy: `supabase functions deploy assistant-chat assistant-approve oauth-start google-oauth-callback microsoft-oauth-callback integration-disconnect provider-data document-process workflow-save workflow-run workflow-tick notification-channels invite-member export-org-data delete-account usage-summary`
 (`supabase/config.toml` already sets `verify_jwt = false` for the two OAuth callbacks and the scheduler tick only; it is authenticated by an HMAC-signed `state`).
 
 ## Scheduler for workflows (pg_cron)

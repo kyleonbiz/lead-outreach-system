@@ -1,4 +1,5 @@
 import { useState, type FormEvent } from 'react'
+import { Link } from 'react-router-dom'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Badge, Button, Field, Input, Notice, PageHeader, Section } from '@/components/ui'
 import { db } from '@/lib/supabase'
@@ -67,6 +68,15 @@ export default function SettingsPage() {
         <ApprovalRulesSection />
 
         <NotificationSettings />
+
+        {isAdmin && (
+          <Section title="Usage">
+            <div className="flex flex-wrap items-center justify-between gap-3 text-sm">
+              <p className="text-muted">See how much AI the assistant has used, your daily limit, tool calls, workflow runs and storage.</p>
+              <Link to="/settings/usage"><Button>View usage</Button></Link>
+            </div>
+          </Section>
+        )}
 
         <PrivacySection />
 
