@@ -1,4 +1,4 @@
-import { Bot, Repeat, Workflow } from 'lucide-react'
+import { Bot, Repeat, User, Workflow } from 'lucide-react'
 import { Badge } from '@/components/ui'
 import { cn, dueInfo, isOpen } from '@/lib/utils'
 import type { Task } from '@/lib/types'
@@ -7,8 +7,8 @@ const priorityTone = { urgent: 'danger', high: 'warn', medium: 'neutral', low: '
 const dueTone = { overdue: 'danger', today: 'warn', soon: 'accent', later: 'neutral', none: 'neutral' } as const
 
 export function TaskRow({
-  task, onToggle, onOpen, busy,
-}: { task: Task; onToggle: (t: Task) => void; onOpen: (t: Task) => void; busy?: boolean }) {
+  task, onToggle, onOpen, busy, assigneeName,
+}: { task: Task; onToggle: (t: Task) => void; onOpen: (t: Task) => void; busy?: boolean; assigneeName?: string }) {
   const open = isOpen(task)
   const due = dueInfo(task.due_at)
   return (
@@ -23,6 +23,7 @@ export function TaskRow({
         <span className={cn('block truncate text-sm font-medium', !open && 'text-muted line-through')}>{task.title}</span>
         <span className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-muted">
           {task.category && <span>{task.category}</span>}
+          {task.assignee_id && <span className="inline-flex items-center gap-1"><User className="h-3 w-3" aria-hidden />{assigneeName ?? 'Assigned'}</span>}
           {task.recurrence && <span className="inline-flex items-center gap-1"><Repeat className="h-3 w-3" aria-hidden />{task.recurrence}</span>}
           {task.created_via === 'assistant' && <span className="inline-flex items-center gap-1"><Bot className="h-3 w-3" aria-hidden />Added by assistant</span>}
           {task.created_via === 'workflow' && <span className="inline-flex items-center gap-1"><Workflow className="h-3 w-3" aria-hidden />Workflow</span>}

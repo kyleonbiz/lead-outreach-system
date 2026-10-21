@@ -13,7 +13,7 @@ Do the steps in order; each ends with a check.
 
 ## 1. Supabase project
 1. Create the project; note the **project ref**, **URL**, **anon key**. Keep the **service_role key** secret.
-2. Apply migrations: `supabase link --project-ref <ref> && supabase db push` (applies every file in `supabase/migrations`, currently `0001`…`0009`, in order).
+2. Apply migrations: `supabase link --project-ref <ref> && supabase db push` (applies every file in `supabase/migrations`, currently `0001`…`0010`, in order).
 3. **Check:** SQL editor → `select count(*) from information_schema.tables where table_schema='public'` returns 25+; and as a test,
    `select * from public.integration_credentials` using the anon key must fail with *permission denied* (it is closed to every client role).
 4. Authentication → Providers → Email: keep **Confirm email** ON. URL Configuration: Site URL = your Vercel URL; add it and
@@ -39,7 +39,7 @@ Optional: `ASSISTANT_DEFAULT_MODEL`, `ASSISTANT_MESSAGES_PER_MINUTE` (default 12
 ```bash
 cd assistant
 supabase functions deploy assistant-chat assistant-approve google-oauth-start google-oauth-callback \
-  integration-disconnect provider-data document-process workflow-save workflow-run workflow-tick notification-channels
+  integration-disconnect provider-data document-process workflow-save workflow-run workflow-tick notification-channels invite-member
 ```
 `supabase/config.toml` marks `google-oauth-callback` and `workflow-tick` as `verify_jwt = false` (they authenticate with a signed
 OAuth `state` and the `CRON_SECRET` respectively). Every other function requires a valid user JWT **and** re-checks organization
@@ -59,6 +59,14 @@ Enable `pg_cron`, `pg_net`, `supabase_vault`; store the secret and schedule the 
   "Post to a channel when a webhook request is received" (or a legacy `*.webhook.office.com` connector). Only these provider hosts are accepted, over https.
   The URL is encrypted with `TOKEN_ENCRYPTION_KEY` and never shown again. Use **Send test** to confirm it works.
 * **Check:** Send test on a channel → message appears; Settings → Recent deliveries shows `sent`.
+
+### Team invitations
+* Owners invite from Settings → **Team** (members or admins; owners are made by promoting a member). The `invite-member` function generates a 256-bit token,
+  stores **only its SHA-256**, and e-mails `APP_URL/invite/<token>` using the same e-mail settings as notifications. If e-mail is not configured the owner is shown the
+  link once to share manually, so an invitation is never lost or faked.
+* The link works once, for 7 days, and only for a signed-in user whose **confirmed** e-mail equals the invited address. Keep **Confirm email** ON in Supabase Auth,
+  otherwise an unconfirmed sign-up could claim an address it does not control (the database refuses unconfirmed addresses regardless).
+* **Check:** invite a second address → open the link in a private window → sign up with that address → confirm the e-mail → you land in the team. Opening the same link again must fail.
 
 ## 5. Google OAuth client
 See SETUP.md → *Google OAuth*. Authorized redirect URI must equal `GOOGLE_OAUTH_REDIRECT_URI` exactly.

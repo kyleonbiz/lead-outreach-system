@@ -1,4 +1,4 @@
-import { lazy, Suspense } from 'react'
+import { lazy, Suspense, useState } from 'react'
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { envStatus } from '@/lib/supabase'
@@ -9,6 +9,8 @@ import { Onboarding } from '@/features/org/Onboarding'
 import { AppShell } from '@/components/AppShell'
 import { Spinner } from '@/components/ui'
 import { SetupRequired } from '@/pages/SetupRequired'
+import { AcceptInvite } from '@/features/team/AcceptInvite'
+import { getPendingInvite } from '@/features/team/pendingInvite'
 
 const Overview = lazy(() => import('@/pages/OverviewPage'))
 const Assistant = lazy(() => import('@/pages/AssistantPage'))
@@ -27,8 +29,10 @@ const queryClient = new QueryClient({
 
 function Gate() {
   const { user, loading } = useAuth()
+  const [invite, setInvite] = useState(getPendingInvite) // set by captureInviteFromUrl() at startup
   if (loading) return <Spinner />
-  if (!user) return <AuthPage />
+  if (!user) return <AuthPage invited={!!invite} />
+  if (invite) return <AcceptInvite token={invite} onDone={() => setInvite(null)} />
   return (
     <OrgProvider empty={<Onboarding />}>
       <Suspense fallback={<Spinner />}>

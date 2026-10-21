@@ -2,17 +2,22 @@ import { useMemo, useState } from 'react'
 import { Plus } from 'lucide-react'
 import { Button, EmptyState, Notice, PageHeader, Spinner } from '@/components/ui'
 import { useOrg } from '@/features/org/OrgProvider'
+import { useAuth } from '@/features/auth/AuthProvider'
+import { memberName, useMembers } from '@/features/team/api'
 import { useCompleteTask, useTasks, useUpdateTask } from '@/features/tasks/api'
 import { TaskDialog } from '@/features/tasks/TaskDialog'
 import { TaskRow } from '@/features/tasks/TaskRow'
 import type { Task } from '@/lib/types'
 import { cn, isOpen } from '@/lib/utils'
 
-type Filter = 'open' | 'overdue' | 'done' | 'all'
+type Filter = 'open' | 'mine' | 'overdue' | 'done' | 'all'
 
 export default function TasksPage() {
   const { orgId } = useOrg()
   const tasks = useTasks(orgId)
+  const { user } = useAuth()
+  const members = useMembers(orgId)
+  const names = useMemo(() => new Map((members.data ?? []).map((m) => [m.user_id, memberName(m)])), [members.data])
   const complete = useCompleteTask(orgId)
   const update = useUpdateTask(orgId)
   const [filter, setFilter] = useState<Filter>('open')
@@ -25,11 +30,12 @@ export default function TasksPage() {
     const now = Date.now()
     switch (filter) {
       case 'open': return all.filter(isOpen)
+      case 'mine': return all.filter((t) => isOpen(t) && t.assignee_id === user?.id)
       case 'overdue': return all.filter((t) => isOpen(t) && t.due_at && Date.parse(t.due_at) < now)
       case 'done': return all.filter((t) => t.status === 'done')
       default: return all
     }
-  }, [tasks.data, filter])
+  }, [tasks.data, filter, user?.id])
 
   const open = (t: Task | null) => { setEditing(t); setDialogOpen(true) }
 
@@ -41,7 +47,7 @@ export default function TasksPage() {
     } catch (e) { setActionError((e as Error).message) }
   }
 
-  const tabs: [Filter, string][] = [['open', 'Open'], ['overdue', 'Overdue'], ['done', 'Done'], ['all', 'All']]
+  const tabs: [Filter, string][] = [['open', 'Open'], ['mine', 'Assigned to me'], ['overdue', 'Overdue'], ['done', 'Done'], ['all', 'All']]
 
   return (
     <>
@@ -74,7 +80,7 @@ export default function TasksPage() {
       {visible.length > 0 && (
         <ul className="divide-y divide-line rounded-lg border border-line bg-surface">
           {visible.map((t) => (
-            <TaskRow key={t.id} task={t} onToggle={toggle} onOpen={open} busy={complete.isPending || update.isPending} />
+            <TaskRow key={t.id} task={t} onToggle={toggle} onOpen={open} busy={complete.isPending || update.isPending} assigneeName={t.assignee_id ? names.get(t.assignee_id) : undefined} />
           ))}
         </ul>
       )}

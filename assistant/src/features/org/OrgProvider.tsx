@@ -24,6 +24,8 @@ const STORAGE_KEY = 'currentOrgId'
 
 const readSaved = () => { try { return localStorage.getItem(STORAGE_KEY) } catch { return null } }
 const writeSaved = (v: string) => { try { localStorage.setItem(STORAGE_KEY, v) } catch { /* private mode */ } }
+/** Makes `orgId` the workspace opened next (e.g. the team someone just joined). */
+export const rememberOrg = writeSaved
 
 /** Loads memberships; renders `empty` when the user belongs to no organization yet. */
 export function OrgProvider({ children, empty }: { children: ReactNode; empty: ReactNode }) {

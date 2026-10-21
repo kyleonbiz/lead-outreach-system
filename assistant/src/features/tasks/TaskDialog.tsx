@@ -2,12 +2,14 @@ import { useState, type FormEvent } from 'react'
 import { Button, Dialog, Field, Input, Notice, Select, Textarea } from '@/components/ui'
 import type { Recurrence, Task, TaskPriority, TaskStatus } from '@/lib/types'
 import { isoToLocalInput, localInputToIso } from '@/lib/utils'
+import { memberName, useMembers } from '@/features/team/api'
 import { useCreateTask, useDeleteTask, useUpdateTask } from './api'
 
 export function TaskDialog({ orgId, task, open, onClose }: { orgId: string; task: Task | null; open: boolean; onClose: () => void }) {
   const create = useCreateTask(orgId)
   const update = useUpdateTask(orgId)
   const remove = useDeleteTask(orgId)
+  const members = useMembers(orgId)
   const [error, setError] = useState<string | null>(null)
   const [confirmDelete, setConfirmDelete] = useState(false)
   const busy = create.isPending || update.isPending || remove.isPending
@@ -27,6 +29,7 @@ export function TaskDialog({ orgId, task, open, onClose }: { orgId: string; task
       status: text('status') as TaskStatus,
       recurrence: (text('recurrence') || null) as Recurrence | null,
       due_at: localInputToIso(text('due_at')),
+      assignee_id: text('assignee_id') || null,
     }
     try {
       if (task) await update.mutateAsync({ id: task.id, ...input })
@@ -78,6 +81,14 @@ export function TaskDialog({ orgId, task, open, onClose }: { orgId: string; task
               <Select id={id} name="status" defaultValue={task?.status ?? 'todo'}>
                 <option value="todo">To do</option><option value="in_progress">In progress</option>
                 <option value="blocked">Blocked</option><option value="done">Done</option><option value="cancelled">Cancelled</option>
+              </Select>
+            )}
+          </Field>
+          <Field label="Assigned to">
+            {(id) => (
+              <Select id={id} name="assignee_id" defaultValue={task?.assignee_id ?? ''}>
+                <option value="">Unassigned</option>
+                {(members.data ?? []).map((m) => <option key={m.user_id} value={m.user_id}>{memberName(m)}</option>)}
               </Select>
             )}
           </Field>

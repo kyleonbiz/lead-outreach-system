@@ -20,6 +20,7 @@ create function auth.uid() returns uuid language sql stable as $$
   )::uuid
 $$;
 grant usage on schema auth to anon, authenticated, service_role;
+grant all on auth.users to service_role;  -- on Supabase the service role administers auth.users
 grant execute on function auth.uid() to anon, authenticated, service_role;
 
 create schema storage;

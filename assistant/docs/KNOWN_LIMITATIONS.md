@@ -19,8 +19,9 @@ Plain list of what is **not** done or **not proven**. Nothing here is hidden beh
 * Calendar: primary calendar only; no recurring-event creation or room/resource handling.
 * Workflows: form-based editor (no drag-and-drop canvas); events limited to `task.overdue` and `document.ready`; no version history UI;
   each tick runs at most 3 runs (long workflows may need the edge-function time limit raised or the run split).
-* Teams: roles exist (`owner/admin/member`) and RLS enforces them, but there is **no invitation UI** — members are added via SQL
-  today. Task assignment columns exist; assignment UI does not.
+* Teams: invitations (owner-only, e-mailed single-use links), role changes, removal and leaving are built; task assignment (dialog, row, "Assigned to me") is built.
+  Not built: ownership **transfer** flow beyond promoting a member to owner, notifying someone when a task is assigned to them, and bulk invitations.
+  Invitation links are delivered by e-mail only if Resend is configured; otherwise the owner copies the link.
 * Task attachments, usage dashboards/billing, per-document sharing, search in languages other than English.
 * No account deletion / data export flow, no audit-log export.
 * Notifications: in-app, e-mail (Resend) and Slack/Teams webhooks. No push/SMS. E-mail needs a Resend account and a verified sending domain.

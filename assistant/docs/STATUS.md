@@ -290,3 +290,22 @@ Each item below was built and tested without any live service. "Verified" means 
 * No OCR, so scanned PDFs are unsupported by design. Table structure and multi-column reading order are best-effort (pdf.js text order).
 * Real-world PDF variety is wide: only the 9 fixtures above (reportlab, LibreOffice, pypdf) were tried.
 
+## 4. Team invitations and task assignment
+### Built
+* **Invitations** (migration `0010`, `invite-member` function): owner-only; roles `admin` or `member` (never `owner`); 256-bit random token that exists in plaintext only in the e-mailed link
+  (the database stores SHA-256; no client can read even the hash); single use (row-locked), 7-day default / 30-day max expiry, revocable, one live invitation per address
+  (re-inviting replaces the old link), caps (50 pending, 100 per day).
+* **Accepting** requires a signed-in user whose **confirmed** e-mail equals the invited address (case-insensitive); a leaked link is useless to anyone else. The token is removed from the
+  address bar on arrival and kept in storage only until accepted or failed (so it survives sign-up + e-mail confirmation). Everything is audited.
+* **If e-mail is not configured or fails**, the owner gets the link once with the real reason — never a fake success.
+* **Team section** in Settings: roster (e-mail addresses visible to owners/admins only), role changes and removal (owner), leave (anyone; the last-owner guard is surfaced), pending invitations with revoke.
+* **Task assignment:** "Assigned to" in the task dialog (names from the team directory), assignee shown on rows, "Assigned to me" filter. Membership is enforced by the existing composite foreign key.
+### Verified
+* 65 new SQL assertions (`90_invitations.test.sql`): who can create, owner role impossible, replay, wrong/unconfirmed address, expiry, revocation, cross-organization use and probing,
+  second-organization isolation, caps, directory privacy, lifecycle. Four mutation checks (drop the address match / confirmed requirement / single-use check / allow owner role) each made the suite fail.
+* 21 handler tests (hash-only storage, link-only plaintext, fallbacks, error mapping, header-injection-safe subject), 29 UI tests (including exactly-once accept under StrictMode, proven by a mutation check).
+### NOT verified
+* A real invitation round trip: sign-up -> e-mail confirmation -> accept on a live Supabase project, and Resend delivery. `auth.users.email_confirmed_at` is stubbed locally.
+* Concurrent acceptance is serialized by a row lock (`FOR UPDATE`) but was only tested sequentially (replay), not with two simultaneous sessions.
+* Ownership transfer is only "promote another member to owner, then leave".
+

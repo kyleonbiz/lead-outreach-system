@@ -3,7 +3,7 @@ import { Button, Field, Input, Notice } from '@/components/ui'
 import { Logo } from '@/components/Logo'
 import { useAuth } from './AuthProvider'
 
-export function AuthPage() {
+export function AuthPage({ invited = false }: { invited?: boolean }) {
   const { signIn, signUp } = useAuth()
   const [mode, setMode] = useState<'signin' | 'signup'>('signin')
   const [busy, setBusy] = useState(false)
@@ -38,6 +38,12 @@ export function AuthPage() {
             <p className="text-sm text-muted mt-1">Delegate the work. Keep control.</p>
           </div>
         </div>
+
+        {invited && (
+          <Notice tone="info" title="You've been invited to join a team">
+            Sign in, or create an account, using the e-mail address the invitation was sent to.
+          </Notice>
+        )}
 
         <form onSubmit={onSubmit} className="space-y-4">
           {mode === 'signup' && (

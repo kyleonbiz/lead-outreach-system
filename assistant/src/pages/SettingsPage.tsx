@@ -4,6 +4,7 @@ import { Badge, Button, Field, Input, Notice, PageHeader, Section } from '@/comp
 import { db } from '@/lib/supabase'
 import { useOrg } from '@/features/org/OrgProvider'
 import { useAuth } from '@/features/auth/AuthProvider'
+import { TeamSection } from '@/features/team/TeamSection'
 import { ApprovalRulesSection } from '@/features/approvals/ApprovalRulesSection'
 import { NotificationSettings } from '@/features/notifications/NotificationSettings'
 
@@ -57,6 +58,8 @@ export default function SettingsPage() {
             </div>
           </Section>
         </form>
+
+        <TeamSection />
 
         <EmailRulesSection />
 
