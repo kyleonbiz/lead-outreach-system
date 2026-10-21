@@ -34,8 +34,8 @@ export function DailyTokensChart({ daily }: { daily: UsageResponse['daily'] }) {
         })}
       </svg>
       <ul className="mt-2 flex flex-wrap gap-4 text-xs text-muted" aria-label="Chart key">
-        <li className="flex items-center gap-1.5"><span aria-hidden className="h-2.5 w-2.5 rounded-sm" style={{ background: 'rgb(var(--muted) / 0.5)' }} />Tokens sent to the AI (input)</li>
-        <li className="flex items-center gap-1.5"><span aria-hidden className="h-2.5 w-2.5 rounded-sm bg-accent" />Tokens written by the AI (output)</li>
+        <li className="flex items-center gap-1.5"><span aria-hidden className="h-2.5 w-2.5 rounded-xs" style={{ background: 'rgb(var(--muted) / 0.5)' }} />Tokens sent to the AI (input)</li>
+        <li className="flex items-center gap-1.5"><span aria-hidden className="h-2.5 w-2.5 rounded-xs bg-accent" />Tokens written by the AI (output)</li>
       </ul>
       {/* the wrapper (not the table) carries sr-only: a <table> ignores width/overflow and would widen the page */}
       <div className="sr-only">

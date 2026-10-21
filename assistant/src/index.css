@@ -1,6 +1,53 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import 'tailwindcss';
+
+@custom-variant dark (&:is([data-theme="dark"] *));
+
+@theme {
+  --color-bg: rgb(var(--bg));
+  --color-surface: rgb(var(--surface));
+  --color-sunken: rgb(var(--sunken));
+  --color-line: rgb(var(--line));
+  --color-ink: rgb(var(--ink));
+  --color-muted: rgb(var(--muted));
+
+  --color-accent: rgb(var(--accent));
+  --color-accent-ink: rgb(var(--accent-ink));
+  --color-accent-soft: rgb(var(--accent-soft));
+
+  --color-ok: rgb(var(--ok));
+  --color-ok-soft: rgb(var(--ok-soft));
+
+  --color-warn: rgb(var(--warn));
+  --color-warn-soft: rgb(var(--warn-soft));
+
+  --color-danger: rgb(var(--danger));
+  --color-danger-soft: rgb(var(--danger-soft));
+  --color-danger-ink: rgb(var(--danger-ink));
+
+  --font-sans:
+    Inter, ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+
+  --radius: 6px;
+  --radius-lg: 10px;
+}
+
+/*
+  The default border color has changed to `currentcolor` in Tailwind CSS v4,
+  so we've added these compatibility styles to make sure everything still
+  looks the same as it did with Tailwind CSS v3.
+
+  If we ever want to remove these styles, we need to add an explicit border
+  color utility to any element that depends on these defaults.
+*/
+@layer base {
+  *,
+  ::after,
+  ::before,
+  ::backdrop,
+  ::file-selector-button {
+    border-color: var(--color-gray-200, currentcolor);
+  }
+}
 
 /* Design tokens: space-separated RGB so Tailwind can apply opacity. */
 :root {
@@ -36,15 +83,16 @@
   --warn: 232 169 82;
   --warn-soft: 56 42 22;
   --danger: 238 112 112;
-  --danger-ink: 36 12 12;   /* dark text: white on the lighter dark-mode red fails WCAG AA */
+  --danger-ink: 36 12 12; /* dark text: white on the lighter dark-mode red fails WCAG AA */
   --danger-soft: 62 30 30;
 }
 
 @layer base {
+  button:not(:disabled), [role='button']:not(:disabled), select:not(:disabled), summary { cursor: pointer; }
   html { color-scheme: light; }
   :root[data-theme='dark'] { color-scheme: dark; }
   body { @apply bg-bg text-ink font-sans antialiased; font-feature-settings: 'cv11', 'ss01'; }
-  :focus-visible { @apply outline-none ring-2 ring-accent ring-offset-2 ring-offset-bg; }
+  :focus-visible { @apply outline-hidden ring-2 ring-accent ring-offset-2 ring-offset-bg; }
   ::selection { background: rgb(var(--accent) / 0.25); }
 }
 

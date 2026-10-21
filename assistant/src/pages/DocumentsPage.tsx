@@ -111,7 +111,7 @@ function DocItem({ d, canDelete, confirming, onConfirm, onCancel, onDelete, onDo
       <div className="flex flex-wrap items-start gap-3">
         <FileText className="mt-0.5 h-4 w-4 shrink-0 text-muted" aria-hidden />
         <div className="min-w-0 flex-1 basis-56">
-          <p className="break-words text-sm font-medium">{d.name} {d.source === 'generated' && <Badge tone="accent" className="ml-1">Created by assistant</Badge>}</p>
+          <p className="wrap-break-word text-sm font-medium">{d.name} {d.source === 'generated' && <Badge tone="accent" className="ml-1">Created by assistant</Badge>}</p>
           <p className="text-xs text-muted">{format(new Date(d.created_at), 'MMM d, yyyy')}{d.size_bytes ? ` · ${fmtSize(d.size_bytes)}` : ''}</p>
           {d.summary && <p className="mt-1.5 text-sm">{d.summary}</p>}
           {!!x.dates?.length && <p className="mt-1 text-xs text-muted"><strong className="font-medium text-ink">Key dates:</strong> {x.dates.map((t) => `${t.date} (${t.description})`).join('; ')}</p>}

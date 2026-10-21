@@ -13,7 +13,7 @@ export function ApprovalCard({ a }: { a: PendingApproval }) {
         <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0 text-warn" aria-hidden />
         <div className="min-w-0 flex-1">
           <p className="text-sm font-medium">Approval needed</p>
-          <p className="mt-0.5 break-words text-sm">{a.summary}</p>
+          <p className="mt-0.5 wrap-break-word text-sm">{a.summary}</p>
           <p className="mt-0.5 text-xs text-muted"><code className="font-mono">{a.action_type}</code></p>
         </div>
       </div>

@@ -12,13 +12,16 @@ const errText = (e: unknown) => (e instanceof FunctionError || e instanceof Erro
 
 export function PrivacySection() {
   const { role } = useOrg()
+  const [deleteOpen, setDeleteOpen] = useState(false)
   return (
     <Section title="Data & privacy">
       <div className="space-y-6 text-sm">
         {(role === 'owner' || role === 'admin') && <ExportData />}
         {role === 'owner' && <TransferOwnership />}
-        <DeleteAccount />
+        <DeleteAccount onOpen={() => setDeleteOpen(true)} />
       </div>
+      {/* the dialog lives outside the spaced stack: even closed (hidden) it would otherwise count as a sibling for space-y */}
+      <DeleteDialog open={deleteOpen} onClose={() => setDeleteOpen(false)} />
     </Section>
   )
 }
@@ -113,16 +116,14 @@ function TransferOwnership() {
   )
 }
 
-function DeleteAccount() {
-  const [open, setOpen] = useState(false)
+function DeleteAccount({ onOpen }: { onOpen: () => void }) {
   return (
     <div className="space-y-3 rounded-lg border border-danger/40 p-4">
       <div>
         <p className="font-medium text-danger">Delete my account</p>
         <p className="text-muted">Permanently deletes your sign-in, your private assistant conversations and your preferences, and disconnects the accounts you connected. This cannot be undone.</p>
       </div>
-      <Button variant="danger" onClick={() => setOpen(true)}>Delete my account…</Button>
-      <DeleteDialog open={open} onClose={() => setOpen(false)} />
+      <Button variant="danger" onClick={onOpen}>Delete my account…</Button>
     </div>
   )
 }

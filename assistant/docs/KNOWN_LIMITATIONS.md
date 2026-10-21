@@ -48,7 +48,8 @@ Plain list of what is **not** done or **not proven**. Nothing here is hidden beh
 ## Security notes / follow-ups
 * Google "restricted" Gmail scopes require Google's verification (and usually a security assessment) before serving the public.
 * A sole owner cannot be deleted from `auth.users` while they are an organization's last owner (by design; transfer ownership first).
-* `npm audit`: 7 findings, all in Tailwind 3's build-time toolchain (not shipped). Resolve by migrating to Tailwind 4.
+* `npm audit`: 0 findings (after the Tailwind 4 migration).
+* Tailwind 4 targets newer browsers (Safari 16.4+, Chrome 111+, Firefox 128+). Older browsers will not render the app correctly.
 * Rate limiting is per user per minute inside the assistant endpoint plus the per-org daily token budget; other endpoints rely on
   Supabase's platform limits. Add an edge/WAF limiter if exposed publicly at scale.
 * Recurring tasks use UTC interval arithmetic (a DST change can shift local time by an hour).

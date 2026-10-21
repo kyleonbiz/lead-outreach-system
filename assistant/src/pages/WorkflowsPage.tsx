@@ -100,9 +100,9 @@ function Detail({ wf, isAdmin, onEdit }: { wf: WorkflowRow; isAdmin: boolean; on
             const Icon = icons[s.type]
             return (
               <li key={s.id} className="relative rounded-lg border border-line bg-surface px-3.5 py-2.5">
-                <span className="absolute -left-[1.62rem] top-3.5 grid h-4 w-4 place-items-center rounded-full bg-accent text-[10px] font-semibold text-accent-ink" aria-hidden>{i + 1}</span>
+                <span className="absolute left-[-1.62rem] top-3.5 grid h-4 w-4 place-items-center rounded-full bg-accent text-[10px] font-semibold text-accent-ink" aria-hidden>{i + 1}</span>
                 <p className="flex items-center gap-2 text-sm font-medium"><Icon className="h-3.5 w-3.5 text-muted" aria-hidden />{s.label ?? s.id}</p>
-                <p className="mt-0.5 break-words text-xs text-muted">
+                <p className="mt-0.5 wrap-break-word text-xs text-muted">
                   {s.type === 'tool' && <code className="font-mono">{s.tool}</code>}
                   {s.type === 'summarize' && 'AI-written summary'}{s.type === 'approval' && `Waits for approval: ${s.summary}`}{s.type === 'notify' && `Notifies: ${s.title}`}
                   {s.when && ` · only if ${s.when.step} ${s.when.op.replace('_', ' ')}`}
@@ -129,7 +129,7 @@ function Detail({ wf, isAdmin, onEdit }: { wf: WorkflowRow; isAdmin: boolean; on
               {r.error && <p className="mt-1.5 text-xs text-danger">{r.error}</p>}
               {open === r.id && (
                 <div className="mt-3 space-y-2">
-                  {r.output?.text && <pre className="whitespace-pre-wrap break-words rounded bg-sunken p-3 font-sans text-sm">{r.output.text}</pre>}
+                  {r.output?.text && <pre className="whitespace-pre-wrap wrap-break-word rounded bg-sunken p-3 font-sans text-sm">{r.output.text}</pre>}
                   <ul className="space-y-1">
                     {[...r.workflow_steps].sort((a, b) => (a.started_at ?? '').localeCompare(b.started_at ?? '')).map((s) => (
                       <li key={s.step_key} className="text-xs">

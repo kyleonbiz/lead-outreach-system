@@ -67,7 +67,7 @@ export default function OverviewPage() {
           <Muted>{briefing.data.enabled ? 'No briefing has run yet. The first one arrives at the next scheduled time.' : 'The daily briefing is switched off.'}</Muted>
         ) : briefing.data.run.status === 'succeeded' && briefing.data.run.output?.text ? (
           <div>
-            <p className="whitespace-pre-wrap break-words text-sm">{briefing.data.run.output.text}</p>
+            <p className="whitespace-pre-wrap wrap-break-word text-sm">{briefing.data.run.output.text}</p>
             <p className="mt-2 text-xs text-muted">Generated {format(new Date(briefing.data.run.finished_at ?? briefing.data.run.created_at), 'EEE MMM d, h:mm a')}</p>
           </div>
         ) : briefing.data.run.status === 'failed' ? (

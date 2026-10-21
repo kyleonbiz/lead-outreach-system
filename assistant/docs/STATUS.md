@@ -364,3 +364,21 @@ Each item below was built and tested without any live service. "Verified" means 
 ### NOT verified
 * The screen has not been rendered against real data in a browser in this round, and nothing ran against a live database. Usage numbers are only as complete as what the assistant records.
 
+
+## 8. Tailwind 3 → 4 migration
+### Built
+* Tailwind 4.3 with `@tailwindcss/postcss`; `tailwind.config.js` replaced by an `@theme` block in `src/index.css` mapping the existing colour tokens and radii. Colour tokens are plain `:root` rules.
+* v4 behaviour differences handled: compat border colour, pointer cursor on buttons, renamed utilities (`wrap-break-word`, `rounded-xs`, `outline-hidden`), and `space-y-*` (now margin on non-last children), which
+  shifted the Settings danger section by 12 px; the delete dialog was moved out of the spaced stack.
+* `npm audit` is now clean (was 7 findings, all in the Tailwind 3 build toolchain).
+### Verified
+* Pixel comparison against the Tailwind 3 build in headless Chromium: 11 pages × 3 viewport sizes × light/dark = 66 views, 0 horizontal overflow, 0 axe violations, 0 console errors.
+  60 of 66 views are pixel-identical; the other 6 (Usage) differ by 1–2 px because v4 no longer leaves the browser's 1 px padding on table cells (judged an improvement).
+  26 of 26 interaction states (task dialogs, channel dialog, delete dialogs, focus ring, mobile menu) are identical.
+* typecheck, 642 unit tests, build, 389 database assertions and `deno check` on all functions pass.
+### NOT verified
+* Only Chromium was used; Safari and Firefox were not checked. The app now requires browsers new enough for Tailwind 4 (Safari 16.4+, Chrome 111+, Firefox 128+).
+* `autoprefixer` is still installed though v4 largely makes it redundant; harmless.
+
+## Deferred (not built, by decision)
+E-signature, accounting (QuickBooks/Xero), SMS/phone, and pgvector semantic search need live accounts or paid services and are not started.

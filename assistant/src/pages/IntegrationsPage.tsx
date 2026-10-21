@@ -49,7 +49,7 @@ export default function IntegrationsPage() {
               <div className="min-w-0 flex-1">
                 <p className="text-sm font-medium">{p.name}</p>
                 <p className="text-sm text-muted">{p.description}</p>
-                {conn && <p className="mt-1 break-words text-xs text-muted">{conn.external_account}{conn.last_error ? ` · ${conn.last_error}` : ''}</p>}
+                {conn && <p className="mt-1 wrap-break-word text-xs text-muted">{conn.external_account}{conn.last_error ? ` · ${conn.last_error}` : ''}</p>}
               </div>
               {conn
                 ? <Badge tone={statusTone[conn.status]}>{statusLabel[conn.status]}</Badge>

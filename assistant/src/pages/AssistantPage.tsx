@@ -68,7 +68,7 @@ export default function AssistantPage() {
             {messages.isLoading && activeId && <Spinner />}
             {visible.map((m) => (
               <div key={m.id} className={cn('flex', m.role === 'user' && 'justify-end')}>
-                <div className={cn('max-w-[85%] whitespace-pre-wrap break-words rounded-lg px-3.5 py-2.5 text-sm',
+                <div className={cn('max-w-[85%] whitespace-pre-wrap wrap-break-word rounded-lg px-3.5 py-2.5 text-sm',
                   m.role === 'user' ? 'bg-accent text-accent-ink' : 'bg-sunken', m.metadata?.error ? 'text-danger' : '')}>
                   {m.content}
                   {m.tool_calls?.filter((t) => t.type === 'tool_use').map((t, i) => (
