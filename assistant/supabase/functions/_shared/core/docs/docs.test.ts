@@ -33,30 +33,29 @@ describe('chunkText', () => {
 })
 
 describe('extractText', () => {
-  it('reads plain text, markdown, csv and json; strips html', () => {
-    expect(extractText(enc('a,b\n1,2'), 'text/csv', 'x.csv')).toBe('a,b\n1,2')
-    expect(extractText(enc('# T'), null, 'x.md')).toBe('# T')
-    expect(extractText(enc('<h1>Hi</h1><script>bad()</script><p>there</p>'), 'text/html', 'x.html')).toMatch(/^Hi\s+there$/)
+  it('reads plain text, markdown, csv and json; strips html', async () => {
+    expect(await extractText(enc('a,b\n1,2'), 'text/csv', 'x.csv')).toBe('a,b\n1,2')
+    expect(await extractText(enc('# T'), null, 'x.md')).toBe('# T')
+    expect(await extractText(enc('<h1>Hi</h1><script>bad()</script><p>there</p>'), 'text/html', 'x.html')).toMatch(/^Hi\s+there$/)
   })
-  it('round-trips a generated .docx (headings, bullets, bold, escaping)', () => {
+  it('round-trips a generated .docx (headings, bullets, bold, escaping)', async () => {
     const md = '# Service Agreement\n\nThis is **binding** & final <draft>.\n\n- Deliver by Dec 15\n- Pay within 30 days\n\n## Terms\nNet 30.'
     const text = docxToText(markdownToDocx(md))
     expect(text).toContain('Service Agreement')
     expect(text).toContain('This is binding & final <draft>.')
     expect(text).toContain('• Deliver by Dec 15')
-    expect(extractText(markdownToDocx(md), null, 'a.docx')).toContain('Net 30.')
+    expect(await extractText(markdownToDocx(md), null, 'a.docx')).toContain('Net 30.')
   })
   it('generated docx is a structurally valid package', () => {
     const files = unzipSync(markdownToDocx('# x'))
     expect(Object.keys(files).sort()).toEqual(['[Content_Types].xml', '_rels/.rels', 'word/document.xml'])
   })
-  it('rejects PDFs (honestly), corrupt/non-Word zips, unknown types, empty and oversized files', () => {
-    expect(() => extractText(enc('%PDF-1.4'), 'application/pdf', 'x.pdf')).toThrow(/PDF text extraction is not supported/)
-    expect(() => extractText(enc('not a zip'), null, 'x.docx')).toThrow(UnsupportedDocumentError)
-    expect(() => extractText(zipSync({ 'other.xml': strToU8('<a/>') }), null, 'x.docx')).toThrow(/not a Word document/)
-    expect(() => extractText(enc('MZ...'), 'application/x-msdownload', 'x.exe')).toThrow(/Unsupported file type/)
-    expect(() => extractText(enc('   '), 'text/plain', 'x.txt')).toThrow(/No readable text/)
-    expect(() => extractText(new Uint8Array(26 * 1024 * 1024), 'text/plain', 'big.txt')).toThrow(/25 MB/)
+  it('rejects corrupt/non-Word zips, unknown types, empty and oversized files', async () => {
+    await expect(extractText(enc('not a zip'), null, 'x.docx')).rejects.toThrow(UnsupportedDocumentError)
+    await expect(extractText(zipSync({ 'other.xml': strToU8('<a/>') }), null, 'x.docx')).rejects.toThrow(/not a Word document/)
+    await expect(extractText(enc('MZ...'), 'application/x-msdownload', 'x.exe')).rejects.toThrow(/Unsupported file type/)
+    await expect(extractText(enc('   '), 'text/plain', 'x.txt')).rejects.toThrow(/No readable text/)
+    await expect(extractText(new Uint8Array(26 * 1024 * 1024), 'text/plain', 'big.txt')).rejects.toThrow(/25 MB/)
   })
 })
 

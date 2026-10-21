@@ -11,7 +11,10 @@ Plain list of what is **not** done or **not proven**. Nothing here is hidden beh
 * Prompt-injection defenses are layered mitigations tested with a scripted "obedient" model, not measured against real models.
 
 ## Product gaps
-* **PDF** text extraction and OCR are unsupported (shown to the user as a failure reason).
+* **PDF**: text-based PDFs are read (pdf.js via `unpdf`). **Scanned/image-only PDFs are not** — there is no OCR; they fail with a clear reason, and a PDF with some
+  scanned pages is indexed with a note listing how many pages were left out. Password-protected PDFs, damaged files and PDFs over 300 pages also fail with a reason.
+  Layout is flattened to reading-order text (tables lose their grid). Hosted edge functions have CPU-time limits that were never exercised: a very large or complex PDF
+  may fail there with the timeout message (our own limit is 25 s) even though it parses locally.
 * Email: Gmail only (adapter interface ready for Outlook). No attachments, labels or folder management; reminders/follow-ups are tasks.
 * Calendar: primary calendar only; no recurring-event creation or room/resource handling.
 * Workflows: form-based editor (no drag-and-drop canvas); events limited to `task.overdue` and `document.ready`; no version history UI;

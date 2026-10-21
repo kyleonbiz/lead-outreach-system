@@ -86,7 +86,7 @@ function Files() {
       {docs.isError && <Notice tone="danger" title="Couldn't load documents">{(docs.error as Error).message}</Notice>}
       {docs.data?.length === 0 && (
         <EmptyState title="No documents yet" action={<Button onClick={() => input.current?.click()}>Upload a file</Button>}>
-          Supported: .txt, .md, .csv, .json, .html and .docx (up to 25 MB). PDF text extraction is not available yet. Ask the assistant to draft letters or reports and they appear here too.
+          Supported: .pdf, .docx, .txt, .md, .csv, .json and .html (up to 25 MB). PDFs must contain real text: scanned pages (pictures of text) can't be read yet. Ask the assistant to draft letters or reports and they appear here too.
         </EmptyState>
       )}
       {!!docs.data?.length && (

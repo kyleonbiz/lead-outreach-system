@@ -118,7 +118,7 @@ Secrets in docs/SETUP.md: `GOOGLE_OAUTH_CLIENT_ID`, `GOOGLE_OAUTH_CLIENT_SECRET`
 * **Upload → process → search:** files go to the private `documents` bucket under `<org_id>/…`; `document-process`
   extracts text, splits it into searchable chunks (Postgres full-text search: no embedding service, no extra cost) and,
   if an AI key is configured, produces a summary plus dates / obligations / action items.
-* **Formats:** .txt .md .csv .json .html .docx. **PDF is explicitly NOT supported** — it fails with that exact reason shown on the row.
+* **Formats:** .txt .md .csv .json .html .docx (and .pdf from round 2).
 * **Knowledge base:** admin-editable entries (company, services, hours, policies, FAQs, guidelines, contacts, SOPs). A digest of the
   trusted kinds is added to the assistant's system prompt; everything is also searchable via `knowledge.search`.
 * **Search:** `search_knowledge()` (SECURITY INVOKER, RLS-scoped) over KB + document chunks, with highlighted snippets, used by both the UI and the assistant.
@@ -273,4 +273,20 @@ Each item below was built and tested without any live service. "Verified" means 
 * `Deno.resolveDns` availability on the hosted edge runtime is unknown (the layer is skipped if absent).
 ### Setup you must do
 `supabase secrets set RESEND_API_KEY=... NOTIFY_FROM_EMAIL=...` (e-mail only), deploy `notification-channels`, and apply migration `0009`. See DEPLOYMENT.md → Notifications.
+
+## 3. PDF text extraction
+### Built
+* PDFs are parsed with pdf.js through `unpdf` (a serverless build that needs no worker or canvas). `extractText` is now async.
+* Honest failure reasons shown on the document row: **scanned/image-only** (no OCR), **password-protected**, **damaged**, **not actually a PDF**, **over 300 pages**, **timeout (25 s)**.
+* A **mixed** PDF is indexed with a trailing note ("1 of 3 pages had no readable text … not included"): content is never silently dropped.
+* Safety: the bundled pdf.js has no `eval`/`new Function` (asserted by a test that scans the bundle), no fonts are loaded, scripts never run, the caller's buffer is not mutated.
+* 9 reproducible fixtures (`scripts/make-pdf-fixtures.py` → `supabase/functions/_shared/core/docs/fixtures`, ~100 KB): text, multi-page with accents, LibreOffice-produced, scanned,
+  mixed, encrypted, truncated, one carrying JavaScript, and 301 blank pages.
+### Verified
+* 22 new tests (extraction content/order/Unicode, every failure reason, JavaScript PDF never executes, end-to-end through the `document-process` handler incl. row state and "nothing indexed on failure").
+* Ran the extractor under **real Deno** with the edge functions' import map on all 9 fixtures: identical results to Node. `deno check` on all functions passes.
+### NOT verified
+* The **hosted Supabase edge runtime** (CPU/memory limits) — only local Deno. Large PDFs may hit platform limits.
+* No OCR, so scanned PDFs are unsupported by design. Table structure and multi-column reading order are best-effort (pdf.js text order).
+* Real-world PDF variety is wide: only the 9 fixtures above (reportlab, LibreOffice, pypdf) were tried.
 

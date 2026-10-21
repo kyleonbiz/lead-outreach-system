@@ -27,14 +27,14 @@ describe('Documents page', () => {
   it('shows processing state, summary, extracted dates and — for failures — the actual reason', () => {
     state.docs = [
       doc({ id: '1', name: 'contract.docx', summary: 'A services contract.', extracted: { dates: [{ date: 'Dec 15, 2026', description: 'report due' }], action_items: ['Calendar it'] } }),
-      doc({ id: '2', name: 'scan.pdf', status: 'failed', error: 'PDF text extraction is not supported yet.' }),
+      doc({ id: '2', name: 'scan.pdf', status: 'failed', error: 'This PDF looks like scanned images: it has no readable text layer.' }),
       doc({ id: '3', name: 'new.txt', status: 'processing' }),
       doc({ id: '4', name: 'Late fee letter.md', source: 'generated' }),
     ]
     render(<DocumentsPage />)
     expect(screen.getByText('A services contract.')).toBeInTheDocument()
     expect(screen.getByText(/Dec 15, 2026 \(report due\)/)).toBeInTheDocument()
-    expect(screen.getByText('PDF text extraction is not supported yet.')).toBeInTheDocument()
+    expect(screen.getByText('This PDF looks like scanned images: it has no readable text layer.')).toBeInTheDocument()
     expect(screen.getByText('Failed')).toBeInTheDocument()
     expect(screen.getByText('Processing')).toBeInTheDocument()
     expect(screen.getByText('Created by assistant')).toBeInTheDocument()
@@ -50,9 +50,9 @@ describe('Documents page', () => {
     expect(container.querySelector('img')).toBeNull()
     expect(res.textContent).toContain('late payment fee')
   })
-  it('explains supported formats (and the PDF limitation) when empty', () => {
+  it('explains supported formats (and the scanned-PDF limitation) when empty', () => {
     render(<DocumentsPage />)
-    expect(screen.getByText(/PDF text extraction is not available yet/)).toBeInTheDocument()
+    expect(screen.getByText(/scanned pages \(pictures of text\) can't be read yet/)).toBeInTheDocument()
   })
   it('hides delete for non-admins; knowledge base is read-only for them', async () => {
     org.isAdmin = false

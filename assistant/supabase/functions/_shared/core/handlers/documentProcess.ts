@@ -32,7 +32,7 @@ export async function handleDocumentProcess(d: DocumentProcessDeps, raw: unknown
   try {
     const bytes = await d.download(doc.storage_path)
     if (!bytes) throw new UnsupportedDocumentError('The uploaded file could not be found in storage')
-    const text = extractText(bytes, doc.mime_type, doc.name)
+    const text = await extractText(bytes, doc.mime_type, doc.name)
     await d.saveChunks(doc.org_id, doc.id, chunkText(text))
 
     let analysis: Analysis | null = null
