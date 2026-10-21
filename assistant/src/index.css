@@ -1,0 +1,51 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Design tokens: space-separated RGB so Tailwind can apply opacity. */
+:root {
+  --bg: 247 246 243;
+  --surface: 255 255 255;
+  --sunken: 240 238 233;
+  --line: 227 224 217;
+  --ink: 28 30 33;
+  --muted: 108 113 121;
+  --accent: 31 111 92;
+  --accent-ink: 255 255 255;
+  --accent-soft: 225 240 235;
+  --ok: 31 122 74;
+  --ok-soft: 224 242 232;
+  --warn: 166 98 8;
+  --warn-soft: 251 239 214;
+  --danger: 187 48 48;
+  --danger-soft: 251 228 228;
+}
+:root[data-theme='dark'] {
+  --bg: 18 19 21;
+  --surface: 27 29 32;
+  --sunken: 35 37 41;
+  --line: 52 55 61;
+  --ink: 236 237 239;
+  --muted: 150 155 164;
+  --accent: 84 184 154;
+  --accent-ink: 12 24 20;
+  --accent-soft: 28 52 45;
+  --ok: 94 200 140;
+  --ok-soft: 26 50 38;
+  --warn: 232 169 82;
+  --warn-soft: 56 42 22;
+  --danger: 238 112 112;
+  --danger-soft: 62 30 30;
+}
+
+@layer base {
+  html { color-scheme: light; }
+  :root[data-theme='dark'] { color-scheme: dark; }
+  body { @apply bg-bg text-ink font-sans antialiased; font-feature-settings: 'cv11', 'ss01'; }
+  :focus-visible { @apply outline-none ring-2 ring-accent ring-offset-2 ring-offset-bg; }
+  ::selection { background: rgb(var(--accent) / 0.25); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
+}
