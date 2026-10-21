@@ -218,3 +218,32 @@ Deploy `document-process`; `ANTHROPIC_API_KEY` for summaries (optional: document
   host matching `https://*.supabase.co`; a custom Supabase domain needs `connect-src` updated.
 * Screen-reader behavior beyond automated axe rules and keyboard use of the custom dialogs/popovers was not manually tested.
 * No load/performance testing.
+
+---
+
+# Round 2 status (features that need no live account)
+
+Each item below was built and tested without any live service. "Verified" means unit/component/SQL tests and
+(where stated) the headless-browser audit — not behavior against a real Supabase, Google, Microsoft, e-mail or chat provider.
+
+## 1. Settings UI for automatic approval rules
+### Built
+* Settings → **Approvals & automatic permissions**: admins turn on / edit / remove two narrow pre-authorizations
+  (send email only to listed addresses/company domains; create calendar events only with listed-domain attendees).
+  Always-ask actions (deletes, payments, signing, critical settings) are listed and cannot be changed.
+* Rules are validated **three times**: in the UI, in `set_approval_policy()` + a CHECK constraint (migration `0008`), and
+  by `parsePolicy()` at run time (invalid → the assistant asks about everything).
+* Refused as "too broad": free-mail domains (`@gmail.com`, …), public suffixes (`@co.uk`), bare TLDs, wildcards, bare domains in email
+  rules, comma/space-joined or display-name entries, more than one rule per action, unknown fields and any other action.
+  Exact addresses at a free-mail provider (`boss@gmail.com`) are allowed.
+* Clients can no longer write `approval_policy` directly; the only path is the admin-only RPC, which writes an audit entry
+  (who, before, after) to Activity.
+### Verified
+* 33 new SQL assertions (`70_approval_rules.test.sql`): who may change rules, direct-write bypass closed, 17 hostile policies refused,
+  the constraint holds even for the service role, audit trail, cross-organization isolation. A mutation check (disabling the broad-domain test in the SQL)
+  makes the suite fail, as it should.
+* 12 UI tests + 11 policy tests; a drift test fails if the TypeScript and SQL blocklists differ.
+### NOT verified
+* The broad-domain list is best-effort (common free-mail providers and public suffixes), not the full Public Suffix List. An admin can still
+  list a company domain they do not control; the rule only ever applies to addresses on that exact domain (not subdomains).
+* Not exercised against a real Supabase RPC call.

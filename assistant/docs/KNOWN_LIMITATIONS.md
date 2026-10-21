@@ -20,7 +20,6 @@ Plain list of what is **not** done or **not proven**. Nothing here is hidden beh
   today. Task assignment columns exist; assignment UI does not.
 * Task attachments, usage dashboards/billing, per-document sharing, search in languages other than English.
 * No account deletion / data export flow, no audit-log export.
-* Auto-approval rules are enforced server-side but there is no Settings UI to create them yet.
 * Notifications are in-app only (no email/push).
 
 ## Security notes / follow-ups

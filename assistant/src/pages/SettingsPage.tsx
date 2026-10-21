@@ -4,6 +4,7 @@ import { Badge, Button, Field, Input, Notice, PageHeader, Section } from '@/comp
 import { db } from '@/lib/supabase'
 import { useOrg } from '@/features/org/OrgProvider'
 import { useAuth } from '@/features/auth/AuthProvider'
+import { ApprovalRulesSection } from '@/features/approvals/ApprovalRulesSection'
 
 export default function SettingsPage() {
   const { orgId, orgName, role, isAdmin, settings, profile, refresh } = useOrg()
@@ -58,18 +59,7 @@ export default function SettingsPage() {
 
         <EmailRulesSection />
 
-        <Section title="Approvals & permissions">
-          <div className="space-y-2 text-sm">
-            <p>
-              The assistant asks for your approval before it sends external email, deletes anything, spends money,
-              signs agreements or changes critical settings.
-            </p>
-            <p className="text-muted">
-              Automatic approvals configured: <strong className="text-ink">{settings?.approval_policy.auto_approve.length ?? 0}</strong>.
-              Narrow, per-action pre-approvals can be added once the assistant is live (Phase 3).
-            </p>
-          </div>
-        </Section>
+        <ApprovalRulesSection />
 
         <Section title="Account">
           <dl className="grid grid-cols-[8rem_1fr] gap-y-2 text-sm">
