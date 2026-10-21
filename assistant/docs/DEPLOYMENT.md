@@ -13,7 +13,7 @@ Do the steps in order; each ends with a check.
 
 ## 1. Supabase project
 1. Create the project; note the **project ref**, **URL**, **anon key**. Keep the **service_role key** secret.
-2. Apply migrations: `supabase link --project-ref <ref> && supabase db push` (applies every file in `supabase/migrations`, currently `0001`…`0010`, in order).
+2. Apply migrations: `supabase link --project-ref <ref> && supabase db push` (applies every file in `supabase/migrations`, currently `0001`…`0011`, in order).
 3. **Check:** SQL editor → `select count(*) from information_schema.tables where table_schema='public'` returns 25+; and as a test,
    `select * from public.integration_credentials` using the anon key must fail with *permission denied* (it is closed to every client role).
 4. Authentication → Providers → Email: keep **Confirm email** ON. URL Configuration: Site URL = your Vercel URL; add it and
@@ -39,7 +39,7 @@ Optional: `ASSISTANT_DEFAULT_MODEL`, `ASSISTANT_MESSAGES_PER_MINUTE` (default 12
 ```bash
 cd assistant
 supabase functions deploy assistant-chat assistant-approve oauth-start google-oauth-callback microsoft-oauth-callback \
-  integration-disconnect provider-data document-process workflow-save workflow-run workflow-tick notification-channels invite-member
+  integration-disconnect provider-data document-process workflow-save workflow-run workflow-tick notification-channels invite-member export-org-data delete-account
 ```
 `supabase/config.toml` marks `google-oauth-callback` and `workflow-tick` as `verify_jwt = false` (they authenticate with a signed
 OAuth `state` and the `CRON_SECRET` respectively). Every other function requires a valid user JWT **and** re-checks organization
@@ -85,6 +85,17 @@ Until Google verifies the app, only listed *test users* can connect and refresh 
 * If an organization connects **both** Gmail and Outlook, the most recently connected working account is used for email (and likewise for calendar); disconnect the other to avoid surprises.
 * **Disconnecting Outlook only deletes our copy of the credentials.** Microsoft gives apps no way to revoke a refresh token remotely, so the UI says so and points to
   myapps.microsoft.com / account.microsoft.com/privacy/app-access. Publisher verification (to remove the "unverified" prompt for other tenants) is a separate Microsoft process.
+
+### Data export, ownership transfer and account deletion
+* Settings → **Data & privacy**. Owners download a zip of all organization data (tasks and history, document *details*, knowledge base, workflows, approvals, activity log, settings, team,
+  usage, notification channels without their URLs, invitations without tokens); owners and admins can download just the audit log (JSON + CSV with spreadsheet-formula protection).
+  Exports read with the requester's own token (Row Level Security), are limited to one per organization per 5 minutes, and are recorded in Activity. Very large tables are capped (newest rows kept) and the
+  zip says so in `manifest.json` and `README.txt`.
+* **Transfer ownership** makes a member an owner and can step the previous owner down to admin; an organization can never be left without an owner.
+* **Delete my account** (`delete-account`, uses the service role): requires typing your e-mail, having signed in within the last 15 minutes, transferring ownership of any organization that still has other members,
+  and acknowledging every organization that would be deleted with you (those where you are the only member, including their stored files). It disconnects the accounts *you* connected (Google is revoked automatically;
+  Microsoft cannot be, see above), removes your e-mail address from the audit-log entries you created, then deletes the account. Each step is idempotent: if one fails nothing further is removed and the request can be repeated.
+* **Check (use a throwaway account):** create a second user with its own organization -> Delete my account -> the organization, its files and the user are gone; the first organization is untouched.
 
 ## 6. Frontend on Vercel
 1. Import the repository; **Root Directory = `assistant`**; framework preset **Vite**; build `npm run build`, output `dist`.

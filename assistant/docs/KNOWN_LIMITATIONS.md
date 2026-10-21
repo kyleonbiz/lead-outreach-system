@@ -30,7 +30,11 @@ Plain list of what is **not** done or **not proven**. Nothing here is hidden beh
   Not built: ownership **transfer** flow beyond promoting a member to owner, notifying someone when a task is assigned to them, and bulk invitations.
   Invitation links are delivered by e-mail only if Resend is configured; otherwise the owner copies the link.
 * Task attachments, usage dashboards/billing, per-document sharing, search in languages other than English.
-* No account deletion / data export flow, no audit-log export.
+* Data export covers organization data and the audit log; there is no per-person export of your own conversations, and the uploaded document **files** themselves are not in the zip (details only). Large tables are
+  capped (see `EXPORT_TABLES`) with the newest rows kept and the truncation stated in the zip. Exporting very large organizations may hit edge-function memory/time limits that were never exercised.
+* Account deletion removes the person's sign-in, profile, private conversations and preferences, disconnects their connected accounts and scrubs their e-mail address from audit-log text. It does **not** delete
+  organization content they created (tasks, documents, workflows stay with the organization, unlinked from them), does not purge database backups, and cannot revoke Microsoft tokens remotely.
+  Audit entries remain (anonymized) as a security record. Deleting an organization removes its Storage files first and fails (leaving the account intact) if the files cannot be listed or removed.
 * Notifications: in-app, e-mail (Resend) and Slack/Teams webhooks. No push/SMS. E-mail needs a Resend account and a verified sending domain.
   **Never run against Resend, Slack or Teams**: request shapes follow their public docs and are tested against mocked HTTP only. The Teams card uses the
   Adaptive Card format used by Teams Workflows; if a tenant's webhook rejects it, the failure is shown on the channel and in Recent deliveries.

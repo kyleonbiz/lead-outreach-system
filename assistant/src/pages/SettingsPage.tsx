@@ -5,6 +5,7 @@ import { db } from '@/lib/supabase'
 import { useOrg } from '@/features/org/OrgProvider'
 import { useAuth } from '@/features/auth/AuthProvider'
 import { TeamSection } from '@/features/team/TeamSection'
+import { PrivacySection } from '@/features/privacy/PrivacySection'
 import { ApprovalRulesSection } from '@/features/approvals/ApprovalRulesSection'
 import { NotificationSettings } from '@/features/notifications/NotificationSettings'
 
@@ -66,6 +67,8 @@ export default function SettingsPage() {
         <ApprovalRulesSection />
 
         <NotificationSettings />
+
+        <PrivacySection />
 
         <Section title="Account">
           <dl className="grid grid-cols-[8rem_1fr] gap-y-2 text-sm">

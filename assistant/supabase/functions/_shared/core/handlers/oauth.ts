@@ -178,15 +178,12 @@ export interface DisconnectDeps {
   audit(e: ActionLogEntry): Promise<void>
 }
 
-export async function handleDisconnect(d: DisconnectDeps, raw: unknown): Promise<HandlerResult> {
-  if (!d.userId) return fail(401, 'Sign in required')
-  const p = z.object({ integration_id: z.uuid() }).safeParse(raw)
-  if (!p.success) return fail(400, 'Invalid request')
-  const integ = await d.loadIntegration(p.data.integration_id)
-  if (!integ) return fail(404, 'Integration not found')
-  if (!isAdmin(await d.getRole(integ.org_id))) return fail(403, 'Only owners and admins can disconnect accounts')
-
-  // Revoke at the provider first (best effort, where the provider allows it), then ALWAYS delete our copy of the credentials.
+/** What disconnecting an account does after authorization has been decided: revoke at the provider where possible, ALWAYS delete our copy, audit. */
+export async function revokeAndRemove(
+  d: Pick<DisconnectDeps, 'config' | 'fetch' | 'loadEncrypted' | 'deleteCredentials' | 'markRevoked' | 'audit'>,
+  integ: { id: string; org_id: string; provider: string; external_account: string },
+  actorUserId: string | null,
+): Promise<{ providerRevoked: boolean; strategyNote: string }> {
   const parsed = Provider.safeParse(integ.provider)
   const strategy = parsed.success ? strategyFor(parsed.data) : GOOGLE
   let providerRevoked = false
@@ -200,12 +197,24 @@ export async function handleDisconnect(d: DisconnectDeps, raw: unknown): Promise
   await d.deleteCredentials(integ.id)
   await d.markRevoked(integ.id)
   await d.audit({
-    org_id: integ.org_id, user_id: d.userId, actor_type: 'user', category: 'integration', tool_name: null,
+    org_id: integ.org_id, user_id: actorUserId, actor_type: 'user', category: 'integration', tool_name: null,
     action: 'integration.disconnected', status: 'success',
     summary: `Disconnected ${integ.provider} (${integ.external_account})${providerRevoked ? '' : strategy.revoke ? ` — ${strategy.label} revocation not confirmed` : ` — ${strategy.label} cannot revoke remotely; remove the app in the account settings`}`,
   })
+  return { providerRevoked, strategyNote: strategy.notRevokedNote }
+}
+
+export async function handleDisconnect(d: DisconnectDeps, raw: unknown): Promise<HandlerResult> {
+  if (!d.userId) return fail(401, 'Sign in required')
+  const p = z.object({ integration_id: z.uuid() }).safeParse(raw)
+  if (!p.success) return fail(400, 'Invalid request')
+  const integ = await d.loadIntegration(p.data.integration_id)
+  if (!integ) return fail(404, 'Integration not found')
+  if (!isAdmin(await d.getRole(integ.org_id))) return fail(403, 'Only owners and admins can disconnect accounts')
+
+  const { providerRevoked, strategyNote } = await revokeAndRemove(d, integ, d.userId)
   return ok({
     status: 'disconnected', provider_revoked: providerRevoked,
-    ...(providerRevoked ? {} : { note: strategy.notRevokedNote }),
+    ...(providerRevoked ? {} : { note: strategyNote }),
   })
 }

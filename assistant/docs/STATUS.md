@@ -330,3 +330,22 @@ Each item below was built and tested without any live service. "Verified" means 
 * Personal (Outlook.com) vs work/school accounts differ in subtle ways (for example `mail` can be empty; handled by falling back to the sign-in name) and only one path was reasoned about, not run.
 * App-registration and publisher-verification steps are documented, not performed.
 
+## 6. Data export, ownership transfer, account deletion
+### Built
+* **Ownership transfer** (`transfer_ownership` RPC, migration `0011`): owner-only, target must be a member, optional step-down, audited; the last-owner guard still applies underneath.
+* **Organization export** (`export-org-data`): owners get a zip of every exportable table; owners/admins get the audit log (JSON + CSV). Reads use the requester's own token (RLS), tables are a fixed whitelist,
+  secrets and private conversations are never read, CSV cells are defanged against spreadsheet formulas, 5-minute throttle, audited, truncation reported in the manifest and README.
+* **Account deletion** (`delete-account`): preview of what will happen, e-mail confirmation, recent-sign-in requirement, blocked while the person is the only owner of an organization with other members,
+  explicit acknowledgement of each organization that is deleted with them (files first, then data), disconnects the integrations they connected (reusing the tested revoke step), anonymizes their e-mail in audit text, deletes the account last.
+* Settings → **Data & privacy** UI for all three.
+### Verified
+* 43 new SQL assertions (`95_account_data.test.sql`): transfer rules incl. cross-organization and anonymous attempts, step-down, plan classification (agrees with what the database guard actually allows), log scrubbing
+  (case-insensitive, regex-safe, never touches other people's entries), exactly what survives a user's deletion, organization cascade. A mutation check on the scrub confirms the test bites.
+  A test found a real bug (case-sensitive scrub) which was fixed.
+* 38 handler tests (22 export: authorization, scoping, whitelist, truncation, throttling, CSV injection; 16 deletion: every refusal, step order, partial failure + retry, no data leakage) and 14 UI tests (gating of the delete button).
+* `deno check` passes for all 15 functions.
+### NOT verified
+* Nothing ran against a real Supabase: `auth.admin.deleteUser`, Storage `list`/`remove`, a real zip download in a browser, and the real `last_sign_in_at` behavior are untested.
+* Whether Supabase refreshes `last_sign_in_at` on token refresh (which would weaken the "recent sign-in" gate) is assumed, not confirmed.
+* Concurrency: two simultaneous deletions or an export during a deletion were not tested.
+
