@@ -37,11 +37,14 @@ export function DailyTokensChart({ daily }: { daily: UsageResponse['daily'] }) {
         <li className="flex items-center gap-1.5"><span aria-hidden className="h-2.5 w-2.5 rounded-sm" style={{ background: 'rgb(var(--muted) / 0.5)' }} />Tokens sent to the AI (input)</li>
         <li className="flex items-center gap-1.5"><span aria-hidden className="h-2.5 w-2.5 rounded-sm bg-accent" />Tokens written by the AI (output)</li>
       </ul>
-      <table className="sr-only">
-        <caption>Tokens per day (UTC)</caption>
-        <thead><tr><th scope="col">Day</th><th scope="col">Input tokens</th><th scope="col">Output tokens</th><th scope="col">Tool calls</th></tr></thead>
-        <tbody>{daily.map((d) => <tr key={d.day}><th scope="row">{d.day}</th><td>{d.input_tokens}</td><td>{d.output_tokens}</td><td>{d.tool_calls}</td></tr>)}</tbody>
-      </table>
+      {/* the wrapper (not the table) carries sr-only: a <table> ignores width/overflow and would widen the page */}
+      <div className="sr-only">
+        <table>
+          <caption>Tokens per day (UTC)</caption>
+          <thead><tr><th scope="col">Day</th><th scope="col">Input tokens</th><th scope="col">Output tokens</th><th scope="col">Tool calls</th></tr></thead>
+          <tbody>{daily.map((d) => <tr key={d.day}><th scope="row">{d.day}</th><td>{d.input_tokens}</td><td>{d.output_tokens}</td><td>{d.tool_calls}</td></tr>)}</tbody>
+        </table>
+      </div>
     </div>
   )
 }

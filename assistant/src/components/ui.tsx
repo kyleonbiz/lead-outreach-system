@@ -15,7 +15,7 @@ const variants: Record<Variant, string> = {
   primary: 'bg-accent text-accent-ink hover:bg-accent/90',
   secondary: 'bg-surface border border-line text-ink hover:bg-sunken',
   ghost: 'text-muted hover:text-ink hover:bg-sunken',
-  danger: 'bg-danger text-white hover:bg-danger/90',
+  danger: 'bg-danger text-danger-ink hover:bg-danger/90',
 }
 
 export const Button = forwardRef<

@@ -18,6 +18,7 @@
   --warn: 138 76 0;
   --warn-soft: 251 239 214;
   --danger: 187 48 48;
+  --danger-ink: 255 255 255;
   --danger-soft: 251 228 228;
 }
 :root[data-theme='dark'] {
@@ -35,6 +36,7 @@
   --warn: 232 169 82;
   --warn-soft: 56 42 22;
   --danger: 238 112 112;
+  --danger-ink: 36 12 12;   /* dark text: white on the lighter dark-mode red fails WCAG AA */
   --danger-soft: 62 30 30;
 }
 

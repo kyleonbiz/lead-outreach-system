@@ -16,7 +16,7 @@ export default {
         accent: { DEFAULT: token('accent'), ink: token('accent-ink'), soft: token('accent-soft') },
         ok: { DEFAULT: token('ok'), soft: token('ok-soft') },
         warn: { DEFAULT: token('warn'), soft: token('warn-soft') },
-        danger: { DEFAULT: token('danger'), soft: token('danger-soft') },
+        danger: { DEFAULT: token('danger'), soft: token('danger-soft'), ink: token('danger-ink') },
       },
       fontFamily: {
         sans: ['Inter', 'ui-sans-serif', 'system-ui', '-apple-system', 'Segoe UI', 'Roboto', 'sans-serif'],

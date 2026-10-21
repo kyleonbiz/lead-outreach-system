@@ -29,7 +29,7 @@ export function NotificationsBell() {
       <button onClick={() => setOpen(!open)} aria-label={`Notifications${unread.length ? `, ${unread.length} unread` : ''}`} aria-expanded={open}
         className="relative rounded p-2 text-muted hover:bg-sunken hover:text-ink">
         <Bell className="h-4 w-4" />
-        {unread.length > 0 && <span className="absolute right-1 top-1 grid h-4 min-w-4 place-items-center rounded-full bg-danger px-1 text-[10px] font-semibold text-white">{unread.length}</span>}
+        {unread.length > 0 && <span className="absolute right-1 top-1 grid h-4 min-w-4 place-items-center rounded-full bg-danger px-1 text-[10px] font-semibold text-danger-ink">{unread.length}</span>}
       </button>
       {open && (
         <div role="dialog" aria-label="Notifications" className="absolute right-0 z-50 mt-2 w-80 max-w-[calc(100vw-2rem)] rounded-lg border border-line bg-surface shadow-xl">
