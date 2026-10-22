@@ -40,7 +40,7 @@ select{font:inherit;padding:8px;border:1px solid var(--line);border-radius:7px;b
 <div class="card" style="margin-bottom:12px"><h2>Needs your attention</h2><p class="sub">These emails are never retried automatically. Check Sent Items, then decide by hand.</p><div class="attn" id="attn"></div></div>
 <div class="card" style="margin-bottom:12px"><h2>Send attempts per day</h2><p class="sub">Last 30 days · UTC</p><div class="legend" id="legend"></div><div id="c-days"></div></div>
 <div class="grid two">
-<div class="card"><h2>Leads by outreach status</h2><p class="sub">All leads and referral partners</p><div id="c-status"></div></div>
+<div class="card"><h2>Leads by outreach status</h2><p class="sub">Leads tab</p><div id="c-status"></div></div>
 <div class="card"><h2>Email enrichment results</h2><p class="sub">Did we find a usable email?</p><div id="c-enrich"></div></div>
 <div class="card"><h2>Top states</h2><p class="sub">By number of leads</p><div id="c-states"></div></div>
 </div>
@@ -91,6 +91,7 @@ function days(){const box=$('c-days');box.innerHTML='';const data=D.sends_by_day
 function kpis(){const k=D.kpis,pct=k.daily_cap?Math.min(100,k.attempts_today/k.daily_cap*100):0;
   const br=k.bounce_rate,bc=br>=k.bounce_limit?'bad':br>=k.bounce_limit/2?'warn':'ok',bi={bad:'✖ Over limit',warn:'▲ Watch',ok:'✔ Healthy'}[bc];
   $('kpis').innerHTML=`<div class="card"><div class="label">Total leads</div><div class="hero">${k.total_leads.toLocaleString()}</div></div>
+  <div class="card"><div class="label">Referral partners</div><div class="hero">${(k.referral_partners||0).toLocaleString()}</div></div>
   <div class="card"><div class="label">Contacted</div><div class="hero">${k.contacted.toLocaleString()}</div></div>
   <div class="card"><div class="label">Today's sending</div><div class="hero">${k.attempts_today}<small> / ${k.daily_cap}</small></div><div class="meter" role="img" aria-label="${pct.toFixed(0)}% of daily cap used"><i style="width:${pct}%"></i></div></div>
   <div class="card"><div class="label">Hard bounce rate</div><div class="hero">${br}%<small> / ${k.bounce_limit}% limit</small></div><span class="flag ${bc}">${bi}</span></div>`}

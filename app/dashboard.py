@@ -49,17 +49,20 @@ def build(leads_rows, referrals_rows, log_rows, today, settings=None):
     settings = settings or {}
     status, enrich, states = Counter(), Counter(), Counter()
     total = 0
-    for rows in (leads_rows, referrals_rows):
-        if not rows:
-            continue
-        col = _col(rows[0])
-        for r in rows[1:]:
+    # Only the Leads tab holds leads. Referrals has its own layout (no status/state/email columns),
+    # so it is counted separately and never mixed into the lead breakdowns.
+    if leads_rows:
+        col = _col(leads_rows[0])
+        for r in leads_rows[1:]:
+            if not any(r):
+                continue
             total += 1
             status[_get(r, col, "outreach_status") or "unknown"] += 1
             enrich[_get(r, col, "enrichment_status") or "n/a"] += 1
             st = _get(r, col, "state").strip().upper()
             if st:
                 states[st] += 1
+    referral_partners = sum(1 for r in (referrals_rows or [])[1:] if any(r))
 
     start = (datetime.date.fromisoformat(today) - datetime.timedelta(days=DAYS - 1))
     days = {(start + datetime.timedelta(days=i)).isoformat(): {"sent": 0, "failed": 0, "unknown": 0} for i in range(DAYS)}
@@ -82,6 +85,7 @@ def build(leads_rows, referrals_rows, log_rows, today, settings=None):
         "as_of": today,
         "kpis": {
             "total_leads": total,
+            "referral_partners": referral_partners,
             "contacted": status.get(se.STATUS_SENT, 0),
             "attempts_today": attempts_today,
             "daily_cap": cap,

@@ -188,6 +188,15 @@ def test_dashboard_aggregates_correctly():
     assert d["kpis"]["attempts_today"] == 3
 
 
+def test_referrals_tab_with_different_layout_is_not_counted_as_leads():
+    leads, _, log = sample()
+    refs = [["Business", "Category", "Type", "Website", "Contact", "Why they could refer"],
+            ["Acme CPA", "Accounting", "Firm", "x.com", "Pat", "clients need admin help"], ["", "", "", "", "", ""]]
+    d = dashboard.build(leads, refs, log, "2026-10-11")
+    assert d["kpis"]["total_leads"] == 5 and d["kpis"]["referral_partners"] == 1
+    assert dict(d["outreach_status"]).get("unknown") is None  # referrals did not add an "unknown" status
+
+
 def test_dashboard_cap_respects_settings():
     leads, refs, log = sample()
     assert dashboard.build(leads, refs, log, "2026-10-11", {"daily_send_cap": 40})["kpis"]["daily_cap"] == 40
