@@ -35,10 +35,7 @@ REFERRALS_MAX_PER_RUN = 150
 
 # Niche focus: only leads whose `industry` is in this set get emailed. Everything else
 # stays "new" in the sheet, so widening the list later picks them up. Empty set = no filter.
-TARGET_INDUSTRIES = {
-    "electricians", "plumbers", "hvac contractors", "roofing contractors",
-    "general contractors", "property management companies",
-}
+TARGET_INDUSTRIES = {"property management companies"}
 # Referral-partner emails are paused while we focus on the niche above.
 SEND_REFERRALS = False
 
