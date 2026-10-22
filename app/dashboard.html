@@ -23,7 +23,12 @@ svg{display:block;width:100%;height:auto;overflow:visible}#c-days{overflow-x:aut
 table{border-collapse:collapse;width:100%}th,td{text-align:left;padding:4px 8px;border-bottom:1px solid var(--line)}td.n,th.n{text-align:right;font-variant-numeric:tabular-nums}
 #tip{position:fixed;pointer-events:none;background:var(--text);color:var(--surface);padding:6px 9px;border-radius:6px;font-size:12px;display:none;z-index:9;white-space:nowrap}
 #login{max-width:360px;margin:60px auto}input{font:inherit;padding:8px;width:100%;border:1px solid var(--line);border-radius:7px;background:var(--bg);color:var(--text);margin:8px 0}
-[hidden]{display:none!important}#err{color:var(--bad);min-height:20px}
+[hidden]{display:none!important}
+.tabs{display:flex;gap:6px;flex-wrap:wrap;margin:8px 0}.rbar{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:8px}.rbar input{flex:1;min-width:180px;margin:0;width:auto}
+select{font:inherit;padding:8px;border:1px solid var(--line);border-radius:7px;background:var(--bg);color:var(--text)}
+.twrap{overflow-x:auto;max-height:560px;overflow-y:auto;border:1px solid var(--line);border-radius:8px}.twrap table{min-width:100%;font-size:13px}
+.twrap th{position:sticky;top:0;background:var(--surface);white-space:nowrap}.twrap td{max-width:260px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.pager{display:flex;justify-content:space-between;align-items:center;margin-top:8px}.pager button:disabled{opacity:.4;cursor:default}#err{color:var(--bad);min-height:20px}
 </style></head><body><main>
 <div id="login" class="card" hidden><h1>Dashboard</h1><p class="sub">Enter the service API key.</p>
 <form id="lf"><input id="key" type="password" placeholder="API key" autocomplete="current-password"><button type="submit">Sign in</button></form><p id="err"></p></div>
@@ -38,7 +43,13 @@ table{border-collapse:collapse;width:100%}th,td{text-align:left;padding:4px 8px;
 <div class="card"><h2>Leads by outreach status</h2><p class="sub">All leads and referral partners</p><div id="c-status"></div></div>
 <div class="card"><h2>Email enrichment results</h2><p class="sub">Did we find a usable email?</p><div id="c-enrich"></div></div>
 <div class="card"><h2>Top states</h2><p class="sub">By number of leads</p><div id="c-states"></div></div>
-</div></div>
+</div>
+<div class="card" style="margin-top:12px"><h2>Records from your sheets</h2><p class="sub" id="rsub">Everything stored in the sheet, all columns.</p>
+<div class="tabs" id="tabs"></div>
+<div class="rbar"><input id="q" type="search" placeholder="Search every column…" aria-label="Search records"><select id="sf" aria-label="Filter by status"><option value="">All statuses</option></select></div>
+<div class="twrap" id="rtable"></div>
+<div class="pager"><button id="prev">← Prev</button><span id="pinfo" class="sub"></span><button id="next">Next →</button></div></div>
+</div>
 <div id="tip"></div>
 </main>
 <script>
@@ -85,12 +96,35 @@ function kpis(){const k=D.kpis,pct=k.daily_cap?Math.min(100,k.attempts_today/k.d
   <div class="card"><div class="label">Hard bounce rate</div><div class="hero">${br}%<small> / ${k.bounce_limit}% limit</small></div><span class="flag ${bc}">${bi}</span></div>`}
 function attn(){const a=D.attention,items=[['unknown','Uncertain (UNKNOWN)',a.unknown],['pending','Stuck in progress',a.pending],['failed','Failed',a.failed]];
   $('attn').innerHTML=items.map(([k,n,v])=>`<div><b>${v}</b>${n}<br><span class="flag ${v&&k!=='failed'?'warn':'ok'}">${v&&k!=='failed'?'▲ Review':'✔ '+(v?'Not retried':'None')}</span></div>`).join('')}
+const TABS=[['leads','Leads'],['referrals','Referrals'],['log','Outreach log'],['queue','Campaign queue']];
+let tab='leads',recs={},page=0,PER=50;
+function recView(){const d=recs[tab];const box=$('rtable');
+  if(!d){box.innerHTML='<p class="sub" style="padding:10px">Loading…</p>';return}
+  if(d.error){box.innerHTML='<p class="sub" style="padding:10px">'+esc(d.error)+'</p>';return}
+  const q=$('q').value.toLowerCase(),sf=$('sf').value,si=d.header.findIndex(h=>/status$/.test(h)&&/outreach|^status/.test(h));
+  const rows=d.rows.filter(r=>(!sf||r[si]===sf)&&(!q||r.some(c=>String(c).toLowerCase().includes(q))));
+  const pages=Math.max(1,Math.ceil(rows.length/PER));page=Math.min(page,pages-1);
+  box.innerHTML=tableHTML(d.header,rows.slice(page*PER,page*PER+PER)).replace(/<td class="n">/g,'<td>').replace(/<th class="n">/g,'<th>');
+  $('pinfo').textContent=rows.length?`${page*PER+1}–${Math.min(rows.length,page*PER+PER)} of ${rows.length.toLocaleString()}${rows.length!==d.total?' (filtered from '+d.total.toLocaleString()+')':''}`:'No matching records';
+  $('prev').disabled=page===0;$('next').disabled=page>=pages-1}
+function fillStatus(){const d=recs[tab],sel=$('sf');sel.innerHTML='<option value="">All statuses</option>';
+  const si=d?d.header.findIndex(h=>/status$/.test(h)&&/outreach|^status/.test(h)):-1;sel.hidden=si<0;
+  if(si>=0)[...new Set(d.rows.map(r=>r[si]).filter(Boolean))].sort().forEach(v=>{const o=document.createElement('option');o.value=v;o.textContent=nm(v);sel.appendChild(o)})}
+async function loadTab(){if(!recs[tab]){recView();const r=await fetch('/api/records/'+tab,{headers:{'x-api-key':key}});
+    recs[tab]=r.ok?await r.json():{error:r.status===404?'That tab does not exist in your sheet.':'Could not read the sheet ('+r.status+').'};
+    if(!r.ok)setTimeout(()=>{delete recs[tab]},5000)}
+  fillStatus();recView()}
+function tabs(){$('tabs').innerHTML='';TABS.forEach(([k,n])=>{const b=document.createElement('button');b.textContent=n;b.setAttribute('aria-pressed',k===tab);
+  b.onclick=()=>{tab=k;page=0;$('q').value='';tabs();loadTab()};$('tabs').appendChild(b)})}
+$('q').oninput=()=>{page=0;recView()};$('sf').onchange=()=>{page=0;recView()};
+$('prev').onclick=()=>{page--;recView()};$('next').onclick=()=>{page++;recView()};
 function render(){$('asof').textContent='As of '+D.as_of+' (UTC)';kpis();attn();days();bars('c-status',D.outreach_status,'Status');bars('c-enrich',D.enrichment,'Result');bars('c-states',D.top_states,'State')}
+let first=true;
 async function load(){if(!key)return;
   const r=await fetch('/api/dashboard',{headers:{'x-api-key':key}});
   if(r.status===403){key='';sessionStorage.removeItem('k');show();$('err').textContent='Wrong or missing API key';return}
   if(!r.ok){$('banner').textContent='Could not read the sheet ('+r.status+'). Showing the last data, if any.';return}
-  $('banner').textContent='';D=await r.json();render()}
+  $('banner').textContent='';D=await r.json();render();if(first){first=false;tabs();loadTab()}else{recs={};fillStatus();recView()}}
 function show(){$('login').hidden=!!key;$('app').hidden=!key}
 $('lf').onsubmit=e=>{e.preventDefault();key=$('key').value;sessionStorage.setItem('k',key);$('key').value='';$('err').textContent='';show();load()};
 $('tv').onclick=()=>{table=!table;$('tv').setAttribute('aria-pressed',table);D&&render()};

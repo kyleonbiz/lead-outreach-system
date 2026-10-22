@@ -104,3 +104,24 @@ def fetch(settings=None, ttl=60):
                  sheet.worksheet("Outreach_Log").get_all_values(), today, settings)
     _cache.update(at=time.time(), data=data)
     return data
+
+
+# Tabs the records view may read. Anything else is refused, so the API can't be used to read arbitrary sheets.
+TABS = {"leads": "Leads", "referrals": "Referrals", "log": "Outreach_Log", "queue": "Campaign_Queue"}
+_tab_cache = {}
+
+
+def fetch_tab(key, ttl=60):
+    """Full contents of one worksheet: {'header': [...], 'rows': [[...]]}, newest rows first for log/leads."""
+    hit = _tab_cache.get(key)
+    if hit and time.time() - hit[0] < ttl:
+        return hit[1]
+    sheet = se.get_sheets_with_retry()
+    values = sheet.worksheet(TABS[key]).get_all_values()
+    header = values[0] if values else []
+    rows = [r + [""] * (len(header) - len(r)) for r in values[1:]]
+    if key in ("leads", "referrals", "log"):
+        rows.reverse()
+    data = {"header": header, "rows": rows, "total": len(rows)}
+    _tab_cache[key] = (time.time(), data)
+    return data

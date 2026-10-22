@@ -93,6 +93,17 @@ def dashboard_data():
         raise HTTPException(503, "could not read the sheet")
 
 
+@app.get("/api/records/{tab}", dependencies=[Depends(require_key)])
+def records(tab: str):
+    if tab not in dashboard.TABS:
+        raise HTTPException(404, "unknown tab")
+    try:
+        return dashboard.fetch_tab(tab)
+    except Exception as e:
+        logging.getLogger("dashboard").warning("records fetch failed: %s", type(e).__name__)
+        raise HTTPException(503, "could not read the sheet")
+
+
 @app.get("/settings", dependencies=[Depends(require_key)])
 def get_settings():
     return runner.load_settings()

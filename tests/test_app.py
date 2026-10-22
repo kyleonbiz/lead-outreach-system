@@ -216,3 +216,27 @@ def test_dashboard_page_has_no_external_scripts():
     r = TestClient(main.app).get("/dashboard")
     assert r.status_code == 200 and "Outreach Dashboard" in r.text
     assert "http://" not in r.text.replace("http://www.w3.org/2000/svg", "") and "https://" not in r.text
+
+
+def test_records_endpoint(monkeypatch):
+    c = TestClient(main.app)
+    assert c.get("/api/records/leads").status_code == 403
+    assert c.get("/api/records/secrets", headers=H).status_code == 404  # only whitelisted tabs
+    class WS:
+        def get_all_values(self):
+            return [["email", "outreach_status"], ["a@x.com", "new"], ["b@x.com"]]
+    class Sheet:
+        def worksheet(self, name):
+            assert name == "Leads"
+            return WS()
+    monkeypatch.setattr(dashboard.se, "get_sheets_with_retry", lambda: Sheet())
+    dashboard._tab_cache.clear()
+    d = c.get("/api/records/leads", headers=H).json()
+    assert d["header"] == ["email", "outreach_status"] and d["total"] == 2
+    assert d["rows"] == [["b@x.com", ""], ["a@x.com", "new"]]  # newest first, short rows padded
+    def boom():
+        raise RuntimeError("secret detail")
+    dashboard._tab_cache.clear()
+    monkeypatch.setattr(dashboard.se, "get_sheets_with_retry", boom)
+    r = c.get("/api/records/leads", headers=H)
+    assert r.status_code == 503 and "secret detail" not in r.text
