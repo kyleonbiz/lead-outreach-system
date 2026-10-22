@@ -18,7 +18,7 @@ from fastapi import Depends, FastAPI, Header, HTTPException
 from fastapi.responses import FileResponse
 from pydantic import BaseModel, Field
 
-from . import runner
+from . import dashboard, runner
 from .jobs import JOBS
 
 logging.basicConfig(level=logging.INFO)
@@ -77,6 +77,20 @@ class Settings(BaseModel):
 @app.get("/")
 def panel():
     return FileResponse(os.path.join(os.path.dirname(__file__), "panel.html"))
+
+
+@app.get("/dashboard")
+def dashboard_page():
+    return FileResponse(os.path.join(os.path.dirname(__file__), "dashboard.html"))
+
+
+@app.get("/api/dashboard", dependencies=[Depends(require_key)])
+def dashboard_data():
+    try:
+        return dashboard.fetch(runner.load_settings())
+    except Exception as e:  # sheet unreachable, missing tab, bad credentials
+        logging.getLogger("dashboard").warning("dashboard fetch failed: %s", type(e).__name__)
+        raise HTTPException(503, "could not read the sheet")
 
 
 @app.get("/settings", dependencies=[Depends(require_key)])

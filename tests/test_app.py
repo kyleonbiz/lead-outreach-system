@@ -149,3 +149,70 @@ def test_settings_validated_and_applied_to_sender_only(monkeypatch):
     assert seen["send_outreach"]["DAILY_SEND_CAP"] == "40" and seen["send_outreach"]["PER_RUN_CAP"] == "5"
     assert seen["find_leads"].get("DAILY_SEND_CAP") != "40"
     assert c.put("/settings", headers=H, json={}).json() == {}  # blank = back to ramp
+
+
+# ---- dashboard ----
+from app import dashboard  # noqa: E402
+
+L_HEAD = ["lead_id", "business_name", "email", "city", "state", "outreach_status", "enrichment_status"]
+LOGH = ["id", "lead", "biz", "recipient", "date", "subject", "template", "status"]
+
+
+def sample(today="2026-10-11"):
+    leads = [L_HEAD,
+             ["1", "Secret Biz Inc", "private@secret.com", "A", "tn", "contacted", "enriched"],
+             ["2", "B", "b@x.com", "A", "TN", "send_unknown", "enriched"],
+             ["3", "C", "c@x.com", "B", "KY", "send_failed", "enriched"],
+             ["4", "D", "", "B", "KY", "not_contactable", "no_email_found"],
+             ["5", "E", "e@x.com", "B", "", "sending", "enriched"]]
+    log = [LOGH,
+           ["a", "1", "Secret Biz Inc", "private@secret.com", today, "s", "v", "sent"],
+           ["b", "2", "B", "b@x.com", today, "s", "v", "unknown"],
+           ["c", "3", "C", "c@x.com", today, "s", "v", "hard_bounce"],
+           ["d", "4", "D", "d@x.com", "2026-10-09", "s", "v", "sent"],
+           ["e", "5", "E", "e@x.com", today, "s", "v", "invalid_email"],
+           ["f", "6", "F", "f@x.com", today, "s", "v", "sent_test"],
+           ["g", "7", "G", "g@x.com", "2020-01-01", "s", "v", "sent"]]
+    return leads, [L_HEAD], log
+
+
+def test_dashboard_aggregates_correctly():
+    leads, refs, log = sample()
+    d = dashboard.build(leads, refs, log, "2026-10-11")
+    assert d["kpis"]["total_leads"] == 5 and d["kpis"]["contacted"] == 1
+    assert d["attention"] == {"unknown": 1, "pending": 1, "failed": 1}
+    today = [x for x in d["sends_by_day"] if x["date"] == "2026-10-11"][0]
+    assert (today["sent"], today["failed"], today["unknown"]) == (1, 1, 1)  # invalid_email / sent_test excluded
+    assert len(d["sends_by_day"]) == 30 and d["send_totals"]["sent"] == 3  # all-time totals include old rows
+    assert dict(d["top_states"])["TN"] == 2  # states normalised
+    assert d["kpis"]["attempts_today"] == 3
+
+
+def test_dashboard_cap_respects_settings():
+    leads, refs, log = sample()
+    assert dashboard.build(leads, refs, log, "2026-10-11", {"daily_send_cap": 40})["kpis"]["daily_cap"] == 40
+
+
+def test_dashboard_output_has_no_personal_data():
+    leads, refs, log = sample()
+    blob = str(dashboard.build(leads, refs, log, "2026-10-11"))
+    for secret in ("private@secret.com", "Secret Biz", "b@x.com"):
+        assert secret not in blob
+
+
+def test_dashboard_api_requires_key_and_handles_sheet_failure(monkeypatch):
+    c = TestClient(main.app)
+    assert c.get("/api/dashboard").status_code == 403
+    def boom(*a, **k):
+        raise RuntimeError("secret detail")
+    monkeypatch.setattr(dashboard, "fetch", boom)
+    r = c.get("/api/dashboard", headers=H)
+    assert r.status_code == 503 and "secret detail" not in r.text
+    monkeypatch.setattr(dashboard, "fetch", lambda s=None: {"ok": 1})
+    assert c.get("/api/dashboard", headers=H).json() == {"ok": 1}
+
+
+def test_dashboard_page_has_no_external_scripts():
+    r = TestClient(main.app).get("/dashboard")
+    assert r.status_code == 200 and "Outreach Dashboard" in r.text
+    assert "http://" not in r.text.replace("http://www.w3.org/2000/svg", "") and "https://" not in r.text
