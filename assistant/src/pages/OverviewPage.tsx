@@ -11,7 +11,9 @@ import { useLatestBriefing } from '@/features/workflows/api'
 import { StatusBadge } from '@/features/activity/StatusBadge'
 import { ApprovalCard } from '@/features/assistant/ApprovalCard'
 import { PROVIDERS } from '@/features/integrations/providers'
+import { AgendaCardBody, MailCardBody } from '@/features/today/cards'
 import { dueInfo, greeting, isOpen } from '@/lib/utils'
+import { Markdown } from '@/lib/markdown'
 
 const More = ({ to, children }: { to: string; children: string }) => (
   <Link to={to} className="inline-flex items-center gap-1 text-xs font-medium text-accent hover:underline">
@@ -32,8 +34,6 @@ export default function OverviewPage() {
   const workflows = useWorkflowSummary(orgId)
   const briefing = useLatestBriefing(orgId)
 
-  const mail = integrations.data?.find((i) => (i.provider === 'google_gmail' || i.provider === 'microsoft_mail') && i.status === 'connected')
-  const calendar = integrations.data?.find((i) => (i.provider === 'google_calendar' || i.provider === 'microsoft_calendar') && i.status === 'connected')
   const dueSoon = (tasks.data ?? []).filter((t) => {
     if (!isOpen(t) || !t.due_at) return false
     return Date.parse(t.due_at) < Date.now() + 3 * 86_400_000
@@ -67,7 +67,7 @@ export default function OverviewPage() {
           <Muted>{briefing.data.enabled ? 'No briefing has run yet. The first one arrives at the next scheduled time.' : 'The daily briefing is switched off.'}</Muted>
         ) : briefing.data.run.status === 'succeeded' && briefing.data.run.output?.text ? (
           <div>
-            <p className="whitespace-pre-wrap wrap-break-word text-sm">{briefing.data.run.output.text}</p>
+            <Markdown className="text-sm" text={briefing.data.run.output.text} />
             <p className="mt-2 text-xs text-muted">Generated {format(new Date(briefing.data.run.finished_at ?? briefing.data.run.created_at), 'EEE MMM d, h:mm a')}</p>
           </div>
         ) : briefing.data.run.status === 'failed' ? (
@@ -77,8 +77,7 @@ export default function OverviewPage() {
 
       <div className="grid gap-6 lg:grid-cols-2">
         <Section title="Today's agenda" action={<More to="/calendar">Calendar</More>}>
-          {calendar ? <Muted>{calendar.external_account} is connected. <Link className="text-accent underline underline-offset-2" to="/calendar">See today's agenda</Link>.</Muted>
-            : <Muted>No calendar is connected. <Link className="text-accent underline underline-offset-2" to="/integrations">Set it up</Link> to see your day here.</Muted>}
+          <AgendaCardBody orgId={orgId} />
         </Section>
 
         <Section title="Tasks due soon" action={<More to="/tasks">All tasks</More>}>
@@ -98,8 +97,7 @@ export default function OverviewPage() {
         </Section>
 
         <Section title="Important communications" action={<More to="/email">Email</More>}>
-          {mail ? <Muted>{mail.external_account} is connected. <Link className="text-accent underline underline-offset-2" to="/email">See what needs a reply</Link>.</Muted>
-            : <Muted>No email account is connected. <Link className="text-accent underline underline-offset-2" to="/integrations">Set it up</Link> to see what needs a reply.</Muted>}
+          <MailCardBody orgId={orgId} />
         </Section>
 
         <Section title="Pending approvals">

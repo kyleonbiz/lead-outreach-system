@@ -3,6 +3,7 @@ import { useLocation } from 'react-router-dom'
 import { Plus, Send, Wrench } from 'lucide-react'
 import { Button, Notice, PageHeader, Spinner, Textarea } from '@/components/ui'
 import { cn } from '@/lib/utils'
+import { Markdown } from '@/lib/markdown'
 import { useOrg } from '@/features/org/OrgProvider'
 import { FunctionError, useConversations, useMessages, usePendingApprovalList, useSendMessage } from '@/features/assistant/api'
 import { ApprovalCard } from '@/features/assistant/ApprovalCard'
@@ -68,9 +69,10 @@ export default function AssistantPage() {
             {messages.isLoading && activeId && <Spinner />}
             {visible.map((m) => (
               <div key={m.id} className={cn('flex', m.role === 'user' && 'justify-end')}>
-                <div className={cn('max-w-[85%] whitespace-pre-wrap wrap-break-word rounded-lg px-3.5 py-2.5 text-sm',
-                  m.role === 'user' ? 'bg-accent text-accent-ink' : 'bg-sunken', m.metadata?.error ? 'text-danger' : '')}>
-                  {m.content}
+                <div className={cn('max-w-[85%] wrap-break-word rounded-lg px-3.5 py-2.5 text-sm',
+                  m.role === 'user' ? 'whitespace-pre-wrap bg-accent text-accent-ink' : 'bg-sunken', m.metadata?.error ? 'text-danger' : '')}>
+                  {/* assistant replies are model output: rendered as Markdown (safe subset); the user's own text stays literal */}
+                  {m.role === 'user' ? m.content : <Markdown text={m.content} />}
                   {m.tool_calls?.filter((t) => t.type === 'tool_use').map((t, i) => (
                     <span key={i} className="mt-1.5 flex items-center gap-1.5 text-xs text-muted">
                       <Wrench className="h-3 w-3" aria-hidden /> Used {String(t.name).replace('__', '.')}

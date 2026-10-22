@@ -380,5 +380,18 @@ Each item below was built and tested without any live service. "Verified" means 
 * Only Chromium was used; Safari and Firefox were not checked. The app now requires browsers new enough for Tailwind 4 (Safari 16.4+, Chrome 111+, Firefox 128+).
 * `autoprefixer` is still installed though v4 largely makes it redundant; harmless.
 
+## 9. Executive-assistant redesign, step 1: Markdown replies and real Overview previews
+### Built
+* `src/lib/markdown.tsx`: a small in-repo Markdown renderer for assistant replies (paragraphs, bold, italic, inline code, bullet/numbered lists, quotes, headings as bold lines, fenced code, links). It builds React elements only
+  (no `dangerouslySetInnerHTML`), so raw HTML in a message is shown literally. Links must parse as absolute `http:`/`https:`/`mailto:` URLs and open with `rel="noopener noreferrer"`; images are never loaded (alt text shown);
+  text over 50,000 characters falls back to plain text. The user's own messages are still shown literally. The daily-briefing text uses the same renderer.
+* Overview "Today's agenda" and "Important communications" now show real previews (next four unfinished events; top four urgent / needs-reply messages, never automated senders) via `useAgenda` / `useEmailTriage`, with honest
+  loading, not-connected (setup link), error (shown plainly) and empty states (`src/features/today/`).
+### Verified
+* 23 renderer tests including XSS payloads (script/img/iframe tags, `javascript:`, mixed-case, tab-split and `data:` links, quote break-outs, image tracking pixels) and adversarial-timing inputs (10,000 repeated markers each, < 1.5 s);
+  a bug the tests found (a hostile URL containing parentheses left a stray `)`) was fixed with a balanced-parenthesis scan. 12 tests for the preview logic and card states, 1 page-level test of assistant replies.
+### NOT verified
+* Not exercised against real model output or a real mailbox/calendar. The Markdown subset is deliberately small (no tables, nested lists or images).
+
 ## Deferred (not built, by decision)
 E-signature, accounting (QuickBooks/Xero), SMS/phone, and pgvector semantic search need live accounts or paid services and are not started.
