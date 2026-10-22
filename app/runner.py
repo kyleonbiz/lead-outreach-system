@@ -41,6 +41,28 @@ def set_sending_paused(paused):
         os.remove(pause_flag_path())
 
 
+def settings_path():
+    return os.path.join(DATA_DIR, "settings.json")
+
+
+def load_settings():
+    try:
+        with open(settings_path()) as f:
+            s = json.load(f)
+    except (OSError, ValueError):
+        s = {}
+    return {k: s[k] for k in ("daily_send_cap", "per_run_cap") if isinstance(s.get(k), int) and 0 <= s[k] <= 1000}
+
+
+def save_settings(daily_send_cap=None, per_run_cap=None):
+    s = {"daily_send_cap": daily_send_cap, "per_run_cap": per_run_cap}
+    s = {k: v for k, v in s.items() if v is not None}
+    os.makedirs(DATA_DIR, exist_ok=True)
+    with open(settings_path(), "w") as f:
+        json.dump(s, f)
+    return load_settings()
+
+
 def scrub(text, env):
     for k, v in env.items():
         if v and len(v) >= 6 and any(h in k.upper() for h in SECRET_HINTS):
@@ -96,6 +118,12 @@ def run_job(name, extra_args=None):
             except OSError:
                 return {"state": "skipped", "reason": "another_sender_running"}
         env = {**os.environ, **job.env}
+        if job.is_sender:  # control-panel caps override the env vars; send_emails.py can only lower its ramp cap with them
+            s = load_settings()
+            if "daily_send_cap" in s:
+                env["DAILY_SEND_CAP"] = str(s["daily_send_cap"])
+            if "per_run_cap" in s:
+                env["PER_RUN_CAP"] = str(s["per_run_cap"])
         started = datetime.datetime.now(datetime.timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
         last_runs[name] = {"state": "running", "started": started}
         with tempfile.TemporaryDirectory() as tmp:

@@ -12,7 +12,11 @@ import threading
 
 from apscheduler.schedulers.background import BackgroundScheduler
 from apscheduler.triggers.cron import CronTrigger
+from typing import Optional
+
 from fastapi import Depends, FastAPI, Header, HTTPException
+from fastapi.responses import FileResponse
+from pydantic import BaseModel, Field
 
 from . import runner
 from .jobs import JOBS
@@ -65,6 +69,26 @@ def shutdown():
         scheduler.shutdown(wait=False)
 
 
+class Settings(BaseModel):
+    daily_send_cap: Optional[int] = Field(default=None, ge=0, le=300)
+    per_run_cap: Optional[int] = Field(default=None, ge=0, le=300)
+
+
+@app.get("/")
+def panel():
+    return FileResponse(os.path.join(os.path.dirname(__file__), "panel.html"))
+
+
+@app.get("/settings", dependencies=[Depends(require_key)])
+def get_settings():
+    return runner.load_settings()
+
+
+@app.put("/settings", dependencies=[Depends(require_key)])
+def put_settings(s: Settings):
+    return runner.save_settings(s.daily_send_cap, s.per_run_cap)
+
+
 @app.get("/health")
 def health():
     return {"ok": True}
@@ -72,7 +96,7 @@ def health():
 
 @app.get("/status", dependencies=[Depends(require_key)])
 def status():
-    return {"sending_paused": runner.sending_paused(), "jobs": runner.last_runs,
+    return {"sending_paused": runner.sending_paused(), "jobs": runner.last_runs, "settings": runner.load_settings(),
             "schedules": {j.name: list(j.crons) for j in JOBS.values()}}
 
 

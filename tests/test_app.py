@@ -128,3 +128,24 @@ def test_all_job_scripts_exist():
     for j in JOBS.values():
         for s in j.steps:
             assert os.path.exists(os.path.join(ROOT, s.script)), s.script
+
+
+def test_panel_served_and_has_no_external_scripts():
+    r = TestClient(main.app).get("/")
+    assert r.status_code == 200 and "Outreach Control Panel" in r.text
+    assert "http://" not in r.text and "https://" not in r.text  # nothing loaded from outside
+
+
+def test_settings_validated_and_applied_to_sender_only(monkeypatch):
+    c = TestClient(main.app)
+    assert c.put("/settings", json={"daily_send_cap": 40, "per_run_cap": 5}).status_code == 403
+    assert c.put("/settings", headers=H, json={"daily_send_cap": 5000}).status_code == 422
+    assert c.put("/settings", headers=H, json={"daily_send_cap": -1}).status_code == 422
+    assert c.put("/settings", headers=H, json={"daily_send_cap": 40, "per_run_cap": 5}).json() == {"daily_send_cap": 40, "per_run_cap": 5}
+    seen = {}
+    monkeypatch.setattr(runner, "_run_steps", lambda job, env, cwd: seen.update({job.name: dict(env)}) or 0)
+    runner.run_job("send_outreach")
+    runner.run_job("find_leads")
+    assert seen["send_outreach"]["DAILY_SEND_CAP"] == "40" and seen["send_outreach"]["PER_RUN_CAP"] == "5"
+    assert seen["find_leads"].get("DAILY_SEND_CAP") != "40"
+    assert c.put("/settings", headers=H, json={}).json() == {}  # blank = back to ramp
