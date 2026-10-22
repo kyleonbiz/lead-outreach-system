@@ -96,13 +96,13 @@ def run_job(name, extra_args=None):
             except OSError:
                 return {"state": "skipped", "reason": "another_sender_running"}
         env = {**os.environ, **job.env}
-        started = datetime.datetime.now(datetime.timezone.utc).isoformat() + "Z"
+        started = datetime.datetime.now(datetime.timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
         last_runs[name] = {"state": "running", "started": started}
         with tempfile.TemporaryDirectory() as tmp:
             cwd = REPO_DIR if job.needs_repo_cwd else tmp
             code = _run_steps(job, env, cwd)
         result = {"state": "ok" if code == 0 else "failed", "started": started,
-                  "finished": datetime.datetime.now(datetime.timezone.utc).isoformat() + "Z", "exit_code": code}
+                  "finished": datetime.datetime.now(datetime.timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"), "exit_code": code}
         last_runs[name] = result
         _notify(f"{'✅' if code == 0 else '❌'} {name} {'finished' if code == 0 else f'failed (exit {code})'}", env)
         return result
