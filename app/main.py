@@ -55,8 +55,15 @@ def add_schedules():
             )  # no retry/rescheduling on failure
 
 
+def local_mode():
+    """Local-spreadsheet mode: read-only dashboard, no scheduler, no jobs, so nothing can send email."""
+    return bool(os.environ.get("LOCAL_DATA_PATH", "").strip())
+
+
 @app.on_event("startup")
 def startup():
+    if local_mode():
+        return
     setup_google_credentials()
     if os.environ.get("SCHEDULER_ENABLED", "true").lower() == "true":
         add_schedules()
@@ -121,7 +128,7 @@ def health():
 
 @app.get("/status", dependencies=[Depends(require_key)])
 def status():
-    return {"sending_paused": runner.sending_paused(), "jobs": runner.last_runs, "settings": runner.load_settings(),
+    return {"local_mode": local_mode(), "sending_paused": runner.sending_paused(), "jobs": runner.last_runs, "settings": runner.load_settings(),
             "schedules": {j.name: list(j.crons) for j in JOBS.values()}}
 
 
@@ -130,6 +137,8 @@ def run_now(name: str):
     """Manual run in the background. Sender safety still applies (state in Sheets, lock, pause flag)."""
     if name not in JOBS:
         raise HTTPException(404, "unknown job")
+    if local_mode():
+        raise HTTPException(409, "jobs are disabled in local mode")
     threading.Thread(target=runner.run_job, args=(name,), daemon=True).start()
     return {"accepted": name}
 

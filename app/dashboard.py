@@ -10,6 +10,22 @@ DAYS = 30
 _cache = {"at": 0, "data": None}
 
 
+def local_path():
+    return os.environ.get("LOCAL_DATA_PATH", "").strip()
+
+
+def get_sheet():
+    """The local file/folder when LOCAL_DATA_PATH is set, otherwise Google Sheets."""
+    if local_path():
+        from .localsheet import LocalSheet
+        return LocalSheet(local_path())
+    return se.get_sheets_with_retry()
+
+
+def _ttl(ttl):
+    return min(ttl, 3) if local_path() else ttl  # local files are cheap to re-read, so show edits quickly
+
+
 def _col(header):
     return {n: i for i, n in enumerate(header)}
 
@@ -96,9 +112,9 @@ class log_rows_ws:
 
 def fetch(settings=None, ttl=60):
     """Read the sheets (cached briefly to stay inside Google's read quota)."""
-    if _cache["data"] and time.time() - _cache["at"] < ttl:
+    if _cache["data"] and time.time() - _cache["at"] < _ttl(ttl):
         return _cache["data"]
-    sheet = se.get_sheets_with_retry()
+    sheet = get_sheet()
     today = datetime.date.today().isoformat()
     data = build(sheet.worksheet("Leads").get_all_values(), sheet.worksheet("Referrals").get_all_values(),
                  sheet.worksheet("Outreach_Log").get_all_values(), today, settings)
@@ -114,9 +130,9 @@ _tab_cache = {}
 def fetch_tab(key, ttl=60):
     """Full contents of one worksheet: {'header': [...], 'rows': [[...]]}, newest rows first for log/leads."""
     hit = _tab_cache.get(key)
-    if hit and time.time() - hit[0] < ttl:
+    if hit and time.time() - hit[0] < _ttl(ttl):
         return hit[1]
-    sheet = se.get_sheets_with_retry()
+    sheet = get_sheet()
     values = sheet.worksheet(TABS[key]).get_all_values()
     header = values[0] if values else []
     rows = [r + [""] * (len(header) - len(r)) for r in values[1:]]

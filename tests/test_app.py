@@ -240,3 +240,73 @@ def test_records_endpoint(monkeypatch):
     monkeypatch.setattr(dashboard.se, "get_sheets_with_retry", boom)
     r = c.get("/api/records/leads", headers=H)
     assert r.status_code == 503 and "secret detail" not in r.text
+
+
+# ---- local spreadsheet mode ----
+import csv as _csv  # noqa: E402
+import datetime as _dt  # noqa: E402
+
+import openpyxl  # noqa: E402
+
+
+def make_workbook(path):
+    wb = openpyxl.Workbook()
+    ws = wb.active
+    ws.title = "Leads"
+    ws.append(L_HEAD)
+    ws.append([1, "Acme", "a@x.com", "Nashville", "TN", "contacted", "enriched"])
+    ws.append([2, "Beta", None, "Austin", "TX", "not_contactable", "no_email_found"])
+    ws2 = wb.create_sheet("Referrals")
+    ws2.append(L_HEAD)
+    log = wb.create_sheet("outreach_log")  # tab-name case must not matter
+    log.append(LOGH)
+    log.append(["a", "1", "Acme", "a@x.com", _dt.date.today(), "s", "v", "sent"])
+    wb.create_sheet("Campaign_Queue").append(["industry", "location", "active"])
+    wb.save(path)
+
+
+def test_local_workbook_reads_and_dashboard_works(tmp_path, monkeypatch):
+    p = tmp_path / "outreach.xlsx"
+    make_workbook(p)
+    before = p.read_bytes()
+    monkeypatch.setenv("LOCAL_DATA_PATH", str(p))
+    dashboard._cache.update(at=0, data=None)
+    dashboard._tab_cache.clear()
+    monkeypatch.setattr(dashboard.se, "get_sheets_with_retry", lambda: pytest.fail("must not touch Google"))
+    c = TestClient(main.app)
+    d = c.get("/api/dashboard", headers=H).json()
+    assert d["kpis"]["total_leads"] == 2 and d["kpis"]["contacted"] == 1
+    assert d["kpis"]["attempts_today"] == 1  # the Excel date cell was read as a date
+    recs = c.get("/api/records/leads", headers=H).json()
+    assert recs["header"][1] == "business_name" and recs["total"] == 2
+    assert recs["rows"][0][3] == "Austin" and recs["rows"][0][2] == ""  # empty cell -> "", newest first
+    assert p.read_bytes() == before  # never written to
+
+
+def test_local_csv_folder(tmp_path, monkeypatch):
+    for name, rows in {"Leads": [L_HEAD, ["1", "Acme", "a@x.com", "N", "TN", "new", "enriched"]],
+                       "Referrals": [L_HEAD], "Outreach_Log": [LOGH], "Campaign_Queue": [["industry"]]}.items():
+        with open(tmp_path / f"{name}.csv", "w", newline="") as f:
+            _csv.writer(f).writerows(rows)
+    monkeypatch.setenv("LOCAL_DATA_PATH", str(tmp_path))
+    dashboard._cache.update(at=0, data=None)
+    assert dashboard.fetch()["kpis"]["total_leads"] == 1
+
+
+def test_missing_tab_gives_clean_error(tmp_path, monkeypatch):
+    wb = openpyxl.Workbook()
+    wb.active.title = "Other"
+    wb.save(tmp_path / "w.xlsx")
+    monkeypatch.setenv("LOCAL_DATA_PATH", str(tmp_path / "w.xlsx"))
+    dashboard._cache.update(at=0, data=None)
+    assert TestClient(main.app).get("/api/dashboard", headers=H).status_code == 503
+
+
+def test_local_mode_cannot_run_jobs_or_start_scheduler(tmp_path, monkeypatch):
+    monkeypatch.setenv("LOCAL_DATA_PATH", str(tmp_path))
+    monkeypatch.setattr(runner, "run_job", lambda *a: pytest.fail("no job may run in local mode"))
+    c = TestClient(main.app)
+    assert c.post("/jobs/send_outreach/run", headers=H).status_code == 409
+    assert c.get("/status", headers=H).json()["local_mode"] is True
+    monkeypatch.setattr(main, "add_schedules", lambda: pytest.fail("scheduler must not start"))
+    main.startup()
