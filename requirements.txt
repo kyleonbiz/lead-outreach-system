@@ -1,0 +1,6 @@
+requests
+gspread
+google-auth
+fastapi
+uvicorn
+apscheduler>=3.10,<4
