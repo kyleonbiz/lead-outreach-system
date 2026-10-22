@@ -33,6 +33,15 @@ RUNS_PER_DAY = 9  # spread the daily cap over ~9 of the hourly runs (leaves slac
 LEADS_MAX_PER_RUN = 150
 REFERRALS_MAX_PER_RUN = 150
 
+# Niche focus: only leads whose `industry` is in this set get emailed. Everything else
+# stays "new" in the sheet, so widening the list later picks them up. Empty set = no filter.
+TARGET_INDUSTRIES = {
+    "electricians", "plumbers", "hvac contractors", "roofing contractors",
+    "general contractors", "property management companies",
+}
+# Referral-partner emails are paused while we focus on the niche above.
+SEND_REFERRALS = False
+
 LOGO_PATH = "logo.png"
 TEMPLATE_VERSION = "v2_intro"
 
@@ -462,8 +471,9 @@ if __name__ == "__main__":
     combined_rows = []
     for row_num, row in enumerate(leads_rows[1:], start=2):
         combined_rows.append(("leads", row_num, row, leads_col, leads_ws))
-    for row_num, row in enumerate(referrals_rows[1:], start=2):
-        combined_rows.append(("referrals", row_num, row, referrals_col, referrals_ws))
+    if SEND_REFERRALS:
+        for row_num, row in enumerate(referrals_rows[1:], start=2):
+            combined_rows.append(("referrals", row_num, row, referrals_col, referrals_ws))
 
     sent_count = 0
     leads_sent = 0
@@ -501,6 +511,9 @@ if __name__ == "__main__":
         state = get("state").strip()
 
         if outreach_status != "new" or not email:
+            continue
+
+        if source == "leads" and TARGET_INDUSTRIES and get("industry").strip().lower() not in TARGET_INDUSTRIES:
             continue
 
         ok, reason = check_email(email)
