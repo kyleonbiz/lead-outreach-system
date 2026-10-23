@@ -9,7 +9,7 @@ import threading
 from dataclasses import dataclass, field
 from typing import Callable, Optional
 
-from .. import calendar_data, contacts, dashboard, runner
+from .. import calendar_data, contacts, dashboard, profile, runner
 from ..agents import followup, service, store
 from ..jobs import JOBS
 
@@ -133,7 +133,28 @@ def status(a):
             "agent_runs": {k: v for k, v in service.runs.items()}, "today": datetime.date.today().isoformat()}
 
 
+def business_profile(a):
+    p = profile.get()
+    return {"learning_mode_on": p["enabled"], "profile": p["profile"], "memories": [{"id": m["id"], "text": m["text"], "enabled": m["enabled"]} for m in p["memories"]]}
+
+
 # ---------------- write tools ----------------
+def v_remember(a):
+    if not profile.get()["enabled"]:
+        return "learning mode is off; the user can turn it on in Settings → AI learning"
+    t = str(a.get("text", "")).strip()
+    if not t or len(t) > profile.MAX_MEMORY_LEN:
+        return f"memory must be 1-{profile.MAX_MEMORY_LEN} characters"
+    return profile.check_text(t)
+
+
+def r_remember(a):
+    m, err = profile.add_memory(a["text"], a.get("category", "preferences"), "assistant")
+    if err:
+        raise ToolError(err)
+    return {"remembered": m["text"]}
+
+
 def v_contact_key(a):
     try:
         return "" if _contact(str(a.get("key", "")))[0] else "no such contact"
@@ -296,6 +317,8 @@ TOOLS = {t.name: t for t in [
       calendar_month, lambda a: f"Checked the calendar for {a.get('month', '')}"),
     T("get_status", "Whether sending is paused, the daily caps, and recent job/agent runs.", _obj({}), "read", status, lambda a: "Checked app status"),
 
+    T("get_business_profile", "What the user has taught the AI about themselves and their business (profile and memories).", _obj({}), "read",
+      business_profile, lambda a: "Checked what I know about your business"),
     T("add_note", "Add a note to a contact's timeline.", _obj({"key": S, "text": S}, ["key", "text"]), "write", r_note,
       lambda a: f"Add a note to {_name(a.get('key', ''))}: “{a.get('text', '')}”", v_note),
     T("add_contact", "Add a new contact (name required).", _obj({"name": S, "company": S, "email": S, "phone": S, "website": S, "notes": S}, ["name"]),
@@ -320,6 +343,9 @@ TOOLS = {t.name: t for t in [
       "The main outreach sender cannot be started from here.", _obj({"name": {"type": "string", "enum": list(RUNNABLE_JOBS)}}, ["name"]), "write", r_job,
       lambda a: f"Start the “{str(a.get('name', '')).replace('_', ' ')}” job", v_job,
       "SENDS EMAIL: every approved follow-up gets one send attempt, within your daily cap. Failed ones are never retried." ),
+    T("remember", "Save one durable fact or preference about the user or their business (category: business, customers, style, rules, preferences). "
+      "Never save contact details, secrets, or facts about individual leads.", _obj({"text": S, "category": S}, ["text"]), "write", r_remember,
+      lambda a: f"Remember: “{a.get('text', '')}”", v_remember),
     T("pause_sending", "Pause all automated email sending.", _obj({}), "write", r_pause, lambda a: "Pause email sending"),
     T("resume_sending", "Resume automated email sending.", _obj({}), "write", r_resume, lambda a: "Resume email sending"),
     T("set_sending_caps", "Set daily and/or per-run sending caps (0-300). Caps can only lower the built-in ramp.",

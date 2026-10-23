@@ -3,6 +3,7 @@ import datetime
 
 import create_fb_posts as fb
 
+from .. import profile
 from . import llm, store
 
 
@@ -23,11 +24,11 @@ def run(ask=llm.ask, site_text=None, today=None):
     today = today or datetime.datetime.now(fb.CENTRAL).date()
     site_text = site_text if site_text is not None else fb.get_site_text()
     topics, dates = fb.week_topics(today), fb.week_dates(today)
-    posts = fb.parse_posts(ask(fb.build_prompt(site_text, topics, dates), 4000))
+    posts = fb.parse_posts(ask(fb.build_prompt(site_text, topics, dates) + profile.prompt_block(), 4000))
     clean = [{"day": str(p.get("day", "")), "service": str(p.get("service", "")), "industry": str(p.get("industry", "")),
               "post": str(p.get("post", "")).strip(), "image_idea": str(p.get("image_idea", "")).strip()}
              for p in posts if isinstance(p, dict) and p.get("post")]
-    seo = llm.parse_json(ask(seo_prompt(site_text), 3000), "[")
+    seo = llm.parse_json(ask(seo_prompt(site_text) + profile.prompt_block(), 3000), "[")
     seo = [{k: (v if isinstance(v, list) else str(v)) for k, v in s.items()} for s in seo if isinstance(s, dict) and s.get("title")][:5]
     report = {"generated": datetime.datetime.now(datetime.timezone.utc).strftime("%Y-%m-%d %H:%M UTC"),
               "week_of": dates[0].isoformat(), "posts": clean, "seo": seo}

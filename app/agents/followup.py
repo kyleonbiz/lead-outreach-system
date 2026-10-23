@@ -8,6 +8,7 @@ import uuid
 
 from .. import mail_core as se
 
+from .. import profile
 from . import llm, store
 
 TEMPLATE = "followup_v1"
@@ -95,7 +96,7 @@ Rules:
 - Do NOT pretend they replied, do not start the subject with "Re:" or "Fwd:", no fake urgency, no guilt.
 - Do not invent statistics, pricing, testimonials, clients or guarantees. Mention only administrative support.
 - Do not include a signature, links, or an unsubscribe line (added automatically). Start with "Hi,".
-Return ONLY JSON: {{"subject": "...", "body": "..."}}"""
+Return ONLY JSON: {{"subject": "...", "body": "..."}}""" + profile.prompt_block()
 
 
 def validate(subject, body):
@@ -152,6 +153,8 @@ def approve(draft_id, subject=None, body=None):
         err = validate(s, b)
         if err:
             return err
+        if s.strip() != d["subject"].strip() or b.strip() != d["body"].strip():
+            d.setdefault("orig", {"subject": d["subject"], "body": d["body"]})  # kept so the AI can learn from the edit
         d.update(subject=s.strip(), body=b.strip(), status="approved")
         return ""
     r = _set(draft_id, go)

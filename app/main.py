@@ -20,7 +20,7 @@ from fastapi import Depends, FastAPI, Header, HTTPException
 from fastapi.responses import FileResponse, RedirectResponse
 from pydantic import BaseModel, Field
 
-from . import calendar_data, contacts, dashboard, runner
+from . import calendar_data, contacts, dashboard, profile, runner
 from .assistant import engine as assistant
 from .agents import followup, research as _research, service, store as agent_store
 from .jobs import JOBS, trigger
@@ -335,6 +335,77 @@ def assistant_decide(cid: str, d: AssistantDecision):
     return {"ok": True}
 
 
+class ProfileUpdate(BaseModel):
+    enabled: Optional[bool] = None
+    profile: Optional[dict] = None
+
+
+class MemoryNew(BaseModel):
+    text: str = Field(min_length=1, max_length=300)
+    category: str = "preferences"
+
+
+class MemoryEdit(BaseModel):
+    text: Optional[str] = Field(default=None, max_length=300)
+    enabled: Optional[bool] = None
+    category: Optional[str] = None
+
+
+@app.get("/api/ai-profile", dependencies=[Depends(require_key)])
+def ai_profile_get():
+    return profile.get()
+
+
+@app.put("/api/ai-profile", dependencies=[Depends(require_key)])
+def ai_profile_put(u: ProfileUpdate):
+    if u.profile is not None:
+        err = profile.update_profile(u.profile)
+        if err:
+            raise HTTPException(400, err)
+    if u.enabled is not None:
+        profile.set_enabled(u.enabled)
+    return profile.get()
+
+
+@app.post("/api/ai-profile/memories", dependencies=[Depends(require_key)])
+def ai_memory_add(m: MemoryNew):
+    out, err = profile.add_memory(m.text, m.category, "you")
+    if err:
+        raise HTTPException(400, err)
+    return out
+
+
+@app.put("/api/ai-profile/memories/{mid}", dependencies=[Depends(require_key)])
+def ai_memory_edit(mid: str, m: MemoryEdit):
+    err = profile.update_memory(mid, m.text, m.enabled, m.category)
+    if err:
+        raise HTTPException(404 if err == "no such memory" else 400, err)
+    return {"ok": True}
+
+
+@app.delete("/api/ai-profile/memories/{mid}", dependencies=[Depends(require_key)])
+def ai_memory_delete(mid: str):
+    if not profile.delete_memory(mid):
+        raise HTTPException(404, "no such memory")
+    return {"ok": True}
+
+
+@app.post("/api/ai-profile/suggestions/{sid}/{action}", dependencies=[Depends(require_key)])
+def ai_suggestion(sid: str, action: str):
+    if action not in ("accept", "dismiss"):
+        raise HTTPException(404, "unknown action")
+    err = profile.resolve_suggestion(sid, action == "accept")
+    if err:
+        raise HTTPException(404 if err == "no such suggestion" else 400, err)
+    return {"ok": True}
+
+
+@app.delete("/api/ai-profile", dependencies=[Depends(require_key)])
+def ai_profile_clear():
+    profile.clear()
+    return {"ok": True}
+
+
 @app.get("/api/agents/state", dependencies=[Depends(require_key)])
 def agents_state():
     return {"local_mode": local_mode(), "runs": service.runs,
@@ -345,7 +416,7 @@ def agents_state():
 
 @app.post("/api/agents/{name}/run", dependencies=[Depends(require_key)])
 def agent_run(name: str, p: AgentRun = AgentRun()):
-    if name not in ("followup", "research", "marketing"):
+    if name not in ("followup", "research", "marketing", "learn"):
         raise HTTPException(404, "unknown agent")
     if not os.environ.get("ANTHROPIC_API_KEY", "").strip():
         raise HTTPException(409, "ANTHROPIC_API_KEY is not set")

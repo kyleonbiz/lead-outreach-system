@@ -5,10 +5,10 @@ import threading
 from .. import mail_core as se
 
 from .. import dashboard
-from . import followup, llm, marketing, research, store
+from . import followup, learn, llm, marketing, research, store
 
 runs = {}  # name -> {state, message, finished}
-_locks = {n: threading.Lock() for n in ("followup", "research", "marketing")}
+_locks = {n: threading.Lock() for n in ("followup", "research", "marketing", "learn")}
 
 
 def _rows(sheet, tab):
@@ -19,6 +19,8 @@ def _rows(sheet, tab):
 
 
 def _do(name, after_days):
+    if name == "learn":
+        return learn.run()["message"]
     if name == "marketing":
         r = marketing.run()
         return f"Drafted {len(r['posts'])} posts and {len(r['seo'])} page ideas."

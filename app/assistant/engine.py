@@ -7,7 +7,7 @@ import datetime
 import threading
 import uuid
 
-from .. import runner  # noqa: F401  (imported so the store path follows runner.DATA_DIR)
+from .. import profile, runner  # noqa: F401  (runner imported so the store path follows runner.DATA_DIR)
 from ..agents import llm, store
 from . import tools as T
 
@@ -139,7 +139,7 @@ def _advance(cid, chat=None):
     c = get(cid)
     try:
         for _ in range(MAX_STEPS):
-            resp = chat(c["messages"], T.specs(), SYSTEM.format(today=datetime.date.today().isoformat()))
+            resp = chat(c["messages"], T.specs(), SYSTEM.format(today=datetime.date.today().isoformat()) + profile.prompt_block())
             blocks = [_clean(b) for b in resp["content"] if b.get("type") in ("text", "tool_use")]
             c["messages"].append({"role": "assistant", "content": blocks})
             for b in blocks:

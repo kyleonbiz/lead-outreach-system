@@ -3,6 +3,7 @@ Uses only your own sheet data (aggregated counts, no emails or names go to the m
 import datetime
 from collections import defaultdict
 
+from .. import profile
 from . import llm, store
 
 MIN_SAMPLE = 15
@@ -75,7 +76,7 @@ REPLY TRACKING: {'available' if stats['replies_tracked'] else 'NOT recorded, so 
 
 Rules: never invent market sizes, prices, or facts not in the stats. Rows with enough_data=false are too small to trust; say so.
 Prefer high email_rate, low bounce_rate, and combinations not already in the queue.
-Return ONLY JSON: {{"summary": "2-3 sentences", "recommendations": [{{"industry": "...", "location": "City, ST", "reason": "cites the numbers", "confidence": "low|medium|high"}}], "caveats": ["..."]}} with at most 8 recommendations."""
+Return ONLY JSON: {{"summary": "2-3 sentences", "recommendations": [{{"industry": "...", "location": "City, ST", "reason": "cites the numbers", "confidence": "low|medium|high"}}], "caveats": ["..."]}} with at most 8 recommendations.""" + profile.prompt_block()
     out = llm.parse_json(ask(prompt), "{")
     recs = [r for r in out.get("recommendations", []) if isinstance(r, dict) and r.get("industry")][:8]
     return {"summary": str(out.get("summary", ""))[:800], "recommendations": recs,

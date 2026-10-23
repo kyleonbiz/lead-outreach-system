@@ -31,3 +31,9 @@ PROPOSES changes (add note/contact/event, do-not-contact, approve/reject a follo
 set caps) as approval cards. Nothing changes until you approve, and the server runs exactly the call you approved. It can never send an
 email itself and cannot start the main outreach sender; follow-ups send only via the approved-drafts job, after you confirm.
 Executed actions are logged (`GET /api/assistant`). Needs `ANTHROPIC_API_KEY`. Note: it sends the data it looks up to the AI service.
+
+## AI learning mode (Settings → AI learning)
+A business profile plus memories you control. When ON, they are added to what the assistant and the follow-up, research and
+marketing agents are told (never overriding the safety rules); when OFF nothing is shared. Memories come from you, from the
+assistant (you approve each), or from suggestions based on how you edit follow-up drafts (you accept or dismiss each).
+Contact details and secrets are rejected. Stored in the app's own data; "Forget everything" deletes it all.
