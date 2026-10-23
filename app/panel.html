@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Outreach Control Panel</title>
+<style>
+:root{--bg:#f6f7fb;--card:#fff;--text:#1b2a5a;--muted:#667;--line:#e1e4ee;--ok:#1a7f4b;--bad:#c0392b;--warn:#b7791f;--btn:#1b2a5a}
+@media (prefers-color-scheme:dark){:root{--bg:#10131c;--card:#181c28;--text:#e8ebf5;--muted:#99a;--line:#2a3042;--btn:#4c6fff}}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font:15px/1.5 system-ui,sans-serif}
+main{max-width:760px;margin:0 auto;padding:20px 16px 60px}h1{font-size:20px;margin:8px 0 16px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:16px;margin-bottom:14px}
+.row{display:flex;gap:10px;align-items:center;justify-content:space-between;flex-wrap:wrap}
+h2{font-size:14px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);margin:0 0 10px}
+button{background:var(--btn);color:#fff;border:0;border-radius:7px;padding:8px 14px;font:inherit;cursor:pointer}
+button.alt{background:transparent;color:var(--text);border:1px solid var(--line)}button:disabled{opacity:.5;cursor:default}
+input{font:inherit;padding:7px 9px;border:1px solid var(--line);border-radius:7px;background:var(--bg);color:var(--text);width:110px}
+#key{width:100%;max-width:340px}.pill{padding:3px 10px;border-radius:99px;font-size:13px;font-weight:600}
+.on{background:#e3f6ec;color:var(--ok)}.off{background:#fdeaea;color:var(--bad)}.dim{color:var(--muted);font-size:13px}
+.job{padding:10px 0;border-top:1px solid var(--line)}.job:first-of-type{border-top:0}
+.ok{color:var(--ok)}.failed{color:var(--bad)}.running{color:var(--warn)}.skipped{color:var(--muted)}
+#msg{min-height:22px;color:var(--muted)}[hidden]{display:none!important}
+</style></head><body><main>
+<h1>Outreach Control Panel</h1>
+<p class="dim" style="margin-top:-8px"><a href="/dashboard" style="color:inherit">Dashboard →</a> &nbsp; <a href="/agents" style="color:inherit">Agents →</a></p>
+<div id="login" class="card" hidden>
+  <h2>Sign in</h2><p class="dim">Enter the service API key. It is kept only in this browser tab.</p>
+  <form id="loginform" class="row" style="justify-content:flex-start"><input id="key" type="password" placeholder="API key" autocomplete="current-password"><button>Sign in</button></form>
+</div>
+<div id="app" hidden>
+  <div class="card"><h2>Email sending</h2>
+    <div class="row"><div><span id="state" class="pill"></span> <span class="dim" id="statedesc"></span></div>
+    <div><button id="toggle"></button></div></div>
+    <p class="dim">Pausing stops new sends at the next run. Lead scraping keeps running. A failed or uncertain email is never retried either way.</p></div>
+  <div class="card"><h2>Daily sending cap</h2>
+    <form id="capform" class="row" style="justify-content:flex-start">
+      <label>Per day <input id="daily" type="number" min="0" max="300" placeholder="ramp"></label>
+      <label>Per run <input id="perrun" type="number" min="0" max="300" placeholder="auto"></label>
+      <button>Save</button></form>
+    <p class="dim">Caps apply to follow-up sending (and to the main sender once it reads DAILY_SEND_CAP). They can only lower the built-in ramp. Blank = use the ramp. Failed and uncertain attempts count toward the cap.</p></div>
+  <div class="card"><h2>Jobs</h2><div id="jobs"></div></div>
+  <p id="msg"></p><button class="alt" id="logout">Sign out</button>
+</div>
+</main>
+<script>
+const $=id=>document.getElementById(id);let key=sessionStorage.getItem('k')||'';
+async function api(path,opt={}){const r=await fetch(path,{...opt,headers:{'x-api-key':key,'content-type':'application/json'}});
+  if(r.status===403){key='';sessionStorage.removeItem('k');show();throw new Error('Wrong or missing API key')}
+  if(!r.ok)throw new Error('Request failed ('+r.status+')');return r.json()}
+function msg(t){$('msg').textContent=t}
+function show(){$('login').hidden=!!key;$('app').hidden=!key}
+function fmt(t){return t?new Date(t).toLocaleString():'never'}
+async function refresh(){if(!key)return;
+  const s=await api('/status');const p=s.sending_paused;
+  $('state').textContent=p?'Paused':'Sending on';$('state').className='pill '+(p?'off':'on');
+  $('toggle').textContent=p?'Resume sending':'Pause sending';$('toggle').dataset.paused=p;
+  if(document.activeElement!==$('daily'))$('daily').value=s.settings.daily_send_cap??'';
+  if(document.activeElement!==$('perrun'))$('perrun').value=s.settings.per_run_cap??'';
+  $('jobs').innerHTML='';
+  for(const [name,crons] of Object.entries(s.schedules)){const j=s.jobs[name]||{};const d=document.createElement('div');d.className='job';
+    const info=j.state?`<span class="${j.state}">${j.state}</span> · last ${fmt(j.finished||j.started)}${j.exit_code?` · exit ${j.exit_code}`:''}`:'<span class="dim">not run since service started</span>';
+    d.innerHTML=`<div class="row"><div><b>${name}</b><br><span class="dim">${info}</span></div><button class="alt" data-job="${name}">Run now</button></div>`;
+    $('jobs').appendChild(d)}}
+$('loginform').onsubmit=async e=>{e.preventDefault();key=$('key').value;sessionStorage.setItem('k',key);$('key').value='';show();try{await refresh();msg('')}catch(x){msg(x.message)}};
+$('toggle').onclick=async()=>{const paused=$('toggle').dataset.paused==='true';
+  try{await api(paused?'/sending/resume':'/sending/pause',{method:'POST'});await refresh();msg(paused?'Sending resumed.':'Sending paused.')}catch(x){msg(x.message)}};
+$('capform').onsubmit=async e=>{e.preventDefault();const n=v=>v===''?null:parseInt(v,10);
+  try{await api('/settings',{method:'PUT',body:JSON.stringify({daily_send_cap:n($('daily').value),per_run_cap:n($('perrun').value)})});await refresh();msg('Caps saved.')}catch(x){msg(x.message)}};
+$('jobs').onclick=async e=>{const n=e.target.dataset.job;if(!n)return;
+  if(n==='send_outreach'&&!confirm('Start a sending run now? It follows the caps and one-attempt rules.'))return;
+  try{await api('/jobs/'+n+'/run',{method:'POST'});msg(n+' started.');setTimeout(refresh,1500)}catch(x){msg(x.message)}};
+$('logout').onclick=()=>{key='';sessionStorage.removeItem('k');show()};
+show();refresh().catch(()=>{});setInterval(()=>refresh().catch(()=>{}),15000);
+</script></body></html>
