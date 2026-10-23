@@ -118,6 +118,8 @@ def run_job(name, extra_args=None):
             except OSError:
                 return {"state": "skipped", "reason": "another_sender_running"}
         env = {**os.environ, **job.env}
+        env["SUPPRESSION_FILE"] = os.path.join(DATA_DIR, "agents", "suppression.json")
+        env["PYTHONPATH"] = REPO_DIR + os.pathsep + env.get("PYTHONPATH", "")
         if job.is_sender:  # control-panel caps override the env vars; send_emails.py can only lower its ramp cap with them
             s = load_settings()
             if "daily_send_cap" in s:

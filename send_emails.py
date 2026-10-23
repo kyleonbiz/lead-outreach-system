@@ -1,3 +1,4 @@
+import json
 import os
 import time
 import uuid
@@ -344,6 +345,13 @@ def normalize_email(email):
 def load_suppression(sheet):
     """Optional 'Suppression' worksheet: first column holds emails, or bare domains / @domain."""
     emails, domains = set(), set()
+    path = os.environ.get("SUPPRESSION_FILE")  # addresses marked replied / do-not-contact in the control panel
+    if path:
+        try:
+            with open(path) as f:
+                emails |= {normalize_email(e) for e in json.load(f).get("emails", [])}
+        except (OSError, ValueError):
+            pass
     try:
         ws = sheet.worksheet("Suppression")
     except Exception:

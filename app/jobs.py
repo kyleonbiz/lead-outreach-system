@@ -34,6 +34,9 @@ JOBS = {j.name: j for j in [
         timeout_s=30 * 60,
         env={"TEST_MODE": "false"},
         needs_repo_cwd=True, is_sender=True),
+    Job("send_followups",  # manual only: sends follow-ups YOU approved, one attempt each
+        steps=(Step("send_followups.py"),), crons=(), timeout_s=30 * 60,
+        env={"TEST_MODE": "false"}, needs_repo_cwd=True, is_sender=True),
     Job("daily_summary", steps=(Step("daily_summary.py"),), crons=("0 18 * * 1-5",)),
     Job("organize_leads", steps=(Step("organize_by_industry.py"),), crons=("0 0 * * *",)),
     Job("create_fb_posts", steps=(Step("create_fb_posts.py"),), crons=("0 13 * * 1",)),

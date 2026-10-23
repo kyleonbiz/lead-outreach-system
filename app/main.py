@@ -19,6 +19,7 @@ from fastapi.responses import FileResponse
 from pydantic import BaseModel, Field
 
 from . import dashboard, runner
+from .agents import followup, research as _research, service, store as agent_store
 from .jobs import JOBS
 
 logging.basicConfig(level=logging.INFO)
@@ -109,6 +110,59 @@ def records(tab: str):
     except Exception as e:
         logging.getLogger("dashboard").warning("records fetch failed: %s", type(e).__name__)
         raise HTTPException(503, "could not read the sheet")
+
+
+class DraftEdit(BaseModel):
+    subject: Optional[str] = None
+    body: Optional[str] = None
+
+
+class Reject(BaseModel):
+    reason: str = "skip"
+
+
+class AgentRun(BaseModel):
+    after_days: int = Field(default=5, ge=1, le=60)
+
+
+@app.get("/agents")
+def agents_page():
+    return FileResponse(os.path.join(os.path.dirname(__file__), "agents.html"))
+
+
+@app.get("/api/agents/state", dependencies=[Depends(require_key)])
+def agents_state():
+    return {"local_mode": local_mode(), "runs": service.runs,
+            "drafts": agent_store.load("followups", {"drafts": []})["drafts"][::-1],
+            "research": agent_store.load("research", None), "marketing": agent_store.load("marketing", None),
+            "anthropic_key_set": bool(os.environ.get("ANTHROPIC_API_KEY", "").strip())}
+
+
+@app.post("/api/agents/{name}/run", dependencies=[Depends(require_key)])
+def agent_run(name: str, p: AgentRun = AgentRun()):
+    if name not in ("followup", "research", "marketing"):
+        raise HTTPException(404, "unknown agent")
+    if not os.environ.get("ANTHROPIC_API_KEY", "").strip():
+        raise HTTPException(409, "ANTHROPIC_API_KEY is not set")
+    if not service.start(name, p.after_days):
+        raise HTTPException(409, "already running")
+    return {"started": name}
+
+
+@app.post("/api/agents/followup/{draft_id}/approve", dependencies=[Depends(require_key)])
+def draft_approve(draft_id: str, e: DraftEdit = DraftEdit()):
+    err = followup.approve(draft_id, e.subject, e.body)
+    if err:
+        raise HTTPException(400 if err != "no such draft" else 404, err)
+    return {"ok": True}
+
+
+@app.post("/api/agents/followup/{draft_id}/reject", dependencies=[Depends(require_key)])
+def draft_reject(draft_id: str, r: Reject = Reject()):
+    err = followup.reject(draft_id, r.reason)
+    if err:
+        raise HTTPException(400 if err != "no such draft" else 404, err)
+    return {"ok": True}
 
 
 @app.get("/settings", dependencies=[Depends(require_key)])
