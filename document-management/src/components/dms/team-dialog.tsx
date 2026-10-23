@@ -189,6 +189,7 @@ export function TeamDialog({
                           </p>
                           <p className="truncate text-xs text-muted-foreground">{m.email} · joined {formatDate(m.joinedAt)}</p>
                         </div>
+                        <div className="ml-auto flex items-center gap-1.5">
                         {editable ? (
                           <Select
                             value={m.role}
@@ -221,6 +222,7 @@ export function TeamDialog({
                         >
                           <UserMinus />
                         </Button>
+                        </div>
                       </li>
                     );
                   })}

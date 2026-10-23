@@ -47,9 +47,16 @@ fails closed) unless `DMS_ALLOW_DEV_MODE=true`.
    share links; it is read solely by `/share/[token]` on the server.
 5. Sign up at `/signup`, then create your workspace on first sign-in. The creator becomes
    `owner` and the five system folders are seeded.
-6. **Adding teammates**: there is no invite UI yet. Insert a row into
-   `public.workspace_members (workspace_id, user_id, role, display_name, email)` with role
-   `viewer | editor | admin | owner` (SQL editor or service role).
+6. **Adding teammates**: owners and admins open **Team** in the workspace header and
+   invite by email address. **No email is sent** — tell the person to sign up (or sign in)
+   at your app with that exact address. When they do, `/app` calls `dms_accept_invites()`,
+   which joins them only if their address is *confirmed* in Supabase Auth, so keep
+   "Confirm email" on (with it off, anyone could claim an invite by typing the address).
+   Invites expire after 14 days. A person who already has a workspace keeps it as their
+   primary one; the new membership exists but there is no workspace switcher yet.
+7. **Scheduled cleanup** (recommended): set `CRON_SECRET` (16+ random characters) and
+   `SUPABASE_SERVICE_ROLE_KEY`, then call `/api/maintenance/cleanup-uploads` daily — see
+   [Deployment](#deployment).
 
 > The bucket limits uploads to 50 MB and a list of MIME types. If you raise
 > `DMS_MAX_FILE_SIZE_MB` or add file types, update the bucket row in
@@ -59,7 +66,8 @@ fails closed) unless `DMS_ALLOW_DEV_MODE=true`.
 
 See `.env.example`. Browser-visible: `NEXT_PUBLIC_SUPABASE_URL`,
 `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` (RLS protects data). Server-only:
-`SUPABASE_SERVICE_ROLE_KEY`. Policy knobs: `DMS_MAX_FILE_SIZE_MB`,
+`SUPABASE_SERVICE_ROLE_KEY` (share links and cleanup), `CRON_SECRET` (protects the cleanup
+route). Policy knobs: `DMS_PENDING_UPLOAD_MAX_AGE_HOURS` (default 24, minimum 3), `DMS_MAX_FILE_SIZE_MB`,
 `DMS_MAX_FILES_PER_BATCH`, `DMS_ALLOWED_EXTENSIONS`, `DMS_EXTRA_FILE_TYPES`,
 `DMS_ALLOW_DEV_MODE`.
 
@@ -89,8 +97,26 @@ UI components ──► useDocumentManager (state) ──► DmsApi interface
   names are sanitised for display only and never used in paths.
 * **Share links**: 256-bit random token, only its SHA-256 hash is stored, 5 min–7 days,
   resolved by a service-role-only SQL function and redirected to a 60-second signed URL.
+  Editors can list a document's live links and revoke their own (admins: any); revocation
+  takes effect immediately. Creation, revocation and every *use* of a link are audit-logged
+  (a use has no actor, since link holders are anonymous). The URL itself is shown once.
+* **Team**: invites and role changes are SECURITY DEFINER RPCs (`workspace_members` and
+  `workspace_invites` have no client write grants). Rules, enforced in both the service and
+  SQL: admins manage viewers/editors only; only owners grant or touch admin/owner; nobody
+  changes their own role or removes themselves; a workspace always keeps one owner (row
+  locks serialise concurrent owner changes). Invites match a *confirmed* email only.
+* **Abandoned uploads**: `dms_cleanup_stale_uploads()` (service-role only) deletes pending
+  versions/documents older than the threshold (≥ 3 h, because signed upload URLs last 2 h)
+  and returns their storage keys; the route then deletes the objects and reports counts.
+* **Rate limiting**: mutating `/api/dms` requests are limited per signed-in user (120/min),
+  with stricter limits on upload initiation (60/min), share-link creation (20/min) and
+  invites (20/h); `/share/[token]` is limited per client address (60/min). Exceeding a limit
+  returns `429` with `Retry-After`. **The limiter is in memory, per server instance** (see
+  limitations).
 * **Audit log**: written by database triggers (upload, rename, move, star, category,
-  delete/restore/purge, folder changes) and an allow-listed RPC (download, share, tags).
+  delete/restore/purge, folder changes), by the team/share RPCs themselves (invites, role
+  changes, removals, joins, link revocation and use, expired uploads), and by an allow-listed
+  RPC (download, share, tags).
   Admins can read it; nobody can edit it. Contents and credentials are never logged.
 * **Auth**: `proxy.ts` refreshes the session and gates `/app` and `/api/dms`; handlers
   re-authenticate with `auth.getUser()` (validated server-side). Cross-origin mutations
@@ -111,22 +137,29 @@ nothing populates or queries them today.
 
 ```bash
 npm run typecheck && npm run lint
-npm test            # 92 unit/component tests (vitest)
-npm run test:db     # migrations + RLS against a throwaway local PostgreSQL 16 (92 assertions)
-npm run test:e2e    # Playwright: demo page + dev-mode server flows (12 tests)
+npm test            # 187 unit/component tests (vitest)
+npm run test:db     # migrations + RLS against a throwaway local PostgreSQL 16 (171 assertions)
+npm run test:e2e    # Playwright: demo page, dev-mode server flows, tablet/phone layout (28 tests)
 ```
 
 * `tests/unit` – service rules (roles, **workspace isolation**, upload validation,
   download authorization, folder filtering, search, rename/move/star, delete/restore/purge,
-  usage and quota), validation helpers, proxy/route authentication, dev-mode guard, API
-  envelope, and component tests for empty/error/loading states and the workspace flows.
+  usage and quota), team rules and share-link revocation, validation helpers, proxy/route
+  authentication, rate limiting, the share and cleanup routes, **the Supabase adapters**
+  (`SupabaseRepository`/`SupabaseStorage` against a recording fake client: RPC arguments,
+  column mapping, tenant scoping, error mapping, signed-URL handling), and component tests
+  for empty/error/loading states, the workspace flows and the Team dialog.
 * `supabase/tests/run.sh` – boots a temporary Postgres 16, stubs Supabase's `auth`/`storage`
   schemas and roles, applies every migration, and exercises RLS as different users
   (cross-workspace reads/writes, role limits, protected columns, storage policies, quota,
-  audit triggers, share-link resolution). Needs the PostgreSQL 16 server binaries
-  (`PG_BIN` overrides the path).
+  audit triggers, share-link resolution, invites and acceptance incl. unverified/expired/
+  wrong-address cases, role/removal rules, link revocation and use auditing, stale-upload
+  cleanup). `supabase/tests/team.sql` is included from `rls.sql`. Needs the PostgreSQL 16
+  server binaries (`PG_BIN` overrides the path).
 * `tests/e2e` – needs a Chromium; set `PLAYWRIGHT_CHROMIUM_PATH` or run
-  `npx playwright install chromium`.
+  `npx playwright install chromium`. `layout.spec.ts` checks 820 px and 360 px for page
+  overflow, panel fit and touch-target size, and writes screenshots to `test-results/layout/`.
+  The first visit to each page compiles it in the dev server, so a cold run is slower.
 
 ## Deployment
 
@@ -138,6 +171,19 @@ Any Node host works (Vercel, Fly, Docker, …):
 4. Smoke test with **two** accounts in two workspaces: sign up, create workspaces,
    upload, download, preview, share link; confirm account B cannot see account A's
    documents, and that `GET /api/dms/bootstrap` is 401 when signed out.
+
+### Scheduling the upload cleanup
+
+`GET|POST /api/maintenance/cleanup-uploads` removes abandoned pending uploads. It needs
+`CRON_SECRET` (≥ 16 characters) and `SUPABASE_SERVICE_ROLE_KEY`, and authenticates with
+`Authorization: Bearer <CRON_SECRET>` (or an `x-cron-secret` header). It responds with
+counts only. The route is outside `/api/dms`, so it is not behind user login — the secret is
+the only gate; without `CRON_SECRET` it returns 503.
+
+* **Vercel**: `vercel.json` schedules it daily at 03:17 UTC; Vercel sends the bearer header
+  automatically when `CRON_SECRET` is set as a project environment variable.
+* **Elsewhere**: `curl -fsS -X POST -H "Authorization: Bearer $CRON_SECRET" https://your.app/api/maintenance/cleanup-uploads`
+  from any scheduler (cron, GitHub Actions, Supabase `pg_cron` + `pg_net`).
 
 If this directory is moved to its own repo, `supabase/` and `tests/` move with it unchanged.
 
@@ -153,7 +199,10 @@ floating details panel (full-screen on phones) with PDF/image/CSV/text preview a
 tags · star · optional expiration date · version history, upload new version, download old
 versions · soft delete with confirmation, restore, permanent delete · custom folders
 (create/rename/delete; system folders protected) · per-workspace storage usage and quota ·
-audit log · Supabase auth (sign in/up/out, onboarding) · RLS on every table and the bucket.
+audit log · Supabase auth (sign in/up/out, onboarding) · RLS on every table and the bucket ·
+team management (invite by email, change roles, remove members, pending invites; owners/admins
+only) · share-link list and revoke, with creation/revocation/use audited · scheduled cleanup of
+abandoned uploads · per-user and per-address rate limiting.
 
 ## Limitations and what is not verified
 
@@ -162,26 +211,42 @@ audit log · Supabase auth (sign in/up/out, onboarding) · RLS on every table an
   RPC logic is exercised for real, but Supabase Auth, PostgREST, Storage's signed-URL
   endpoints and the browser→Storage signed upload (the multipart body mirrors
   `@supabase/storage-js`' `uploadToSignedUrl`, checked against its source) have **not** been
-  run end to end. `SupabaseRepository`/`SupabaseStorage` have no automated tests. Run the
+  run end to end. `SupabaseRepository`/`SupabaseStorage` are tested against a *fake* client
+  (they verify what we ask the database/Storage to do, not how Supabase answers). Run the
   two-account smoke test above before trusting a deployment.
 * **Full-text search of document contents is NOT implemented.** Search covers filenames,
   tags, category, extension and uploader. The columns for later text extraction exist but
   are unused, and the UI does not claim content search.
 * Mutations are mostly one round trip each; multi-step operations rely on the RPCs (quota
-  reservation, completing/aborting uploads, tag replacement, purge). Deleting storage
-  objects after a purge is best-effort: a failure leaves an orphaned object, never a
-  dangling record. There is no scheduled cleanup of abandoned *pending* uploads or orphans.
+  reservation, completing/aborting uploads, tag replacement, purge, team changes). Deleting
+  storage objects after a purge or cleanup is best-effort: a failure leaves an orphaned
+  object, never a dangling record, and the cleanup route only *reports* such failures. There
+  is no scan for objects that have no database row at all.
+* The cleanup route and its schedule are not exercised against a real Supabase project, and
+  nothing triggers it by itself: you must schedule it.
 * Signed upload URLs are valid for Supabase's fixed 2 hours.
-* No member-invite or role-management UI; users get one workspace (their oldest membership);
-  `create_workspace` is not rate-limited. No API rate limiting at all.
-* Share links serve the current version, cannot be revoked from the UI, are not rate
-  limited, and their *use* is not audit-logged.
+* **Rate limiting is in memory and per server instance.** On a multi-instance or serverless
+  deployment each instance counts separately (effective limit = limit × instances) and
+  counters reset on restart. It blunts loops and casual abuse; it is not a hard guarantee.
+  Use a CDN/WAF or a shared store (e.g. Redis) for that. `create_workspace`, login and
+  signup are not limited by this app (Supabase Auth applies its own limits).
+* **Team**: invites send no email (the inviter must tell the person); they are matched on a
+  *confirmed* address, so this depends on "Confirm email" being on. There is no workspace
+  switcher: a user who belongs to several workspaces always opens their oldest one. Users
+  cannot leave a workspace, change their own role, or transfer ownership in one step
+  (promote a second owner, then have them demote you). The Team UI is hidden from editors and
+  viewers. Removing a member does not delete what they uploaded or revoke share links they
+  created (an admin can revoke those).
+* Share links serve the current version, are limited per client address only in memory, and
+  the full URL cannot be shown again after creation. Revocation is by link (no "revoke all
+  for this document" button).
 * Expiration dates are informational (badge on cards); nothing enforces or notifies.
 * Previews: PDF, images, CSV, text only. No dark mode.
 * Development mode data is in server memory (lost on restart); seeded sample images have no
   bytes there, so their preview/download reports "not available".
 * The reference screenshot was never supplied, so styling follows the written spec.
-  Responsive behaviour was checked at 1440 px and 390 px (and a 12-test Playwright run), not
-  across browsers or real devices; there is no visual-regression testing.
+  Responsive behaviour is checked at 1440, 820, 390 and 360 px in Chromium (Playwright layout
+  specs plus a manual look at the screenshots), not across other browsers or real devices;
+  there is no visual-regression testing.
 * Dependencies were installed at current latest versions (Next 16.4, React 19, Tailwind 4,
   zod 4, Vitest 5); `@hookform/resolvers` is pinned to v5 because v6 fails peer resolution.

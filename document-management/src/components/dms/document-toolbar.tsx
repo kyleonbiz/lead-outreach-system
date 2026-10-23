@@ -42,7 +42,7 @@ export function DocumentToolbar({
         <div
           role="group"
           aria-label="Document view"
-          className="flex w-full gap-1 overflow-x-auto rounded-xl bg-muted p-1 lg:w-auto"
+          className="grid w-full grid-cols-4 gap-1 rounded-xl bg-muted p-1 lg:flex lg:w-auto"
         >
           {VIEWS.map(({ id, label, Icon }) => {
             const active = query.view === id;
@@ -53,11 +53,11 @@ export function DocumentToolbar({
                 aria-pressed={active}
                 onClick={() => onChange({ view: id })}
                 className={cn(
-                  "flex flex-1 items-center justify-center gap-1.5 whitespace-nowrap rounded-lg px-3.5 py-1.5 text-sm font-medium transition-colors lg:flex-none",
+                  "flex min-w-0 items-center justify-center gap-1.5 whitespace-nowrap rounded-lg px-1.5 py-2 text-[13px] font-medium transition-colors min-[420px]:px-3.5 min-[420px]:text-sm lg:py-1.5",
                   active ? "bg-card text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground",
                 )}
               >
-                <Icon className={cn("size-4", active && id === "starred" && "fill-amber-400 text-amber-500")} aria-hidden />
+                <Icon className={cn("hidden size-4 min-[420px]:block", active && id === "starred" && "fill-amber-400 text-amber-500")} aria-hidden />
                 {label}
                 {id === "trash" && trashCount > 0 && (
                   <span className="rounded-full bg-secondary px-1.5 text-[10px] tabular-nums">{trashCount}</span>

@@ -111,3 +111,41 @@ test.describe("development-mode app (server API)", () => {
     await expect(page.getByText(/Authentication is not configured/)).toBeVisible();
   });
 });
+
+test.describe("team management (dev mode API + UI)", () => {
+  test("invites, changes a role, and removes a member end to end", async ({ page, request }) => {
+    const email = `e2e-${Date.now()}@example.test`;
+    await page.goto("/app");
+    await page.getByRole("button", { name: "Team", exact: true }).click();
+    const dialog = page.getByRole("dialog", { name: "Team" });
+    await expect(dialog.getByTestId("member-row").first()).toBeVisible();
+
+    await dialog.getByLabel("Email").fill(email);
+    await dialog.getByRole("button", { name: "Invite" }).click();
+    await expect(dialog.getByTestId("invite-row").filter({ hasText: email })).toBeVisible();
+
+    // Server state, not just component state.
+    const team = await json(await request.get("/api/dms/team"));
+    expect(team.data.invites.map((i: { email: string }) => i.email)).toContain(email);
+
+    await dialog.getByRole("button", { name: `Revoke invite for ${email}` }).click();
+    await expect(dialog.getByTestId("invite-row").filter({ hasText: email })).toHaveCount(0);
+
+    // Invariants enforced server-side regardless of the UI: no self role change, bad input rejected.
+    const me = team.data.members.find((m: { role: string }) => m.role === "owner");
+    const self = await json(await request.patch(`/api/dms/team/members/${me.userId}`, { data: { role: "viewer" } }));
+    expect(self.ok).toBe(false);
+    expect(self.error.code).toBe("forbidden");
+    const bad = await json(await request.post("/api/dms/team/invites", { data: { email: "nope", role: "viewer" } }));
+    expect(bad.error.code).toBe("validation");
+  });
+
+  test("share links are honestly unavailable in dev mode", async ({ request }) => {
+    const list = await json(await request.get("/api/dms/documents?pageSize=1"));
+    const id = list.data.items[0].id;
+    const created = await json(await request.post(`/api/dms/documents/${id}/share`, { data: { ttlMinutes: 60 } }));
+    expect(created.ok).toBe(false);
+    expect(created.error.code).toBe("unavailable");
+    expect((await json(await request.get(`/api/dms/documents/${id}/share`))).data).toEqual([]);
+  });
+});
