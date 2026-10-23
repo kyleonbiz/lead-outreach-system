@@ -99,7 +99,7 @@ export function xhrUpload(
 export function createHttpApi(mode: Exclude<ApiMode, "demo">): DmsApi {
   return {
     mode,
-    capabilities: { share: true },
+    capabilities: { share: mode === "live" },
     bootstrap: () => call<Bootstrap>("/bootstrap"),
     listDocuments: (q) => call<DocumentPage>(`/documents?${queryString(q)}`),
     getDocument: (id) => call<DocumentDetail>(`/documents/${id}`),

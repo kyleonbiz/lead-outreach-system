@@ -361,7 +361,7 @@ export class MemoryStorage implements ObjectStorage {
     private readonly opts: {
       /** Builds an upload URL for the server-side dev route. Omit in the browser demo. */
       uploadUrl?: (key: string) => string;
-      downloadUrl?: (key: string, o: { fileName: string; disposition: string; ttlSeconds: number }) => string;
+      downloadUrl?: (key: string, o: { fileName: string; disposition: "inline" | "attachment"; ttlSeconds: number }) => string;
       /** Lets the demo synthesise bytes for seeded sample records. */
       synthesize?: (key: string) => { bytes: Uint8Array; mimeType: string } | null;
     } = {},
