@@ -3,9 +3,9 @@
 <title>Aurum Outreach</title>
 <style>
 :root{color-scheme:light;--hdr:#16213f;--hdr-text:#fff;--hdr-dim:#aab4d4;--side:#e9eef7;--side-hover:#dbe4f3;--side-active:#cbd9f0;--bg:#f4f6fa;--card:#fff;--line:#dfe3ec;--text:#1d2433;--muted:#667085;--link:#1f5fbf;--primary:#1f5fbf;--primary-text:#fff;
---good:#1a7f4b;--good-bg:#e3f5ec;--bad:#c0392b;--bad-bg:#fdeaea;--warn:#9a6700;--warn-bg:#fff3d6;--info:#1f5fbf;--info-bg:#e4edfb;--grey-bg:#eceff4;--s1:#2a78d6;--s2:#eb6834;--s3:#1baf7a;--track:#e6eaf3;--focus:#1f5fbf}
-@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){color-scheme:dark;--hdr:#0c1224;--side:#161c2c;--side-hover:#1e2640;--side-active:#26335a;--bg:#0f1320;--card:#171c2b;--line:#2a3147;--text:#e8ebf5;--muted:#9aa3bb;--link:#7aa7ff;--primary:#4c7fe0;--good:#4cc38a;--good-bg:#12301f;--bad:#f07a6e;--bad-bg:#3a1b19;--warn:#e0a63a;--warn-bg:#33270c;--info:#7aa7ff;--info-bg:#1b2745;--grey-bg:#232a3d;--s1:#3987e5;--s2:#d95926;--s3:#199e70;--track:#26304a;--focus:#7aa7ff}}
-:root[data-theme="dark"]{color-scheme:dark;--hdr:#0c1224;--side:#161c2c;--side-hover:#1e2640;--side-active:#26335a;--bg:#0f1320;--card:#171c2b;--line:#2a3147;--text:#e8ebf5;--muted:#9aa3bb;--link:#7aa7ff;--primary:#4c7fe0;--good:#4cc38a;--good-bg:#12301f;--bad:#f07a6e;--bad-bg:#3a1b19;--warn:#e0a63a;--warn-bg:#33270c;--info:#7aa7ff;--info-bg:#1b2745;--grey-bg:#232a3d;--s1:#3987e5;--s2:#d95926;--s3:#199e70;--track:#26304a;--focus:#7aa7ff}
+--good:#1a7f4b;--good-bg:#e3f5ec;--bad:#c0392b;--bad-bg:#fdeaea;--warn:#9a6700;--warn-bg:#fff3d6;--info:#1f5fbf;--info-bg:#e4edfb;--grey-bg:#eceff4;--s1:#2a78d6;--s2:#eb6834;--s3:#1baf7a;--track:#e6eaf3;--focus:#1f5fbf;--ev-bg:#efe7fb;--ev:#6b3fb0}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){color-scheme:dark;--hdr:#0c1224;--side:#161c2c;--side-hover:#1e2640;--side-active:#26335a;--bg:#0f1320;--card:#171c2b;--line:#2a3147;--text:#e8ebf5;--muted:#9aa3bb;--link:#7aa7ff;--primary:#4c7fe0;--good:#4cc38a;--good-bg:#12301f;--bad:#f07a6e;--bad-bg:#3a1b19;--warn:#e0a63a;--warn-bg:#33270c;--info:#7aa7ff;--info-bg:#1b2745;--grey-bg:#232a3d;--s1:#3987e5;--s2:#d95926;--s3:#199e70;--track:#26304a;--focus:#7aa7ff;--ev-bg:#2a2147;--ev:#c4a8f5}}
+:root[data-theme="dark"]{color-scheme:dark;--hdr:#0c1224;--side:#161c2c;--side-hover:#1e2640;--side-active:#26335a;--bg:#0f1320;--card:#171c2b;--line:#2a3147;--text:#e8ebf5;--muted:#9aa3bb;--link:#7aa7ff;--primary:#4c7fe0;--good:#4cc38a;--good-bg:#12301f;--bad:#f07a6e;--bad-bg:#3a1b19;--warn:#e0a63a;--warn-bg:#33270c;--info:#7aa7ff;--info-bg:#1b2745;--grey-bg:#232a3d;--s1:#3987e5;--s2:#d95926;--s3:#199e70;--track:#26304a;--focus:#7aa7ff;--ev-bg:#2a2147;--ev:#c4a8f5}
 *{box-sizing:border-box}html,body{height:100%}body{margin:0;background:var(--bg);color:var(--text);font:14px/1.45 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
 a{color:var(--link);text-decoration:none}a:hover{text-decoration:underline}button,input,select,textarea{font:inherit;color:inherit}
 :focus-visible{outline:2px solid var(--focus);outline-offset:2px}[hidden]{display:none!important}
@@ -35,7 +35,7 @@ body.min #side{width:60px}body.min #side .lbl,body.min #side .chev,body.min #sid
 .metrics{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:0}.metric{padding:18px 12px;text-align:center;border-right:1px solid var(--line);display:block;color:var(--text)}.metric:last-child{border-right:0}.metric:hover{background:var(--grey-bg);text-decoration:none}
 .metric b{display:block;font-size:30px;font-weight:500;line-height:1.2;font-variant-numeric:tabular-nums}.metric span{color:var(--link);font-size:13px}.metric small{display:block;color:var(--muted);font-size:12px}
 .meter{height:6px;border-radius:3px;background:var(--track);overflow:hidden;margin:6px auto 0;max-width:120px}.meter i{display:block;height:100%;background:var(--primary)}
-.grid2{display:grid;grid-template-columns:repeat(auto-fit,minmax(340px,1fr));gap:16px}.grid2>.card{margin:0}
+.grid2{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(340px,100%),1fr));gap:16px}.grid2>.card{margin:0}
 /* filters + table */
 .filters{display:flex;gap:14px;flex-wrap:wrap;align-items:flex-end;margin-bottom:10px}.field{display:flex;flex-direction:column;gap:4px;font-size:12px;color:var(--muted)}.field input,.field select{height:34px;padding:0 10px;border:1px solid var(--line);border-radius:6px;background:var(--card);min-width:170px;color:var(--text)}
 .filters .links{display:flex;gap:14px;align-items:center;height:34px}.filters .right{margin-left:auto}
@@ -54,6 +54,17 @@ table.plain{border-collapse:collapse;width:100%;font-size:13px}table.plain th,ta
 .draft textarea,.draft input.subj,.form input{width:100%;padding:8px 10px;border:1px solid var(--line);border-radius:6px;background:var(--card);color:var(--text)}.draft textarea{min-height:190px;resize:vertical;margin-top:6px}
 .legend{display:flex;gap:16px;flex-wrap:wrap;font-size:12px;color:var(--muted);margin-bottom:6px}.sw{display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:6px}
 svg.ch{display:block;width:100%;height:auto;overflow:visible}svg.ch text{fill:var(--muted);font-size:11px}.scroll-x{overflow-x:auto}
+/* calendar */
+.cal{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));border-top:1px solid var(--line);border-left:1px solid var(--line);background:var(--card);border-radius:8px;overflow:hidden}
+.cal .dow{padding:8px;font-size:12px;font-weight:600;color:var(--muted);background:var(--grey-bg);border-right:1px solid var(--line);border-bottom:1px solid var(--line)}
+.cal .cell{min-height:104px;padding:6px;border:0;border-right:1px solid var(--line);border-bottom:1px solid var(--line);background:var(--card);text-align:left;cursor:pointer;display:flex;flex-direction:column;gap:3px;min-width:0}
+.cal .cell:hover{background:var(--grey-bg)}.cal .cell.out{background:var(--bg);cursor:default;color:var(--muted)}.cal .cell.sel{outline:2px solid var(--primary);outline-offset:-2px}
+.cal .num{font-size:13px;font-weight:600;width:24px;height:24px;display:grid;place-items:center;border-radius:50%}.cal .today .num{background:var(--primary);color:#fff}
+.chip{font-size:11px;line-height:1.3;padding:1px 6px;border-radius:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;display:block;background:var(--grey-bg);color:var(--muted)}
+.chip.s{background:var(--good-bg);color:var(--good)}.chip.f{background:var(--bad-bg);color:var(--bad)}.chip.u{background:var(--warn-bg);color:var(--warn)}.chip.d{background:var(--info-bg);color:var(--info)}.chip.e{background:var(--ev-bg);color:var(--ev)}
+.layers{display:flex;gap:16px;flex-wrap:wrap;margin-bottom:12px;font-size:13px}.layers label{display:flex;gap:6px;align-items:center;cursor:pointer}
+@media (max-width:900px){.cal .cell{min-height:64px;padding:3px}.chip{font-size:10px;padding:0 3px}}
+@media (max-width:600px){#topbar{gap:6px;padding:0 8px}.logo .lbl,#stxt{display:none}.tb-btn{padding:6px}}
 #tip{position:fixed;pointer-events:none;background:var(--text);color:var(--card);padding:6px 9px;border-radius:6px;font-size:12px;display:none;z-index:50;white-space:nowrap}
 #toast{position:fixed;bottom:18px;left:50%;transform:translateX(-50%);background:var(--text);color:var(--card);padding:9px 16px;border-radius:8px;z-index:60;display:none;max-width:90vw}
 .modal-bg{position:fixed;inset:0;background:rgba(0,0,0,.45);display:grid;place-items:center;z-index:40}.modal{background:var(--card);border-radius:10px;padding:22px;max-width:440px;width:92%}.modal h3{margin:0 0 8px}.modal .actions{justify-content:flex-end;margin-top:16px}
@@ -76,10 +87,10 @@ const $=(s,r=document)=>r.querySelector(s),$$=(s,r=document)=>[...r.querySelecto
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 let key='';try{key=sessionStorage.getItem('k')||''}catch(e){}
 const store=(k,v)=>{try{v==null?sessionStorage.removeItem(k):sessionStorage.setItem(k,v)}catch(e){}};
-const IC={dash:'<path d="M4 4h7v7H4zM13 4h7v7h-7zM4 13h7v7H4zM13 13h7v7h-7z"/>',users:'<circle cx="9" cy="8" r="3.5"/><path d="M2.5 20c.7-3.5 3.2-5 6.5-5s5.8 1.5 6.5 5M16 11a3 3 0 100-6M18 15c2 .5 3.2 2 3.5 5"/>',mail:'<rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 7l9 6 9-6"/>',spark:'<path d="M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8zM18 16l.8 2.2L21 19l-2.2.8L18 22l-.8-2.2L15 19l2.2-.8z"/>',gear:'<circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M5 5l2 2M17 17l2 2M19 5l-2 2M7 17l-2 2"/>'};
+const IC={dash:'<path d="M4 4h7v7H4zM13 4h7v7h-7zM4 13h7v7H4zM13 13h7v7h-7z"/>',users:'<circle cx="9" cy="8" r="3.5"/><path d="M2.5 20c.7-3.5 3.2-5 6.5-5s5.8 1.5 6.5 5M16 11a3 3 0 100-6M18 15c2 .5 3.2 2 3.5 5"/>',mail:'<rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 7l9 6 9-6"/>',spark:'<path d="M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8zM18 16l.8 2.2L21 19l-2.2.8L18 22l-.8-2.2L15 19l2.2-.8z"/>',cal:'<rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/>',gear:'<circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M5 5l2 2M17 17l2 2M19 5l-2 2M7 17l-2 2"/>'};
 const ico=n=>`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">${IC[n]}</svg>`;
 const CHEV='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg>';
-const NAV=[{i:'dash',t:'Dashboard',to:'/dashboard'},{i:'users',t:'Leads',g:'leads',kids:[['Leads','/leads'],['Referral partners','/referrals']]},
+const NAV=[{i:'dash',t:'Dashboard',to:'/dashboard'},{i:'cal',t:'Calendar',to:'/calendar'},{i:'users',t:'Leads',g:'leads',kids:[['Leads','/leads'],['Referral partners','/referrals']]},
  {i:'mail',t:'Outreach',g:'out',kids:[['Follow-ups','/followups'],['Outreach log','/log'],['Campaign queue','/queue']]},
  {i:'spark',t:'Agents',g:'ag',kids:[['Market research','/research'],['Marketing','/marketing']]},{i:'gear',t:'Settings',to:'/settings'}];
 const OPEN={leads:true,out:true,ag:true};
@@ -109,7 +120,7 @@ $('#mini').onclick=()=>document.body.classList.toggle('min');$('#burger').onclic
 $('#usr').onclick=e=>{e.stopPropagation();$('#usrm').hidden=!$('#usrm').hidden};
 $('#usrm').onclick=e=>{const a=e.target.dataset.act;if(a==='logout')logout();if(a==='theme'){const r=document.documentElement;r.dataset.theme=(r.dataset.theme||(matchMedia('(prefers-color-scheme:dark)').matches?'dark':'light'))==='dark'?'light':'dark'}$('#usrm').hidden=true};
 $('#gsearch').onsubmit=e=>{e.preventDefault();const q=$('#gq').value.trim();rs('leads').q=q;rs('leads').status='';rs('leads').page=0;go('/leads'+(q?'?q='+encodeURIComponent(q):''))};
-function logout(msg){key='';store('k',null);S.status=S.dash=S.agents=null;Object.keys(S.recs).forEach(k=>delete S.recs[k]);$('#shell').hidden=true;$('#login').hidden=false;$('#lerr').textContent=msg||''}
+function logout(msg){key='';store('k',null);S.status=S.dash=S.agents=S.cal=null;Object.keys(S.recs).forEach(k=>delete S.recs[k]);$('#shell').hidden=true;$('#login').hidden=false;$('#lerr').textContent=msg||''}
 $('#lf').onsubmit=e=>{e.preventDefault();key=$('#key').value;store('k',key);$('#key').value='';boot()};
 function head(title,sub,actions){return `<div class="page-head"><div><h1>${esc(title)}</h1>${sub?`<div class="sub-t">${sub}</div>`:''}</div><div class="actions">${actions||''}</div></div>`}
 function tabsBar(items,on){return `<div class="tabs">${items.map(([k,t,to])=>`<a href="#${to}" data-go="${to}" class="${k===on?'on':''}">${esc(t)}</a>`).join('')}</div>`}
@@ -227,8 +238,47 @@ function bSending(){$('#ptog').onclick=async()=>{try{await post(S.status.sending
  $('#cf').onsubmit=async e=>{e.preventDefault();const n=v=>v===''?null:parseInt(v,10);try{await api('/settings',{method:'PUT',body:JSON.stringify({daily_send_cap:n($('#cd').value),per_run_cap:n($('#cr').value)})});await loadStatus();toast('Caps saved.')}catch(x){toast(x.message)}};
  $$('[data-job]').forEach(b=>b.onclick=()=>{const n=b.dataset.job,go=async()=>{try{await post(`/jobs/${n}/run`);toast(n.replace(/_/g,' ')+' started.');setTimeout(async()=>{await loadStatus();render(true)},1500)}catch(x){toast(x.message)}};
   n.startsWith('send_')?confirmBox('Start a sending run?','It follows the caps and one-attempt rules.','Start run',go):go()})}
+/* calendar */
+const CAL={month:null,sel:null,layers:{sends:true,due:true,jobs:true,events:true}};
+const iso=d=>d.toISOString().slice(0,10);
+function calInit(){if(!CAL.month)CAL.month=iso(new Date()).slice(0,7)}
+async function loadCal(){calInit();const m=CAL.month;try{const d=await api('/api/calendar?month='+m+'&after_days='+(cur.days||5));if(CAL.month===m)S.cal=d}catch(x){if(x.message!=='auth')S.cal={error:x.message,month:m}}}
+const JN=n=>n.replace(/_/g,' ');
+function vCal(){calInit();const D=S.cal,[y,m]=CAL.month.split('-').map(Number),title=new Date(Date.UTC(y,m-1,1)).toLocaleString('en-US',{month:'long',year:'numeric',timeZone:'UTC'});
+ const nav=`<button class="btn sm" data-cm="-1" aria-label="Previous month">◀</button><button class="btn sm" data-cm="0">Today</button><button class="btn sm" data-cm="1" aria-label="Next month">▶</button><b style="min-width:150px;text-align:center">${title}</b>`;
+ const hd=head('Calendar','Sends, follow-ups due, scheduled runs, and your own events. All dates are UTC.',nav+`<button class="btn primary" id="evadd">+ Add event</button>`);
+ if(!D||D.month!==CAL.month)return hd+'<div class="empty">Loading…</div>';if(D.error)return hd+`<div class="banner bad">${esc(D.error)}</div>`;
+ const L=CAL.layers,first=new Date(Date.UTC(y,m-1,1)),lead=first.getUTCDay(),dim=new Date(Date.UTC(y,m,0)).getUTCDate(),rows=Math.ceil((lead+dim)/7);
+ let cells=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'].map(d=>`<div class="dow">${d}</div>`).join('');
+ for(let i=0;i<rows*7;i++){const dn=i-lead+1;if(dn<1||dn>dim){cells+='<div class="cell out"></div>';continue}
+  const k=`${CAL.month}-${String(dn).padStart(2,'0')}`,d=D.days[k]||{},ev=D.events.filter(e=>e.date===k),ch=[];
+  if(L.sends){if(d.sent)ch.push(`<span class="chip s">${d.sent} sent</span>`);if(d.failed)ch.push(`<span class="chip f">${d.failed} failed</span>`);if(d.unknown)ch.push(`<span class="chip u">${d.unknown} uncertain</span>`)}
+  if(L.due&&d.due_count)ch.push(`<span class="chip d">${d.due_count} follow-up${d.due_count>1?'s':''} due</span>`);
+  if(L.jobs&&d.jobs){const n=Object.values(d.jobs).reduce((x,y)=>x+y,0);if(n)ch.push(`<span class="chip">${n} scheduled run${n>1?'s':''}</span>`)}
+  if(L.events){ev.slice(0,2).forEach(e=>ch.push(`<span class="chip e">${esc(e.title)}</span>`));if(ev.length>2)ch.push(`<span class="chip e">+${ev.length-2} more</span>`)}
+  cells+=`<button class="cell ${k===D.today?'today':''} ${k===CAL.sel?'sel':''}" data-day="${k}" aria-label="${k}"><span class="num">${dn}</span>${ch.join('')}</button>`}
+ const lay=`<div class="layers">${[['sends','Emails sent'],['due','Follow-ups due'],['jobs','Scheduled runs'],['events','My events']].map(([k,t])=>`<label><input type="checkbox" data-layer="${k}" ${L[k]?'checked':''}>${t}</label>`).join('')}</div>`;
+ return hd+(S.status&&S.status.local_mode?'<div class="banner">Local mode: the scheduler is off, so scheduled runs shown here are not active.</div>':'')+lay+`<div class="cal">${cells}</div>`+calDay(D)}
+function calDay(D){const k=CAL.sel;if(!k)return '<p class="sub-note" style="margin-top:12px">Select a day to see its details.</p>';const d=D.days[k]||{},ev=D.events.filter(e=>e.date===k);
+ const nice_d=new Date(k+'T00:00:00Z').toLocaleDateString('en-US',{weekday:'long',month:'long',day:'numeric',year:'numeric',timeZone:'UTC'});
+ const sent=(d.sent||0)+(d.failed||0)+(d.unknown||0);
+ return `<div class="card" style="margin-top:16px"><h2>${esc(nice_d)}</h2><div class="body"><div class="grid2" style="gap:24px">
+  <div><b>Emails</b>${sent?`<p style="margin:6px 0">${d.sent||0} sent · ${d.failed||0} failed · ${d.unknown||0} uncertain</p><a href="#" data-go="/log?q=${k}">View in outreach log →</a>`:'<p class="sub-note">No email attempts.</p>'}</div>
+  <div><b>Follow-ups due</b>${d.due_count?`<ul style="margin:6px 0;padding-left:18px">${d.due.map(x=>`<li>${esc(x.name)}</li>`).join('')}</ul>${d.due_count>d.due.length?`<p class="sub-note">…and ${d.due_count-d.due.length} more</p>`:''}<a href="#" data-go="/followups">Review follow-ups →</a>`:'<p class="sub-note">None due.</p>'}</div>
+  <div><b>Scheduled runs</b>${d.jobs&&Object.keys(d.jobs).length?`<ul style="margin:6px 0;padding-left:18px">${Object.entries(d.jobs).map(([n,c])=>`<li>${esc(JN(n))} ×${c}</li>`).join('')}</ul>`:'<p class="sub-note">No scheduled runs.</p>'}</div>
+  <div><b>My events</b>${ev.length?`<ul style="margin:6px 0;padding-left:0;list-style:none">${ev.map(e=>`<li style="margin-bottom:8px"><span class="chip e" style="display:inline-block">${esc(e.title)}</span> <button class="btn sm" data-evdel="${esc(e.id)}">Delete</button>${e.note?`<div class="sub-note">${esc(e.note)}</div>`:''}</li>`).join('')}</ul>`:'<p class="sub-note">No events.</p>'}
+   <form id="evf" class="form" style="margin-top:8px;display:grid;gap:6px"><input id="evt" maxlength="120" placeholder="Event title" aria-label="Event title" required><input id="evn" maxlength="500" placeholder="Note (optional)" aria-label="Note"><button class="btn primary sm" style="justify-self:start">Add event</button></form></div></div></div></div>`}
+function bCal(){const D=S.cal;if(!D||D.error||D.month!==CAL.month)return;
+ const shift=async n=>{if(n===0)CAL.month=iso(new Date()).slice(0,7);else{const [y,m]=CAL.month.split('-').map(Number),d=new Date(Date.UTC(y,m-1+n,1));CAL.month=iso(d).slice(0,7)}CAL.sel=null;S.cal=null;render(true);await loadCal();render(true)};
+ $('#view').onclick=e=>{const b=e.target.closest('[data-cm],[data-day],[data-evdel]');if(!b)return;
+  if(b.dataset.cm!==undefined)shift(+b.dataset.cm);
+  if(b.dataset.day){CAL.sel=b.dataset.day;render(true)}
+  if(b.dataset.evdel)api('/api/calendar/events/'+b.dataset.evdel,{method:'DELETE'}).then(async()=>{toast('Event deleted.');await loadCal();render(true)}).catch(x=>toast(x.message))};
+ $$('[data-layer]').forEach(c=>c.onchange=()=>{CAL.layers[c.dataset.layer]=c.checked;render(true)});
+ $('#evadd').onclick=()=>{if(!CAL.sel)CAL.sel=D.days&&iso(new Date()).startsWith(CAL.month)?iso(new Date()):CAL.month+'-01';render(true);const t=$('#evt');if(t){t.scrollIntoView({block:'center'});t.focus()}};
+ $('#evf')&&($('#evf').onsubmit=async e=>{e.preventDefault();try{await post('/api/calendar/events',{date:CAL.sel,title:$('#evt').value,note:$('#evn').value});toast('Event added.');await loadCal();render(true)}catch(x){toast(x.message)}})}
 /* ---------- render / data ---------- */
-const VIEWS={'/dashboard':[vDashboard,bDashboard,'dash'],'/leads':[()=>vRecords('leads'),()=>bRecords('leads'),'leads'],'/referrals':[()=>vRecords('referrals'),()=>bRecords('referrals'),'referrals'],'/log':[()=>vRecords('log'),()=>bRecords('log'),'log'],'/queue':[()=>vRecords('queue'),()=>bRecords('queue'),'queue'],
+const VIEWS={'/dashboard':[vDashboard,bDashboard,'dash'],'/calendar':[vCal,bCal,'cal'],'/leads':[()=>vRecords('leads'),()=>bRecords('leads'),'leads'],'/referrals':[()=>vRecords('referrals'),()=>bRecords('referrals'),'referrals'],'/log':[()=>vRecords('log'),()=>bRecords('log'),'log'],'/queue':[()=>vRecords('queue'),()=>bRecords('queue'),'queue'],
  '/followups':[vFollow,bFollow,'agents'],'/research':[vResearch,bResearch,'agents'],'/marketing':[vMarketing,bMarketing,'agents'],'/settings':[vSending,bSending,'status']};
 function typing(){const a=document.activeElement;return a&&['INPUT','TEXTAREA','SELECT'].includes(a.tagName)&&$('#view').contains(a)}
 function render(force){if(!VIEWS[cur.path])cur.path='/dashboard';if(!force&&typing())return;const v=VIEWS[cur.path];nav();$('#view').onclick=null;$('#view').innerHTML=v[0]();v[1]();
@@ -236,12 +286,12 @@ function render(force){if(!VIEWS[cur.path])cur.path='/dashboard';if(!force&&typi
  $('#notices').innerHTML=T&&T.local_mode?'<div class="banner">Local mode: read-only. Nothing is sent and jobs cannot run.</div>':''}
 async function ensure(path){const v=VIEWS[path];if(!v)return;const w=v[2];try{
  if(w==='dash'&&!S.dash)S.dash=await api('/api/dashboard');else if(TABS[w]&&!S.recs[w]){render();try{S.recs[w]=await api('/api/records/'+TABS[w].api)}catch(x){if(x.message!=='auth')S.recs[w]={error:x.message}}}
- else if(w==='agents'&&!S.agents)await loadAgents(true)}catch(x){if(x.message!=='auth'){if(w==='dash')toast(x.message)}}}
+ else if(w==='agents'&&!S.agents)await loadAgents(true);else if(w==='cal'&&(!S.cal||S.cal.month!==CAL.month))await loadCal()}catch(x){if(x.message!=='auth'){if(w==='dash')toast(x.message)}}}
 async function loadStatus(){S.status=await api('/status')}
 async function loadAgents(quiet){S.agents=await api('/api/agents/state');if(!quiet||true)render()}
 async function route(){render();await ensure(cur.path);render()}
 async function boot(){if(!key){$('#login').hidden=false;$('#shell').hidden=true;return}try{await loadStatus()}catch(x){return}
  $('#login').hidden=true;$('#shell').hidden=false;const h=parseHash();if(h&&VIEWS[h.path])cur=h;await route();
- clearInterval(boot.t);boot.t=setInterval(async()=>{if(!key)return;try{await loadStatus();if(VIEWS[cur.path][2]==='agents'||(S.agents&&Object.values(S.agents.runs||{}).some(r=>r.state==='running')))S.agents=await api('/api/agents/state');if(VIEWS[cur.path][2]==='dash'){S.dash=await api('/api/dashboard')}Object.keys(S.recs).forEach(k=>{if(k!==VIEWS[cur.path][2])delete S.recs[k]});if(TABS[VIEWS[cur.path][2]]&&!S.recs[VIEWS[cur.path][2]])await ensure(cur.path);render()}catch(e){}},8000)}
+ clearInterval(boot.t);boot.t=setInterval(async()=>{if(!key)return;try{await loadStatus();if(VIEWS[cur.path][2]==='agents'||(S.agents&&Object.values(S.agents.runs||{}).some(r=>r.state==='running')))S.agents=await api('/api/agents/state');if(VIEWS[cur.path][2]==='dash'){S.dash=await api('/api/dashboard')}if(VIEWS[cur.path][2]==='cal')await loadCal();Object.keys(S.recs).forEach(k=>{if(k!==VIEWS[cur.path][2])delete S.recs[k]});if(TABS[VIEWS[cur.path][2]]&&!S.recs[VIEWS[cur.path][2]])await ensure(cur.path);render()}catch(e){}},8000)}
 boot();
 </script></body></html>

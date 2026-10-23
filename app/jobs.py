@@ -2,7 +2,23 @@
 
 Cron expressions are UTC, copied from .github/workflows/*.yml.
 """
+import re
 from dataclasses import dataclass, field
+
+from apscheduler.triggers.cron import CronTrigger
+
+
+_DOW = ["sun", "mon", "tue", "wed", "thu", "fri", "sat", "sun"]
+
+
+def trigger(cron):
+    """CronTrigger from a standard 5-field cron string (UTC).
+
+    APScheduler numbers weekdays Monday=0, but standard cron (and GitHub Actions) uses Sunday=0, so the
+    weekday field is converted to names. Without this, "1-5" would mean Tue-Sat instead of Mon-Fri."""
+    minute, hour, dom, month, dow = cron.split()
+    dow = re.sub(r"(?<!/)\d+", lambda m: _DOW[int(m.group())], dow)
+    return CronTrigger(minute=minute, hour=hour, day=dom, month=month, day_of_week=dow, timezone="UTC")
 
 
 @dataclass(frozen=True)

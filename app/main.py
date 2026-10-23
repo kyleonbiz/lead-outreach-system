@@ -3,12 +3,14 @@
 Run exactly ONE instance. Sending safety relies on a single scheduler and the one-attempt
 state kept in Google Sheets (see send_emails.py).
 """
+import datetime
 import hmac
 import json
 import logging
 import os
 import stat
 import threading
+import uuid
 
 from apscheduler.schedulers.background import BackgroundScheduler
 from apscheduler.triggers.cron import CronTrigger
@@ -18,9 +20,9 @@ from fastapi import Depends, FastAPI, Header, HTTPException
 from fastapi.responses import FileResponse, RedirectResponse
 from pydantic import BaseModel, Field
 
-from . import dashboard, runner
+from . import calendar_data, dashboard, runner
 from .agents import followup, research as _research, service, store as agent_store
-from .jobs import JOBS
+from .jobs import JOBS, trigger
 
 logging.basicConfig(level=logging.INFO)
 app = FastAPI(title="Aurum outreach service")
@@ -50,7 +52,7 @@ def add_schedules():
     for job in JOBS.values():
         for i, cron in enumerate(job.crons):
             scheduler.add_job(
-                runner.run_job, CronTrigger.from_crontab(cron, timezone="UTC"), args=[job.name],
+                runner.run_job, trigger(cron), args=[job.name],
                 id=f"{job.name}-{i}", max_instances=1, coalesce=True, misfire_grace_time=300,
                 replace_existing=True,
             )  # no retry/rescheduling on failure
@@ -128,6 +130,56 @@ class Reject(BaseModel):
 
 class AgentRun(BaseModel):
     after_days: int = Field(default=5, ge=1, le=60)
+
+
+class NewEvent(BaseModel):
+    date: str = Field(pattern=r"^\d{4}-\d{2}-\d{2}$")
+    title: str = Field(min_length=1, max_length=120)
+    note: str = Field(default="", max_length=500)
+
+
+@app.get("/api/calendar", dependencies=[Depends(require_key)])
+def calendar_month(month: str, after_days: int = 5):
+    if not calendar_data.MONTH_RE.match(month):
+        raise HTTPException(400, "month must look like 2026-10")
+    after_days = max(1, min(60, after_days))
+    try:
+        leads, log = dashboard.fetch_tab("leads"), dashboard.fetch_tab("log")
+    except Exception as e:
+        logging.getLogger("calendar").warning("calendar fetch failed: %s", type(e).__name__)
+        raise HTTPException(503, "could not read the sheet")
+    events = agent_store.load("calendar", {"events": []})["events"]
+    schedules = {j.name: list(j.crons) for j in JOBS.values() if j.crons}
+    return calendar_data.build(leads, log, month, datetime.date.today(), after_days, schedules, events)
+
+
+@app.post("/api/calendar/events", dependencies=[Depends(require_key)])
+def calendar_event_add(e: NewEvent):
+    try:
+        datetime.date.fromisoformat(e.date)
+    except ValueError:
+        raise HTTPException(400, "not a real date")
+    def go(d):
+        if len(d["events"]) >= 500:
+            return None
+        ev = {"id": uuid.uuid4().hex[:8], "date": e.date, "title": e.title.strip(), "note": e.note.strip()}
+        d["events"].append(ev)
+        return ev
+    ev = agent_store.mutate("calendar", go, {"events": []})
+    if ev is None:
+        raise HTTPException(400, "limit of 500 events")
+    return ev
+
+
+@app.delete("/api/calendar/events/{event_id}", dependencies=[Depends(require_key)])
+def calendar_event_delete(event_id: str):
+    def go(d):
+        n = len(d["events"])
+        d["events"] = [x for x in d["events"] if x["id"] != event_id]
+        return len(d["events"]) < n
+    if not agent_store.mutate("calendar", go, {"events": []}):
+        raise HTTPException(404, "no such event")
+    return {"ok": True}
 
 
 @app.get("/api/agents/state", dependencies=[Depends(require_key)])
