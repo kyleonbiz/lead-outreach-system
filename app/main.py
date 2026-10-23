@@ -15,7 +15,7 @@ from apscheduler.triggers.cron import CronTrigger
 from typing import Optional
 
 from fastapi import Depends, FastAPI, Header, HTTPException
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, RedirectResponse
 from pydantic import BaseModel, Field
 
 from . import dashboard, runner
@@ -83,13 +83,18 @@ class Settings(BaseModel):
 
 
 @app.get("/")
-def panel():
-    return FileResponse(os.path.join(os.path.dirname(__file__), "panel.html"))
+def app_shell():
+    return FileResponse(os.path.join(os.path.dirname(__file__), "app.html"))
 
 
 @app.get("/dashboard")
 def dashboard_page():
-    return FileResponse(os.path.join(os.path.dirname(__file__), "dashboard.html"))
+    return RedirectResponse("/#/dashboard")
+
+
+@app.get("/agents")
+def agents_page():
+    return RedirectResponse("/#/followups")
 
 
 @app.get("/api/dashboard", dependencies=[Depends(require_key)])
@@ -123,11 +128,6 @@ class Reject(BaseModel):
 
 class AgentRun(BaseModel):
     after_days: int = Field(default=5, ge=1, le=60)
-
-
-@app.get("/agents")
-def agents_page():
-    return FileResponse(os.path.join(os.path.dirname(__file__), "agents.html"))
 
 
 @app.get("/api/agents/state", dependencies=[Depends(require_key)])

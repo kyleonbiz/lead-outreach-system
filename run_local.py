@@ -3,7 +3,7 @@
     python run_local.py path/to/your_workbook.xlsx
     python run_local.py path/to/folder_with_csvs
 
-Then open http://127.0.0.1:8000/dashboard and sign in with the key "local".
+Then open http://127.0.0.1:8000/ and sign in with the key "local".
 """
 import os
 import sys
@@ -18,5 +18,5 @@ os.environ.setdefault("APP_API_KEY", "local")
 
 import uvicorn  # noqa: E402
 
-print("\nDashboard: http://127.0.0.1:8000/dashboard   (key: %s)\nReading: %s\nRead-only. No email is sent in this mode.\n" % (os.environ["APP_API_KEY"], path))
+print("\nDashboard: http://127.0.0.1:8000/   (key: %s)\nReading: %s\nRead-only. No email is sent in this mode.\n" % (os.environ["APP_API_KEY"], path))
 uvicorn.run("app.main:app", host="127.0.0.1", port=8000, log_level="warning")

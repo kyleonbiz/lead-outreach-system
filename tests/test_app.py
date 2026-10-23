@@ -130,10 +130,14 @@ def test_all_job_scripts_exist():
             assert os.path.exists(os.path.join(ROOT, s.script)), s.script
 
 
-def test_panel_served_and_has_no_external_scripts():
+def test_app_shell_served_and_has_no_external_resources():
     r = TestClient(main.app).get("/")
-    assert r.status_code == 200 and "Outreach Control Panel" in r.text
-    assert "http://" not in r.text and "https://" not in r.text  # nothing loaded from outside
+    assert r.status_code == 200 and "Aurum Outreach" in r.text
+    body = r.text.replace("http://www.w3.org/2000/svg", "")  # SVG namespace id, not a network request
+    assert "<script src" not in body and "https://" not in body and "http://" not in body  # nothing loaded from outside
+    for old in ("/dashboard", "/agents"):  # old page URLs still land somewhere useful
+        loc = TestClient(main.app).get(old, follow_redirects=False)
+        assert loc.status_code in (302, 307) and loc.headers["location"].startswith("/#/")
 
 
 def test_settings_validated_and_applied_to_sender_only(monkeypatch):
@@ -220,11 +224,6 @@ def test_dashboard_api_requires_key_and_handles_sheet_failure(monkeypatch):
     monkeypatch.setattr(dashboard, "fetch", lambda s=None: {"ok": 1})
     assert c.get("/api/dashboard", headers=H).json() == {"ok": 1}
 
-
-def test_dashboard_page_has_no_external_scripts():
-    r = TestClient(main.app).get("/dashboard")
-    assert r.status_code == 200 and "Outreach Dashboard" in r.text
-    assert "http://" not in r.text.replace("http://www.w3.org/2000/svg", "") and "https://" not in r.text
 
 
 def test_records_endpoint(monkeypatch):

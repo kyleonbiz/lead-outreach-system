@@ -1,0 +1,247 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Aurum Outreach</title>
+<style>
+:root{color-scheme:light;--hdr:#16213f;--hdr-text:#fff;--hdr-dim:#aab4d4;--side:#e9eef7;--side-hover:#dbe4f3;--side-active:#cbd9f0;--bg:#f4f6fa;--card:#fff;--line:#dfe3ec;--text:#1d2433;--muted:#667085;--link:#1f5fbf;--primary:#1f5fbf;--primary-text:#fff;
+--good:#1a7f4b;--good-bg:#e3f5ec;--bad:#c0392b;--bad-bg:#fdeaea;--warn:#9a6700;--warn-bg:#fff3d6;--info:#1f5fbf;--info-bg:#e4edfb;--grey-bg:#eceff4;--s1:#2a78d6;--s2:#eb6834;--s3:#1baf7a;--track:#e6eaf3;--focus:#1f5fbf}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){color-scheme:dark;--hdr:#0c1224;--side:#161c2c;--side-hover:#1e2640;--side-active:#26335a;--bg:#0f1320;--card:#171c2b;--line:#2a3147;--text:#e8ebf5;--muted:#9aa3bb;--link:#7aa7ff;--primary:#4c7fe0;--good:#4cc38a;--good-bg:#12301f;--bad:#f07a6e;--bad-bg:#3a1b19;--warn:#e0a63a;--warn-bg:#33270c;--info:#7aa7ff;--info-bg:#1b2745;--grey-bg:#232a3d;--s1:#3987e5;--s2:#d95926;--s3:#199e70;--track:#26304a;--focus:#7aa7ff}}
+:root[data-theme="dark"]{color-scheme:dark;--hdr:#0c1224;--side:#161c2c;--side-hover:#1e2640;--side-active:#26335a;--bg:#0f1320;--card:#171c2b;--line:#2a3147;--text:#e8ebf5;--muted:#9aa3bb;--link:#7aa7ff;--primary:#4c7fe0;--good:#4cc38a;--good-bg:#12301f;--bad:#f07a6e;--bad-bg:#3a1b19;--warn:#e0a63a;--warn-bg:#33270c;--info:#7aa7ff;--info-bg:#1b2745;--grey-bg:#232a3d;--s1:#3987e5;--s2:#d95926;--s3:#199e70;--track:#26304a;--focus:#7aa7ff}
+*{box-sizing:border-box}html,body{height:100%}body{margin:0;background:var(--bg);color:var(--text);font:14px/1.45 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+a{color:var(--link);text-decoration:none}a:hover{text-decoration:underline}button,input,select,textarea{font:inherit;color:inherit}
+:focus-visible{outline:2px solid var(--focus);outline-offset:2px}[hidden]{display:none!important}
+/* shell */
+#topbar{position:fixed;inset:0 0 auto 0;height:56px;background:var(--hdr);color:var(--hdr-text);display:flex;align-items:center;gap:14px;padding:0 16px;z-index:20}
+.logo{display:flex;align-items:center;gap:10px;font-weight:650;white-space:nowrap}.logo i{width:30px;height:30px;border-radius:8px;background:#fff;color:#16213f;display:grid;place-items:center;font-style:normal;font-weight:800}
+#gsearch{flex:1;max-width:560px;position:relative}#gsearch input{width:100%;height:36px;border:0;border-radius:6px;padding:0 12px 0 34px;background:#fff;color:#1d2433}#gsearch svg{position:absolute;left:10px;top:9px;width:18px;height:18px;color:#667085}
+.tb-right{margin-left:auto;display:flex;align-items:center;gap:10px}.tb-btn{background:transparent;border:0;color:var(--hdr-text);padding:6px 10px;border-radius:6px;cursor:pointer;display:flex;gap:6px;align-items:center}.tb-btn:hover{background:rgba(255,255,255,.1)}
+.dot{width:9px;height:9px;border-radius:50%;background:#4cc38a;display:inline-block}.dot.off{background:#f07a6e}
+#burger{display:none}
+#side{position:fixed;top:56px;bottom:0;left:0;width:236px;background:var(--side);overflow-y:auto;padding:10px 8px;display:flex;flex-direction:column;z-index:15;transition:width .15s}
+#side nav{flex:1}.grp-h,.nav-i{display:flex;align-items:center;gap:10px;width:100%;border:0;background:transparent;padding:9px 12px;border-radius:7px;cursor:pointer;text-align:left;color:var(--text);text-decoration:none}
+.grp-h:hover,.nav-i:hover{background:var(--side-hover);text-decoration:none}.grp-h .chev{margin-left:auto;transition:transform .15s}.grp.open>.grp-h .chev{transform:rotate(180deg)}
+.nav-i svg,.grp-h>svg{width:18px;height:18px;flex:none}.sub{display:none;padding:2px 0 6px 0}.grp.open .sub{display:block}.sub .nav-i{padding:7px 12px 7px 40px;color:var(--text)}
+.nav-i.on{background:var(--side-active);font-weight:650}.grp-h.has-on{font-weight:650}
+.org{font-size:12px;color:var(--muted);padding:10px 12px 4px;border-top:1px solid var(--line)}
+body.min #side{width:60px}body.min #side .lbl,body.min #side .chev,body.min #side .sub,body.min .org{display:none}body.min #main{margin-left:60px}
+#main{margin-left:236px;padding:72px 24px 48px;min-height:100%;transition:margin .15s}
+.banner{padding:8px 12px;border-radius:7px;margin-bottom:12px;font-size:13px;background:var(--warn-bg);color:var(--warn)}.banner.bad{background:var(--bad-bg);color:var(--bad)}
+/* page chrome */
+.page-head{display:flex;justify-content:space-between;align-items:flex-end;gap:12px;flex-wrap:wrap;margin:6px 0 14px}.page-head h1{margin:0;font-size:26px;font-weight:600;letter-spacing:-.01em}.page-head .sub-t{color:var(--muted);font-size:13px;margin-top:2px}
+.actions{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.btn{border:1px solid var(--line);background:var(--card);border-radius:6px;padding:7px 14px;cursor:pointer}.btn:hover{background:var(--grey-bg)}.btn.primary{background:var(--primary);border-color:var(--primary);color:var(--primary-text)}.btn.primary:hover{filter:brightness(1.08)}
+.btn.danger{background:var(--bad);border-color:var(--bad);color:#fff}.btn:disabled{opacity:.5;cursor:default}.btn.sm{padding:4px 10px;font-size:13px}
+.tabs{display:flex;gap:22px;border-bottom:1px solid var(--line);margin-bottom:16px;overflow-x:auto}.tabs a{padding:8px 2px;color:var(--text);border-bottom:3px solid transparent;white-space:nowrap}.tabs a.on{border-color:var(--primary);color:var(--link);font-weight:600}.tabs a:hover{text-decoration:none;color:var(--link)}
+.card{background:var(--card);border:1px solid var(--line);border-radius:8px;margin-bottom:16px}.card>h2{margin:0;padding:14px 18px;font-size:16px;font-weight:600;border-bottom:1px solid var(--line)}.card .body{padding:16px 18px}.sub-note{color:var(--muted);font-size:13px}
+.metrics{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:0}.metric{padding:18px 12px;text-align:center;border-right:1px solid var(--line);display:block;color:var(--text)}.metric:last-child{border-right:0}.metric:hover{background:var(--grey-bg);text-decoration:none}
+.metric b{display:block;font-size:30px;font-weight:500;line-height:1.2;font-variant-numeric:tabular-nums}.metric span{color:var(--link);font-size:13px}.metric small{display:block;color:var(--muted);font-size:12px}
+.meter{height:6px;border-radius:3px;background:var(--track);overflow:hidden;margin:6px auto 0;max-width:120px}.meter i{display:block;height:100%;background:var(--primary)}
+.grid2{display:grid;grid-template-columns:repeat(auto-fit,minmax(340px,1fr));gap:16px}.grid2>.card{margin:0}
+/* filters + table */
+.filters{display:flex;gap:14px;flex-wrap:wrap;align-items:flex-end;margin-bottom:10px}.field{display:flex;flex-direction:column;gap:4px;font-size:12px;color:var(--muted)}.field input,.field select{height:34px;padding:0 10px;border:1px solid var(--line);border-radius:6px;background:var(--card);min-width:170px;color:var(--text)}
+.filters .links{display:flex;gap:14px;align-items:center;height:34px}.filters .right{margin-left:auto}
+.tbl{background:var(--card);border:1px solid var(--line);border-radius:8px;overflow:hidden}.tbl-bar{display:flex;gap:12px;align-items:center;padding:8px 12px;background:var(--grey-bg);border-bottom:1px solid var(--line)}
+.tr{display:grid;grid-template-columns:34px 1.1fr 1.6fr 1.4fr 1.6fr 1.3fr 28px;gap:12px;padding:12px;border-bottom:1px solid var(--line);align-items:start}.tr:last-child{border-bottom:0}.tr.row:hover{background:var(--grey-bg)}
+.tr .c b{display:block;font-weight:600;overflow-wrap:anywhere}.tr .c small{display:block;color:var(--muted);overflow-wrap:anywhere}.tr .c{min-width:0}
+.expand{grid-column:2/-1;display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:8px 18px;padding:10px 0 4px}.expand div{font-size:13px;min-width:0;overflow-wrap:anywhere}.expand span{display:block;color:var(--muted);font-size:11px;text-transform:uppercase;letter-spacing:.04em}
+.xbtn{border:0;background:transparent;cursor:pointer;padding:2px;color:var(--muted)}.xbtn svg{width:16px;height:16px;transition:transform .15s}.xbtn[aria-expanded=true] svg{transform:rotate(180deg)}
+.pill{display:inline-block;font-size:11px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;padding:2px 8px;border-radius:5px;background:var(--grey-bg);color:var(--muted);margin-top:4px;white-space:nowrap}
+.pill.good{background:var(--good-bg);color:var(--good)}.pill.bad{background:var(--bad-bg);color:var(--bad)}.pill.warn{background:var(--warn-bg);color:var(--warn)}.pill.info{background:var(--info-bg);color:var(--info)}
+.pager{display:flex;justify-content:space-between;align-items:center;padding:10px 12px;border-top:1px solid var(--line);color:var(--muted)}
+.empty{padding:36px;text-align:center;color:var(--muted)}
+.menu{position:relative}.menu-list{position:absolute;top:100%;left:0;background:var(--card);border:1px solid var(--line);border-radius:6px;min-width:190px;z-index:5;box-shadow:0 6px 18px rgba(0,0,0,.15);padding:4px}.menu-list button{display:block;width:100%;text-align:left;background:transparent;border:0;padding:7px 10px;border-radius:4px;cursor:pointer}.menu-list button:hover{background:var(--grey-bg)}
+input[type=checkbox]{width:16px;height:16px}
+table.plain{border-collapse:collapse;width:100%;font-size:13px}table.plain th,table.plain td{text-align:left;padding:8px 10px;border-bottom:1px solid var(--line);vertical-align:top}table.plain th{color:var(--muted);font-weight:600;font-size:12px}.num{text-align:right!important;font-variant-numeric:tabular-nums}
+.draft textarea,.draft input.subj,.form input{width:100%;padding:8px 10px;border:1px solid var(--line);border-radius:6px;background:var(--card);color:var(--text)}.draft textarea{min-height:190px;resize:vertical;margin-top:6px}
+.legend{display:flex;gap:16px;flex-wrap:wrap;font-size:12px;color:var(--muted);margin-bottom:6px}.sw{display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:6px}
+svg.ch{display:block;width:100%;height:auto;overflow:visible}svg.ch text{fill:var(--muted);font-size:11px}.scroll-x{overflow-x:auto}
+#tip{position:fixed;pointer-events:none;background:var(--text);color:var(--card);padding:6px 9px;border-radius:6px;font-size:12px;display:none;z-index:50;white-space:nowrap}
+#toast{position:fixed;bottom:18px;left:50%;transform:translateX(-50%);background:var(--text);color:var(--card);padding:9px 16px;border-radius:8px;z-index:60;display:none;max-width:90vw}
+.modal-bg{position:fixed;inset:0;background:rgba(0,0,0,.45);display:grid;place-items:center;z-index:40}.modal{background:var(--card);border-radius:10px;padding:22px;max-width:440px;width:92%}.modal h3{margin:0 0 8px}.modal .actions{justify-content:flex-end;margin-top:16px}
+#login{max-width:380px;margin:12vh auto;padding:0 16px}
+@media (max-width:900px){#burger{display:flex}#side{transform:translateX(-100%);width:250px}body.nav-open #side{transform:none;box-shadow:0 0 30px rgba(0,0,0,.35)}#main,body.min #main{margin-left:0;padding:72px 14px 40px}.tr{grid-template-columns:30px 1fr 24px}.tr .c.h{display:none}.expand{grid-column:2/-1}#gsearch{display:none}}
+</style></head><body>
+<div id="login" class="card" hidden><div class="body"><div class="logo" style="color:var(--text);margin-bottom:12px"><i style="background:#16213f;color:#fff">A</i> Aurum Outreach</div>
+<p class="sub-note">Sign in with your service API key.</p><form id="lf" class="form"><input id="key" type="password" placeholder="API key" autocomplete="current-password" aria-label="API key"><p id="lerr" class="sub-note" style="color:var(--bad);min-height:20px"></p><button class="btn primary" style="width:100%">Sign in</button></form></div></div>
+<div id="shell" hidden>
+<header id="topbar"><button class="tb-btn" id="burger" aria-label="Menu"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 7h16M4 12h16M4 17h16"/></svg></button>
+<div class="logo"><i>A</i><span class="lbl">Aurum Outreach</span></div>
+<form id="gsearch" role="search"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg><input id="gq" placeholder="Search leads by name, email, city…" aria-label="Search leads"></form>
+<div class="tb-right"><a class="tb-btn" id="sendpill" href="#/sending" data-go="/sending" style="color:#fff"><span class="dot" id="sdot"></span><span id="stxt">Sending</span></a>
+<div class="menu"><button class="tb-btn" id="usr">Kyle Fulwood ▾</button><div class="menu-list" id="usrm" hidden style="left:auto;right:0"><button data-act="theme">Toggle dark mode</button><button data-act="logout">Sign out</button></div></div></div></header>
+<aside id="side"><nav id="nav" aria-label="Main"></nav><div class="org">Aurum Ventura Enterprise LLC</div><button class="nav-i" id="mini"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 6l-6 6 6 6M5 5v14"/></svg><span class="lbl">Minimize</span></button></aside>
+<main id="main"><div id="notices"></div><div id="view"></div></main></div>
+<div id="tip"></div><div id="toast" role="status"></div><div id="modal"></div>
+<script>
+const $=(s,r=document)=>r.querySelector(s),$$=(s,r=document)=>[...r.querySelectorAll(s)];
+const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+let key='';try{key=sessionStorage.getItem('k')||''}catch(e){}
+const store=(k,v)=>{try{v==null?sessionStorage.removeItem(k):sessionStorage.setItem(k,v)}catch(e){}};
+const IC={dash:'<path d="M4 4h7v7H4zM13 4h7v7h-7zM4 13h7v7H4zM13 13h7v7h-7z"/>',users:'<circle cx="9" cy="8" r="3.5"/><path d="M2.5 20c.7-3.5 3.2-5 6.5-5s5.8 1.5 6.5 5M16 11a3 3 0 100-6M18 15c2 .5 3.2 2 3.5 5"/>',mail:'<rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 7l9 6 9-6"/>',spark:'<path d="M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8zM18 16l.8 2.2L21 19l-2.2.8L18 22l-.8-2.2L15 19l2.2-.8z"/>',gear:'<circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M5 5l2 2M17 17l2 2M19 5l-2 2M7 17l-2 2"/>'};
+const ico=n=>`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">${IC[n]}</svg>`;
+const CHEV='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg>';
+const NAV=[{i:'dash',t:'Dashboard',to:'/dashboard'},{i:'users',t:'Leads',g:'leads',kids:[['Leads','/leads'],['Referral partners','/referrals']]},
+ {i:'mail',t:'Outreach',g:'out',kids:[['Follow-ups','/followups'],['Outreach log','/log'],['Campaign queue','/queue']]},
+ {i:'spark',t:'Agents',g:'ag',kids:[['Market research','/research'],['Marketing','/marketing']]},{i:'gear',t:'Sending controls',to:'/sending'}];
+const OPEN={leads:true,out:true,ag:true};
+/* ---------- api ---------- */
+async function api(p,o={}){const r=await fetch(p,{...o,headers:{'x-api-key':key,'content-type':'application/json'}});
+ if(r.status===403){logout('Wrong or missing API key');throw Error('auth')}
+ if(!r.ok){let d='';try{d=(await r.json()).detail}catch{}throw Error(d||'Request failed ('+r.status+')')}return r.json()}
+const post=(p,b)=>api(p,{method:'POST',body:JSON.stringify(b||{})});
+function toast(t){const e=$('#toast');e.textContent=t;e.style.display='block';clearTimeout(toast.t);toast.t=setTimeout(()=>e.style.display='none',3500)}
+function confirmBox(title,text,ok,cb,danger){$('#modal').innerHTML=`<div class="modal-bg"><div class="modal" role="dialog" aria-modal="true"><h3>${esc(title)}</h3><p class="sub-note" style="font-size:14px">${text}</p><div class="actions"><button class="btn" data-m="no">Cancel</button><button class="btn ${danger?'danger':'primary'}" data-m="yes">${esc(ok)}</button></div></div></div>`;
+ $('#modal').onclick=e=>{const m=e.target.dataset.m;if(m==='yes')cb();if(m||e.target.classList.contains('modal-bg'))$('#modal').innerHTML=''}}
+/* ---------- state ---------- */
+const S={status:null,dash:null,recs:{},agents:null};let cur={path:'/dashboard',q:new URLSearchParams()};
+const RS={};const rs=k=>RS[k]||(RS[k]={q:'',status:'',adv:{},sort:'newest',page:0,sel:new Set(),open:new Set(),showAdv:false});
+const nice=k=>({contacted:'Contacted',new:'Ready to contact',not_contactable:'Not contactable',send_failed:'Failed',send_unknown:'Uncertain',sending:'In progress',replied:'Replied',unsubscribed:'Unsubscribed',invalid_email:'Invalid email',sent:'Sent',sent_test:'Test',hard_bounce:'Bounced',failed:'Failed',unknown:'Uncertain',enriched:'Email found',no_email_found:'No email found',site_unreachable:'Site unreachable',no_website:'No website',pending:'Needs review',approved:'Approved',rejected:'Rejected',skipped:'Skipped',TRUE:'Active',FALSE:'Paused'}[k]||String(k||'').replace(/_/g,' '));
+const tone=k=>({contacted:'good',sent:'good',enriched:'good',approved:'good',TRUE:'good',new:'info',pending:'info',replied:'info',send_failed:'bad',failed:'bad',hard_bounce:'bad',rejected:'bad',send_unknown:'warn',unknown:'warn',sending:'warn',skipped:'warn'}[k]||'');
+const pill=v=>v?`<span class="pill ${tone(v)}">${esc(nice(v))}</span>`:'';
+/* ---------- router / shell ---------- */
+function parseHash(){const h=(location.hash||'').slice(1);if(!h)return null;const [p,q]=h.split('?');return {path:p,q:new URLSearchParams(q||'')}}
+function go(to,push=true){const [p,q]=to.split('?');cur={path:p||'/dashboard',q:new URLSearchParams(q||'')};try{if(push)history.replaceState(null,'','#'+to)}catch(e){}document.body.classList.remove('nav-open');route()}
+document.addEventListener('click',e=>{const a=e.target.closest('[data-go]');if(a){e.preventDefault();go(a.dataset.go)}
+ if(!e.target.closest('.menu'))$$('.menu-list').forEach(m=>m.hidden=true)});
+function nav(){const p=cur.path;$('#nav').innerHTML=NAV.map(n=>n.kids?`<div class="grp ${OPEN[n.g]||n.kids.some(k=>k[1]===p)?'open':''}"><button class="grp-h ${n.kids.some(k=>k[1]===p)?'has-on':''}" data-g="${n.g}">${ico(n.i)}<span class="lbl">${n.t}</span><span class="chev">${CHEV}</span></button><div class="sub">${n.kids.map(k=>`<a class="nav-i ${k[1]===p?'on':''}" href="#${k[1]}" data-go="${k[1]}"><span class="lbl">${k[0]}</span></a>`).join('')}</div></div>`
+  :`<a class="nav-i ${n.to===p?'on':''}" href="#${n.to}" data-go="${n.to}">${ico(n.i)}<span class="lbl">${n.t}</span></a>`).join('')}
+$('#nav').onclick=e=>{const g=e.target.closest('[data-g]');if(g){OPEN[g.dataset.g]=!g.parentElement.classList.contains('open');nav()}};
+$('#mini').onclick=()=>document.body.classList.toggle('min');$('#burger').onclick=()=>document.body.classList.toggle('nav-open');
+$('#usr').onclick=e=>{e.stopPropagation();$('#usrm').hidden=!$('#usrm').hidden};
+$('#usrm').onclick=e=>{const a=e.target.dataset.act;if(a==='logout')logout();if(a==='theme'){const r=document.documentElement;r.dataset.theme=(r.dataset.theme||(matchMedia('(prefers-color-scheme:dark)').matches?'dark':'light'))==='dark'?'light':'dark'}$('#usrm').hidden=true};
+$('#gsearch').onsubmit=e=>{e.preventDefault();const q=$('#gq').value.trim();rs('leads').q=q;rs('leads').status='';rs('leads').page=0;go('/leads'+(q?'?q='+encodeURIComponent(q):''))};
+function logout(msg){key='';store('k',null);S.status=S.dash=S.agents=null;Object.keys(S.recs).forEach(k=>delete S.recs[k]);$('#shell').hidden=true;$('#login').hidden=false;$('#lerr').textContent=msg||''}
+$('#lf').onsubmit=e=>{e.preventDefault();key=$('#key').value;store('k',key);$('#key').value='';boot()};
+function head(title,sub,actions){return `<div class="page-head"><div><h1>${esc(title)}</h1>${sub?`<div class="sub-t">${sub}</div>`:''}</div><div class="actions">${actions||''}</div></div>`}
+function tabsBar(items,on){return `<div class="tabs">${items.map(([k,t,to])=>`<a href="#${to}" data-go="${to}" class="${k===on?'on':''}">${esc(t)}</a>`).join('')}</div>`}
+/* ---------- charts (inline SVG, one scale, tooltips) ---------- */
+const tip=$('#tip');const showTip=(e,h)=>{tip.innerHTML=h;tip.style.display='block';tip.style.left=Math.min(e.clientX+12,innerWidth-tip.offsetWidth-8)+'px';tip.style.top=e.clientY+12+'px'};const hideTip=()=>tip.style.display='none';
+const NS='http://www.w3.org/2000/svg';const el=(t,a,p)=>{const e=document.createElementNS(NS,t);for(const k in a)e.setAttribute(k,a[k]);p&&p.appendChild(e);return e};
+function barsChart(box,pairs,label){box.innerHTML='';if(!pairs.length){box.innerHTML='<p class="sub-note">No data yet.</p>';return}
+ const W=340,rowH=26,L=124,R=40,H=pairs.length*rowH+4,max=Math.max(...pairs.map(p=>p[1]));const s=el('svg',{viewBox:`0 0 ${W} ${H}`,class:'ch',role:'img','aria-label':label});
+ pairs.forEach(([k,v],i)=>{const y=i*rowH+2,w=Math.max(2,(W-L-R)*v/max);const t=el('text',{x:L-8,y:y+14,'text-anchor':'end'},s);t.textContent=nice(k).slice(0,20);t.style.fill='var(--text)';
+  el('rect',{x:L,y:y+4,width:w,height:12,rx:4,fill:'var(--s1)'},s);const t2=el('text',{x:L+w+6,y:y+14},s);t2.textContent=v.toLocaleString();t2.style.fill='var(--text)';
+  const hit=el('rect',{x:0,y,width:W,height:rowH,fill:'transparent'},s);hit.onmousemove=e=>showTip(e,`<b>${esc(nice(k))}</b>: ${v.toLocaleString()}`);hit.onmouseleave=hideTip});box.appendChild(s)}
+function daysChart(box,data){box.innerHTML='';const ser=[['sent','Sent','--s1'],['failed','Failed','--s2'],['unknown','Uncertain','--s3']];
+ const W=900,H=240,L=36,B=24,T=8,max=Math.max(5,...data.map(d=>d.sent+d.failed+d.unknown)),bw=(W-L)/data.length;const s=el('svg',{viewBox:`0 0 ${W} ${H}`,class:'ch',style:'min-width:640px',role:'img','aria-label':'Send attempts per day'});const step=Math.ceil(max/4/5)*5||5;
+ for(let v=0;v<=max;v+=step){const y=T+(H-T-B)*(1-v/max);el('line',{x1:L,x2:W,y1:y,y2:y,stroke:'var(--line)'},s);const t=el('text',{x:L-6,y:y+4,'text-anchor':'end'},s);t.textContent=v}
+ data.forEach((d,i)=>{const x=L+i*bw+bw*.2,w=bw*.6;let y=H-B;ser.forEach(([k,n,c])=>{const h=(H-T-B)*d[k]/max;if(!h)return;y-=h;el('rect',{x,y,width:w,height:h,fill:`var(${c})`,stroke:'var(--card)','stroke-width':2},s)});
+  if(i%5===0||i===data.length-1){const t=el('text',{x:x+w/2,y:H-6,'text-anchor':'middle'},s);t.textContent=d.date.slice(5)}
+  const hit=el('rect',{x:L+i*bw,y:T,width:bw,height:H-T-B,fill:'transparent'},s);hit.onmousemove=e=>showTip(e,`<b>${d.date}</b><br>Sent ${d.sent} · Failed ${d.failed} · Uncertain ${d.unknown}`);hit.onmouseleave=hideTip});box.appendChild(s)}
+/* ---------- views ---------- */
+function vDashboard(){const D=S.dash;if(!D)return head('Dashboard')+'<div class="empty">Loading…</div>';const k=D.kpis,a=D.attention,pct=k.daily_cap?Math.min(100,k.attempts_today/k.daily_cap*100):0;
+ const br=k.bounce_rate,bt=br>=k.bounce_limit?'bad':br>=k.bounce_limit/2?'warn':'good';
+ const L=(s,t)=>`data-go="/leads?status=${s}" href="#/leads?status=${s}"`;
+ return head('Dashboard','As of '+esc(D.as_of)+' (UTC)',`<a class="btn" href="#/leads" data-go="/leads">View all leads</a><a class="btn primary" href="#/followups" data-go="/followups">Review follow-ups</a>`)+
+ `<div class="card"><h2>Metrics</h2><div class="metrics">
+  <a class="metric" href="#/leads" data-go="/leads"><b>${k.total_leads.toLocaleString()}</b><span>Total leads</span></a>
+  <a class="metric" ${L('new')}><b>${(D.outreach_status.find(x=>x[0]==='new')||[0,0])[1].toLocaleString()}</b><span>Ready to contact</span></a>
+  <a class="metric" ${L('contacted')}><b>${k.contacted.toLocaleString()}</b><span>Contacted</span></a>
+  <a class="metric" href="#/referrals" data-go="/referrals"><b>${(k.referral_partners||0).toLocaleString()}</b><span>Referral partners</span></a>
+  <div class="metric"><b>${k.attempts_today}<small style="display:inline;font-size:15px"> / ${k.daily_cap}</small></b><span style="color:var(--text)">Sent today</span><div class="meter"><i style="width:${pct}%"></i></div></div>
+  <div class="metric"><b>${br}%</b><span style="color:var(--text)">Bounce rate</span><small><span class="pill ${bt}">${bt==='good'?'Healthy':bt==='warn'?'Watch':'Over limit'} · limit ${k.bounce_limit}%</span></small></div></div></div>
+ <div class="card"><h2>Needs attention</h2><div class="metrics">
+  <a class="metric" ${L('send_unknown')}><b>${a.unknown}</b><span>Uncertain delivery</span><small>${a.unknown?'Check Sent Items':'None'}</small></a>
+  <a class="metric" ${L('sending')}><b>${a.pending}</b><span>Stuck in progress</span><small>${a.pending?'Review manually':'None'}</small></a>
+  <a class="metric" ${L('send_failed')}><b>${a.failed}</b><span>Failed (not retried)</span><small>Never auto-retried</small></a></div></div>
+ <div class="card"><h2>Send attempts per day</h2><div class="body"><div class="legend">${[['sent','Sent','--s1'],['failed','Failed','--s2'],['unknown','Uncertain','--s3']].map(([x,n,c])=>`<span><span class="sw" style="background:var(${c})"></span>${n} · ${D.send_totals[x].toLocaleString()} total</span>`).join('')}<span>Last 30 days · UTC</span></div><div class="scroll-x" id="ch-days"></div></div></div>
+ <div class="grid2"><div class="card"><h2>Leads by status</h2><div class="body" id="ch-st"></div></div><div class="card"><h2>Email found?</h2><div class="body" id="ch-en"></div></div><div class="card"><h2>Top states</h2><div class="body" id="ch-ss"></div></div></div>`}
+function bDashboard(){const D=S.dash;if(!D)return;daysChart($('#ch-days'),D.sends_by_day);barsChart($('#ch-st'),D.outreach_status,'Leads by status');barsChart($('#ch-en'),D.enrichment,'Email found');barsChart($('#ch-ss'),D.top_states,'Top states')}
+/* records */
+const TABS={leads:{t:'Leads',api:'leads',stat:'outreach_status',sub:'Every business found by your lead searches.'},referrals:{t:'Referral partners',api:'referrals',stat:null,sub:'Businesses that could refer clients to you.'},log:{t:'Outreach log',api:'log',stat:'send_status',sub:'One row per email attempt.'},queue:{t:'Campaign queue',api:'queue',stat:'active',sub:'Industry and location searches.'}};
+const H=(d,n)=>d.header.indexOf(n),G=(d,r,n)=>{const i=H(d,n);return i<0?'':String(r[i]??'')};
+function cols(k,d,r){const g=n=>G(d,r,n);
+ if(k==='leads')return [`<a href="#" data-x>${esc(g('lead_id'))}</a><br>${pill(g('outreach_status'))}`,`<b>${esc(g('business_name'))}</b><small>${esc([g('city'),g('state')].filter(Boolean).join(', '))}</small>`,`<b>${esc(g('industry'))}</b><small>${esc(g('website').replace(/^https?:\/\//,''))}</small>`,`<b>${esc(g('email')||'—')}</b><small>${esc(g('phone'))}</small>`,`<b>${esc(nice(g('enrichment_status')))}</b><small>${g('date_contacted')?'Contacted '+esc(g('date_contacted')):'Found '+esc(g('date_found'))}</small>`,`<b>${esc(g('contact_name'))}</b><small>${esc(g('notes'))}</small>`];
+ if(k==='log')return [`<a href="#" data-x>${esc(g('log_id'))}</a><br>${pill(g('send_status'))}`,`<b>${esc(g('business_name'))}</b><small>${esc(g('email'))}</small>`,`<b>${esc(g('subject'))}</b><small>${esc(g('template_used'))}</small>`,`<b>${esc(g('date_sent'))}</b>`,`<small>${esc(g('city_state'))}</small>`,`<small>${esc(g('error_message'))}</small>`];
+ if(k==='queue')return [`<b>${esc(g('industry'))}</b>`,`<b>${esc(g('location'))}</b>`,pill(g('active')),`<small>Last run ${esc(g('last_run_at')||'never')}</small>`,'',''];
+ const f=d.header;return [`<a href="#" data-x><b>${esc(r[0])}</b></a>`,`<b>${esc(r[1]||'')}</b><small>${esc(r[2]||'')}</small>`,`<b>${esc((r[3]||'').replace(/^https?:\/\//,''))}</b>`,`<b>${esc(r[4]||'')}</b>`,`<small>${esc(r[5]||'')}</small>`,'']}
+function filtered(k,d){const s=rs(k);if(!d._s)d._s=d.rows.map(r=>r.join(' ').toLowerCase());const q=s.q.toLowerCase(),si=TABS[k].stat?H(d,TABS[k].stat):-1;let idx=[];
+ d.rows.forEach((r,i)=>{if(q&&!d._s[i].includes(q))return;if(s.status&&(si<0||r[si]!==s.status))return;for(const [f,v] of Object.entries(s.adv)){if(v&&G(d,r,f)!==v)return}idx.push(i)});
+ if(s.sort==='oldest')idx.reverse();if(s.sort==='name'){const n=H(d,'business_name')>=0?H(d,'business_name'):0;idx.sort((a,b)=>String(d.rows[a][n]).localeCompare(String(d.rows[b][n])))}return idx}
+const ADV={leads:[['industry','Industry'],['state','State'],['enrichment_status','Email found?']],log:[['template_used','Template']],referrals:[],queue:[]};
+function vRecords(k){const T=TABS[k],d=S.recs[k],s=rs(k);const st=new URLSearchParams(cur.q);if(st.has('status')){s.status=st.get('status');cur.q.delete('status');s.page=0}if(st.has('q')){s.q=st.get('q');cur.q.delete('q');s.page=0;$('#gq').value=s.q}
+ if(!d)return head(T.t,T.sub)+'<div class="empty">Loading…</div>';if(d.error)return head(T.t)+`<div class="banner bad">${esc(d.error)}</div>`;
+ const idx=filtered(k,d),PER=25,pages=Math.max(1,Math.ceil(idx.length/PER));s.page=Math.min(s.page,pages-1);const shown=idx.slice(s.page*PER,s.page*PER+PER);
+ const si=T.stat?H(d,T.stat):-1,counts={};if(si>=0)d.rows.forEach(r=>counts[r[si]]=(counts[r[si]]||0)+1);
+ const metrics=k==='leads'?`<div class="card"><h2>Metrics</h2><div class="metrics"><a class="metric" href="#" data-st=""><b>${d.total.toLocaleString()}</b><span>All leads</span></a><a class="metric" href="#" data-st="new"><b>${(counts.new||0).toLocaleString()}</b><span>Ready to contact</span></a><a class="metric" href="#" data-st="contacted"><b>${(counts.contacted||0).toLocaleString()}</b><span>Contacted</span></a><a class="metric" href="#" data-st="replied"><b>${(counts.replied||0).toLocaleString()}</b><span>Replied</span></a><a class="metric" href="#" data-st="send_unknown"><b>${((counts.send_unknown||0)+(counts.send_failed||0)+(counts.sending||0)).toLocaleString()}</b><span>Needs review</span></a></div></div>`:'';
+ const adv=(ADV[k]||[]).map(([f,l])=>{const vals=[...new Set(d.rows.map(r=>G(d,r,f)).filter(Boolean))].sort();return `<label class="field">${l}<select data-adv="${f}"><option value="">All</option>${vals.map(v=>`<option ${s.adv[f]===v?'selected':''} value="${esc(v)}">${esc(nice(v))}</option>`).join('')}</select></label>`}).join('');
+ const opts=si>=0?[...new Set(d.rows.map(r=>r[si]).filter(Boolean))].sort():[];
+ const rows=shown.map(i=>{const r=d.rows[i],open=s.open.has(i),c=cols(k,d,r);return `<div class="tr row" data-i="${i}"><input type="checkbox" data-sel="${i}" ${s.sel.has(i)?'checked':''} aria-label="Select row">${c.map((x,j)=>`<div class="c ${j>1?'h':''}">${x}</div>`).join('')}<button class="xbtn" data-open="${i}" aria-expanded="${open}" aria-label="Show all details"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg></button>${open?`<div class="expand">${d.header.map((h,j)=>r[j]?`<div><span>${esc(h.replace(/_/g,' '))}</span>${esc(r[j])}</div>`:'').join('')}</div>`:''}</div>`}).join('');
+ return head(T.t,T.sub,`<button class="btn" id="exp">Download CSV</button>`)+metrics+
+ `<div class="filters"><label class="field">Search<input id="fq" value="${esc(s.q)}" placeholder="Any column…"></label>${si>=0?`<label class="field">Status<select id="fs"><option value="">All</option>${opts.map(o=>`<option value="${esc(o)}" ${s.status===o?'selected':''}>${esc(nice(o))}</option>`).join('')}</select></label>`:''}${s.showAdv?adv:''}
+  <div class="links">${adv?`<a href="#" id="advt">${s.showAdv?'Hide':'Show'} Advanced Filters</a>`:''}<a href="#" id="rf">Reset Filters</a></div>
+  <label class="field right">Sort by<select id="so"><option value="newest" ${s.sort==='newest'?'selected':''}>Newest first</option><option value="oldest" ${s.sort==='oldest'?'selected':''}>Oldest first</option><option value="name" ${s.sort==='name'?'selected':''}>Name (A–Z)</option></select></label></div>
+ <div class="tbl"><div class="tbl-bar"><input type="checkbox" id="all" aria-label="Select all on page"><div class="menu"><button class="btn sm" id="bulk">Bulk Actions ▾</button><div class="menu-list" id="bulkm" hidden><button data-b="copy">Copy email addresses</button><button data-b="csv">Download selected as CSV</button><button data-b="clear">Clear selection</button></div></div><span class="sub-note">${s.sel.size} Selected</span></div>
+ ${rows||'<div class="empty">No records match these filters.</div>'}<div class="pager"><span>${idx.length?`${s.page*PER+1}–${Math.min(idx.length,s.page*PER+PER)} of ${idx.length.toLocaleString()}${idx.length!==d.total?' (filtered from '+d.total.toLocaleString()+')':''}`:'0 records'}</span><span><button class="btn sm" id="pv" ${s.page?'':'disabled'}>← Prev</button> <button class="btn sm" id="nx" ${s.page<pages-1?'':'disabled'}>Next →</button></span></div></div>`}
+function csvOf(d,idx){const q=v=>'"'+String(v).replace(/"/g,'""')+'"';return [d.header.map(q).join(',')].concat(idx.map(i=>d.rows[i].map(q).join(','))).join('\n')}
+function bRecords(k){const d=S.recs[k];if(!d||d.error)return;const s=rs(k),re=()=>{render(true)};
+ $('#fq')&&($('#fq').oninput=e=>{s.q=e.target.value;s.page=0;clearTimeout(bRecords.t);bRecords.t=setTimeout(()=>{re();const f=$('#fq');if(f){f.focus();f.setSelectionRange(f.value.length,f.value.length)}},250)});
+ $('#fs')&&($('#fs').onchange=e=>{s.status=e.target.value;s.page=0;re()});$('#so').onchange=e=>{s.sort=e.target.value;re()};
+ $$('[data-adv]').forEach(x=>x.onchange=e=>{s.adv[x.dataset.adv]=x.value;s.page=0;re()});
+ $('#advt')&&($('#advt').onclick=e=>{e.preventDefault();s.showAdv=!s.showAdv;re()});$('#rf').onclick=e=>{e.preventDefault();s.q='';s.status='';s.adv={};s.page=0;$('#gq').value='';re()};
+ $('#pv').onclick=()=>{s.page--;re()};$('#nx').onclick=()=>{s.page++;re()};
+ $$('[data-st]').forEach(a=>a.onclick=e=>{e.preventDefault();s.status=a.dataset.st;s.page=0;re()});
+ $('#view').onclick=e=>{const o=e.target.closest('[data-open],[data-x]');if(o){e.preventDefault();const i=+(o.dataset.open??o.closest('.row').dataset.i);s.open.has(i)?s.open.delete(i):s.open.add(i);re()}};
+ $$('[data-sel]').forEach(c=>c.onchange=()=>{c.checked?s.sel.add(+c.dataset.sel):s.sel.delete(+c.dataset.sel);re()});
+ $('#all').onchange=e=>{$$('[data-sel]').forEach(c=>e.target.checked?s.sel.add(+c.dataset.sel):s.sel.delete(+c.dataset.sel));re()};
+ $('#bulk').onclick=e=>{e.stopPropagation();$('#bulkm').hidden=!$('#bulkm').hidden};
+ $('#bulkm').onclick=async e=>{const b=e.target.dataset.b;if(!b)return;const sel=[...s.sel].sort((a,c)=>a-c);
+  if(b==='clear'){s.sel.clear();re();return}if(!sel.length){toast('Select at least one row first.');$('#bulkm').hidden=true;return}
+  if(b==='copy'){const ei=H(d,'email'),txt=sel.map(i=>d.rows[i][ei]).filter(Boolean).join('\n');try{await navigator.clipboard.writeText(txt);toast(sel.length+' rows checked; copied '+txt.split('\n').filter(Boolean).length+' addresses.')}catch{toast('Could not copy. Your browser blocked clipboard access.')}}
+  if(b==='csv')dl(csvOf(d,sel),TABS[k].t+'-selected.csv');$('#bulkm').hidden=true};
+ $('#exp').onclick=()=>dl(csvOf(d,filtered(k,d)),TABS[k].t+'.csv')}
+function dl(text,name){try{const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([text],{type:'text/csv'}));a.download=name;document.body.appendChild(a);a.click();a.remove();toast('Download started.')}catch{toast('Download is not available here.')}}
+/* follow-ups */
+const FT=[['all','All'],['pending','Needs review'],['approved','Approved'],['done','Sent / closed']];
+function vFollow(){const A=S.agents;if(!A)return head('Follow-ups')+'<div class="empty">Loading…</div>';const f=cur.q.get('f')||'all';const ds=A.drafts;const cnt=x=>ds.filter(d=>x==='all'||(x==='done'?!['pending','approved'].includes(d.status):d.status===x)).length;
+ const list=ds.filter(d=>f==='all'||(f==='done'?!['pending','approved'].includes(d.status):d.status===f));const appr=ds.filter(d=>d.status==='approved').length;const r=(A.runs||{}).followup;
+ return head('Follow-ups','Drafts for contacted leads that have not replied. Nothing sends until you approve a draft and press Send.',`<label class="field" style="flex-direction:row;align-items:center;gap:6px">Days since first email<input id="fdays" type="number" min="1" max="60" value="${esc(cur.days||5)}" style="min-width:0;width:70px"></label><button class="btn primary" id="frun">+ Find leads &amp; draft</button><button class="btn" id="fsend" ${appr&&!A.local_mode?'':'disabled'}>Send ${appr||''} approved…</button>`)+
+ (r?`<div class="banner ${r.state==='failed'?'bad':''}" style="${r.state==='ok'?'background:var(--good-bg);color:var(--good)':''}">${r.state==='running'?'Working…':esc(r.message)}</div>`:'')+
+ `<div class="banner">Replies are not tracked automatically yet. Check your inbox before approving, and use <b>They replied</b> to take someone off the list.</div>`+
+ tabsBar(FT.map(([k,t])=>[k,`${t} (${cnt(k)})`,'/followups?f='+k]),f)+
+ (list.length?`<div class="tbl">${list.map(d=>{const open=d.status==='pending'||d.status==='approved';return `<div class="tr row draft" data-id="${esc(d.id)}" style="grid-template-columns:1fr">
+  <div style="display:flex;gap:14px;flex-wrap:wrap;align-items:baseline"><b>${esc(d.business_name)}</b><span class="sub-note">${esc(d.email)} · first emailed ${esc(d.first_contacted)}</span>${pill(d.status)}${d.reason?`<span class="sub-note">${esc(nice(d.reason))}</span>`:''}</div>
+  ${open?`<input class="subj" value="${esc(d.subject)}" aria-label="Subject" style="margin-top:8px"><textarea aria-label="Email body">${esc(d.body)}</textarea><div class="actions" style="margin-top:8px"><button class="btn primary sm" data-a="approve">${d.status==='approved'?'Save changes':'Approve'}</button><button class="btn sm" data-a="skip">Skip</button><button class="btn sm" data-a="replied">They replied</button><button class="btn danger sm" data-a="do_not_contact">Never email</button></div>`:`<div class="sub-note" style="margin-top:4px">${esc(d.subject)}</div>`}</div>`}).join('')}</div>`:`<div class="card"><div class="empty">${ds.length?'No drafts in this view.':'No drafts yet. Press “Find leads &amp; draft” to create some.'}</div></div>`)}
+function bFollow(){const A=S.agents;if(!A)return;$('#frun').onclick=async()=>{cur.days=parseInt($('#fdays').value||'5',10);try{await post('/api/agents/followup/run',{after_days:cur.days});toast('Started. Drafts appear here shortly.');await loadAgents()}catch(x){toast(x.message)}};
+ $('#fsend').onclick=()=>{const n=A.drafts.filter(d=>d.status==='approved').length;confirmBox('Send approved follow-ups?',`${n} approved follow-up(s) will be sent now. Each gets <b>one attempt</b>, within your daily cap. Failed or uncertain ones are never retried.`,'Send now',async()=>{try{await post('/jobs/send_followups/run');toast('Sending started. Check the dashboard for results.');setTimeout(loadAgents,1500)}catch(x){toast(x.message)}})};
+ $$('.draft').forEach(e=>e.onclick=async ev=>{const a=ev.target.dataset.a;if(!a)return;const id=e.dataset.id;try{if(a==='approve')await post(`/api/agents/followup/${id}/approve`,{subject:$('.subj',e).value,body:$('textarea',e).value});else await post(`/api/agents/followup/${id}/reject`,{reason:a});toast(a==='approve'?'Approved. It sends only when you press Send.':'Done.');await loadAgents()}catch(x){toast(x.message)}})}
+/* research / marketing */
+function vResearch(){const A=S.agents;if(!A)return head('Market research')+'<div class="empty">Loading…</div>';const r=A.research,run=(A.runs||{}).research;
+ return head('Market research','Where to prospect next, from your own results. It only suggests; it never edits your queue.',`<button class="btn primary" id="rrun">Analyze my pipeline</button>`)+(run?`<div class="banner ${run.state==='failed'?'bad':''}">${run.state==='running'?'Working…':esc(run.message)}</div>`:'')+
+ (!r?`<div class="card"><div class="empty">No analysis yet. Press “Analyze my pipeline”.</div></div>`:`<div class="card"><h2>Recommendations <span class="sub-note" style="font-weight:400">· ${esc(r.generated)}</span></h2><div class="body"><p>${esc(r.advice.summary)}</p><div class="scroll-x"><table class="plain"><tr><th>Industry</th><th>Location</th><th>Why</th><th>Confidence</th></tr>${r.advice.recommendations.map(x=>`<tr><td><b>${esc(x.industry)}</b></td><td>${esc(x.location)}</td><td>${esc(x.reason)}</td><td>${pill2(x.confidence)}</td></tr>`).join('')}</table></div>${r.advice.caveats.length?`<p class="sub-note">${r.advice.caveats.map(esc).join('<br>')}</p>`:''}</div></div>
+ <div class="card"><h2>Your numbers by industry</h2><div class="body scroll-x"><table class="plain"><tr><th>Industry</th><th class="num">Leads</th><th class="num">Email found</th><th class="num">Contacted</th><th class="num">Bounce rate</th></tr>${r.stats.industries.slice(0,15).map(i=>`<tr><td>${esc(i.name)}${i.enough_data?'':' <span class="sub-note">(small sample)</span>'}</td><td class="num">${i.leads}</td><td class="num">${i.email_rate}%</td><td class="num">${i.contacted}</td><td class="num">${i.bounce_rate}%</td></tr>`).join('')}</table></div></div>`)}
+const pill2=c=>`<span class="pill ${c==='high'?'good':c==='medium'?'info':''}">${esc(c)}</span>`;
+function bResearch(){$('#rrun').onclick=async()=>{try{await post('/api/agents/research/run');toast('Started.');await loadAgents()}catch(x){toast(x.message)}}}
+function vMarketing(){const A=S.agents;if(!A)return head('Marketing')+'<div class="empty">Loading…</div>';const m=A.marketing,run=(A.runs||{}).marketing;
+ return head('Marketing',"Drafts this week's Facebook posts and SEO page ideas. Copy and post them yourself.",`<button class="btn primary" id="mrun">Draft this week's content</button>`)+(run?`<div class="banner ${run.state==='failed'?'bad':''}">${run.state==='running'?'Working…':esc(run.message)}</div>`:'')+
+ (!m?`<div class="card"><div class="empty">No content yet. Press “Draft this week's content”.</div></div>`:`<div class="card"><h2>Posts · week of ${esc(m.week_of)}</h2><div class="tbl" style="border:0;border-radius:0">${m.posts.map((p,i)=>`<div class="tr row" style="grid-template-columns:1fr"><div><b>${esc(p.day)}</b> <span class="sub-note">${esc(p.service)} · ${esc(p.industry)}</span></div><pre style="white-space:pre-wrap;font:inherit;background:var(--bg);padding:10px;border-radius:6px;margin:0">${esc(p.post)}</pre><div class="sub-note">Image idea: ${esc(p.image_idea)}</div><div><button class="btn sm" data-copy="${i}">Copy post</button></div></div>`).join('')}</div></div>
+ <div class="card"><h2>SEO page ideas</h2><div class="body">${m.seo.map(s=>`<div style="margin-bottom:14px"><b>${esc(s.title)}</b><div class="sub-note">${esc(s.audience)} · ${esc(s.search_intent)} · keyword to try: ${esc(s.suggested_keyword)}</div><ul style="margin:6px 0">${(s.outline||[]).map(o=>`<li>${esc(o)}</li>`).join('')}</ul></div>`).join('')}</div></div>`)}
+function bMarketing(){$('#mrun').onclick=async()=>{try{await post('/api/agents/marketing/run');toast('Started.');await loadAgents()}catch(x){toast(x.message)}};
+ $('#view').onclick=async e=>{const i=e.target.dataset.copy;if(i===undefined)return;try{await navigator.clipboard.writeText(S.agents.marketing.posts[i].post);e.target.textContent='Copied'}catch{toast('Could not copy. Select the text and copy it manually.')}}}
+/* sending controls */
+function vSending(){const T=S.status;if(!T)return head('Sending controls')+'<div class="empty">Loading…</div>';const p=T.sending_paused,cs=T.settings||{};
+ return head('Sending controls','Pause sending, set caps, and run jobs.')+
+ `<div class="card"><h2>Email sending</h2><div class="body" style="display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;align-items:center"><div><span class="pill ${p?'bad':'good'}" style="font-size:13px">${p?'Paused':'Sending on'}</span><p class="sub-note" style="margin:8px 0 0">Pausing stops new sends at the next run. Lead scraping keeps running. A failed or uncertain email is never retried either way.</p></div><button class="btn ${p?'primary':''}" id="ptog">${p?'Resume sending':'Pause sending'}</button></div></div>
+ <div class="card"><h2>Daily sending cap</h2><div class="body"><form id="cf" class="filters" style="margin:0"><label class="field">Per day<input id="cd" type="number" min="0" max="300" value="${cs.daily_send_cap??''}" placeholder="ramp"></label><label class="field">Per run<input id="cr" type="number" min="0" max="300" value="${cs.per_run_cap??''}" placeholder="auto"></label><button class="btn primary">Save caps</button></form><p class="sub-note">Caps can only lower the built-in ramp. Blank means use the ramp. Failed and uncertain attempts count toward the cap. They apply to follow-up sending, and to the main sender once it reads them.</p></div></div>
+ <div class="card"><h2>Jobs</h2><div class="body scroll-x"><table class="plain"><tr><th>Job</th><th>Schedule (UTC)</th><th>Last result</th><th></th></tr>${Object.entries(T.schedules).map(([n,c])=>{const j=(T.jobs||{})[n]||{};return `<tr><td><b>${esc(n.replace(/_/g,' '))}</b></td><td class="sub-note">${c.length?c.map(esc).join('<br>'):'Manual only'}</td><td>${j.state?`<span class="pill ${j.state==='ok'?'good':j.state==='failed'?'bad':'warn'}">${esc(j.state)}</span> <span class="sub-note">${esc(j.finished||j.started||'')}</span>`:'<span class="sub-note">not run since start</span>'}</td><td><button class="btn sm" data-job="${esc(n)}" ${T.local_mode?'disabled':''}>Run now</button></td></tr>`}).join('')}</table></div></div>`}
+function bSending(){$('#ptog').onclick=async()=>{try{await post(S.status.sending_paused?'/sending/resume':'/sending/pause');await loadStatus();render();toast(S.status.sending_paused?'Sending paused.':'Sending resumed.')}catch(x){toast(x.message)}};
+ $('#cf').onsubmit=async e=>{e.preventDefault();const n=v=>v===''?null:parseInt(v,10);try{await api('/settings',{method:'PUT',body:JSON.stringify({daily_send_cap:n($('#cd').value),per_run_cap:n($('#cr').value)})});await loadStatus();toast('Caps saved.')}catch(x){toast(x.message)}};
+ $$('[data-job]').forEach(b=>b.onclick=()=>{const n=b.dataset.job,go=async()=>{try{await post(`/jobs/${n}/run`);toast(n.replace(/_/g,' ')+' started.');setTimeout(async()=>{await loadStatus();render(true)},1500)}catch(x){toast(x.message)}};
+  n.startsWith('send_')?confirmBox('Start a sending run?','It follows the caps and one-attempt rules.','Start run',go):go()})}
+/* ---------- render / data ---------- */
+const VIEWS={'/dashboard':[vDashboard,bDashboard,'dash'],'/leads':[()=>vRecords('leads'),()=>bRecords('leads'),'leads'],'/referrals':[()=>vRecords('referrals'),()=>bRecords('referrals'),'referrals'],'/log':[()=>vRecords('log'),()=>bRecords('log'),'log'],'/queue':[()=>vRecords('queue'),()=>bRecords('queue'),'queue'],
+ '/followups':[vFollow,bFollow,'agents'],'/research':[vResearch,bResearch,'agents'],'/marketing':[vMarketing,bMarketing,'agents'],'/sending':[vSending,bSending,'status']};
+function typing(){const a=document.activeElement;return a&&['INPUT','TEXTAREA','SELECT'].includes(a.tagName)&&$('#view').contains(a)}
+function render(force){if(!VIEWS[cur.path])cur.path='/dashboard';if(!force&&typing())return;const v=VIEWS[cur.path];nav();$('#view').onclick=null;$('#view').innerHTML=v[0]();v[1]();
+ const T=S.status;$('#sdot').className='dot'+(T&&T.sending_paused?' off':'');$('#stxt').textContent=T?(T.sending_paused?'Sending paused':'Sending on'):'Sending';
+ $('#notices').innerHTML=T&&T.local_mode?'<div class="banner">Local mode: read-only. Nothing is sent and jobs cannot run.</div>':''}
+async function ensure(path){const v=VIEWS[path];if(!v)return;const w=v[2];try{
+ if(w==='dash'&&!S.dash)S.dash=await api('/api/dashboard');else if(TABS[w]&&!S.recs[w]){render();try{S.recs[w]=await api('/api/records/'+TABS[w].api)}catch(x){if(x.message!=='auth')S.recs[w]={error:x.message}}}
+ else if(w==='agents'&&!S.agents)await loadAgents(true)}catch(x){if(x.message!=='auth'){if(w==='dash')toast(x.message)}}}
+async function loadStatus(){S.status=await api('/status')}
+async function loadAgents(quiet){S.agents=await api('/api/agents/state');if(!quiet||true)render()}
+async function route(){render();await ensure(cur.path);render()}
+async function boot(){if(!key){$('#login').hidden=false;$('#shell').hidden=true;return}try{await loadStatus()}catch(x){return}
+ $('#login').hidden=true;$('#shell').hidden=false;const h=parseHash();if(h&&VIEWS[h.path])cur=h;await route();
+ clearInterval(boot.t);boot.t=setInterval(async()=>{if(!key)return;try{await loadStatus();if(VIEWS[cur.path][2]==='agents'||(S.agents&&Object.values(S.agents.runs||{}).some(r=>r.state==='running')))S.agents=await api('/api/agents/state');if(VIEWS[cur.path][2]==='dash'){S.dash=await api('/api/dashboard')}Object.keys(S.recs).forEach(k=>{if(k!==VIEWS[cur.path][2])delete S.recs[k]});if(TABS[VIEWS[cur.path][2]]&&!S.recs[VIEWS[cur.path][2]])await ensure(cur.path);render()}catch(e){}},8000)}
+boot();
+</script></body></html>
