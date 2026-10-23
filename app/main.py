@@ -21,6 +21,7 @@ from fastapi.responses import FileResponse, RedirectResponse
 from pydantic import BaseModel, Field
 
 from . import calendar_data, contacts, dashboard, runner
+from .assistant import engine as assistant
 from .agents import followup, research as _research, service, store as agent_store
 from .jobs import JOBS, trigger
 
@@ -155,19 +156,9 @@ def calendar_month(month: str, after_days: int = 5):
 
 @app.post("/api/calendar/events", dependencies=[Depends(require_key)])
 def calendar_event_add(e: NewEvent):
-    try:
-        datetime.date.fromisoformat(e.date)
-    except ValueError:
-        raise HTTPException(400, "not a real date")
-    def go(d):
-        if len(d["events"]) >= 500:
-            return None
-        ev = {"id": uuid.uuid4().hex[:8], "date": e.date, "title": e.title.strip(), "note": e.note.strip()}
-        d["events"].append(ev)
-        return ev
-    ev = agent_store.mutate("calendar", go, {"events": []})
-    if ev is None:
-        raise HTTPException(400, "limit of 500 events")
+    ev, err = calendar_data.add_event(e.date, e.title, e.note)
+    if err:
+        raise HTTPException(400, err)
     return ev
 
 
@@ -276,6 +267,71 @@ def contact_allow(key: str):
         raise HTTPException(400, "this contact has no email address")
     agent_store.remove_suppressed(c["e"])
     contacts.add_note(key, "Removed from do not contact.")
+    return {"ok": True}
+
+
+class AssistantMessage(BaseModel):
+    text: str = Field(min_length=1, max_length=2000)
+
+
+class AssistantDecision(BaseModel):
+    call_id: str = Field(max_length=100)
+    approve: bool
+
+
+def _assistant_guard():
+    if not os.environ.get("ANTHROPIC_API_KEY", "").strip():
+        raise HTTPException(409, "ANTHROPIC_API_KEY is not set")
+
+
+@app.get("/api/assistant", dependencies=[Depends(require_key)])
+def assistant_info():
+    return {"enabled": bool(os.environ.get("ANTHROPIC_API_KEY", "").strip()), "local_mode": local_mode(),
+            "conversations": assistant.listing(), "log": assistant.action_log()}
+
+
+@app.post("/api/assistant/conversations", dependencies=[Depends(require_key)])
+def assistant_new():
+    return {"id": assistant.new_conv()}
+
+
+@app.get("/api/assistant/conversations/{cid}", dependencies=[Depends(require_key)])
+def assistant_get(cid: str):
+    try:
+        return assistant.view(cid)
+    except assistant.NotFound:
+        raise HTTPException(404, "no such conversation")
+
+
+@app.delete("/api/assistant/conversations/{cid}", dependencies=[Depends(require_key)])
+def assistant_delete(cid: str):
+    try:
+        assistant.delete(cid)
+    except assistant.NotFound:
+        raise HTTPException(404, "no such conversation")
+    return {"ok": True}
+
+
+@app.post("/api/assistant/conversations/{cid}/messages", dependencies=[Depends(require_key)])
+def assistant_send(cid: str, m: AssistantMessage):
+    _assistant_guard()
+    try:
+        assistant.send(cid, m.text)
+    except assistant.NotFound:
+        raise HTTPException(404, "no such conversation")
+    except assistant.Busy as e:
+        raise HTTPException(409, str(e))
+    except ValueError as e:
+        raise HTTPException(400, str(e))
+    return {"ok": True}
+
+
+@app.post("/api/assistant/conversations/{cid}/decide", dependencies=[Depends(require_key)])
+def assistant_decide(cid: str, d: AssistantDecision):
+    try:
+        assistant.decide(cid, d.call_id, d.approve)
+    except assistant.NotFound:
+        raise HTTPException(404, "nothing is waiting for that decision")
     return {"ok": True}
 
 

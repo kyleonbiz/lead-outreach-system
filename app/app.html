@@ -54,6 +54,17 @@ table.plain{border-collapse:collapse;width:100%;font-size:13px}table.plain th,ta
 .draft textarea,.draft input.subj,.form input{width:100%;padding:8px 10px;border:1px solid var(--line);border-radius:6px;background:var(--card);color:var(--text)}.draft textarea{min-height:190px;resize:vertical;margin-top:6px}
 .legend{display:flex;gap:16px;flex-wrap:wrap;font-size:12px;color:var(--muted);margin-bottom:6px}.sw{display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:6px}
 svg.ch{display:block;width:100%;height:auto;overflow:visible}svg.ch text{fill:var(--muted);font-size:11px}.scroll-x{overflow-x:auto}
+/* assistant */
+#asdrawer{position:fixed;top:56px;right:0;bottom:0;width:410px;max-width:100vw;background:var(--card);border-left:1px solid var(--line);z-index:30;display:flex;flex-direction:column;box-shadow:-8px 0 24px rgba(0,0,0,.12)}
+#asdrawer header{display:flex;align-items:center;gap:8px;padding:12px 14px;border-bottom:1px solid var(--line)}#asdrawer header b{flex:1}
+#asmsgs{flex:1;overflow-y:auto;padding:14px;display:flex;flex-direction:column;gap:10px}
+.am{max-width:92%;padding:9px 12px;border-radius:10px;overflow-wrap:anywhere;white-space:normal}.am.user{align-self:flex-end;background:var(--primary);color:#fff}.am.assistant{align-self:flex-start;background:var(--grey-bg)}
+.at{font-size:12px;color:var(--muted);display:flex;gap:6px;align-items:center}.at i{font-style:normal;color:var(--good)}.at.error i{color:var(--bad)}
+.ac{border:1px solid var(--line);border-left:4px solid var(--primary);border-radius:8px;padding:10px 12px;background:var(--card)}.ac.warnc{border-left-color:var(--warn)}.ac .w{font-size:12px;color:var(--warn);margin-top:4px;font-weight:600}.ac .actions{margin-top:8px}
+.ac .st{font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;margin-top:6px}.ac .st.executed,.ac .st.approved{color:var(--good)}.ac .st.declined{color:var(--muted)}.ac .st.failed{color:var(--bad)}
+#asform{display:flex;gap:8px;padding:10px 14px;border-top:1px solid var(--line);align-items:flex-end}#asform textarea{flex:1;resize:none;padding:8px 10px;border:1px solid var(--line);border-radius:8px;background:var(--card);color:var(--text);max-height:120px}
+.chips{display:flex;gap:6px;flex-wrap:wrap}.chips button{border:1px solid var(--line);background:var(--card);border-radius:99px;padding:5px 11px;cursor:pointer;font-size:13px}.chips button:hover{background:var(--grey-bg)}
+@media (max-width:600px){#asdrawer{top:56px;width:100vw}}
 /* contacts */
 .av{width:36px;height:36px;border-radius:50%;background:var(--info-bg);color:var(--info);display:grid;place-items:center;font-weight:700;font-size:13px;flex:none}.av.lg{width:56px;height:56px;font-size:20px}
 .tr.c-row{grid-template-columns:44px 1.5fr 1.4fr 1.3fr 1.5fr 24px;cursor:pointer;align-items:center}
@@ -71,7 +82,7 @@ svg.ch{display:block;width:100%;height:auto;overflow:visible}svg.ch text{fill:va
 .chip.s{background:var(--good-bg);color:var(--good)}.chip.f{background:var(--bad-bg);color:var(--bad)}.chip.u{background:var(--warn-bg);color:var(--warn)}.chip.d{background:var(--info-bg);color:var(--info)}.chip.e{background:var(--ev-bg);color:var(--ev)}
 .layers{display:flex;gap:16px;flex-wrap:wrap;margin-bottom:12px;font-size:13px}.layers label{display:flex;gap:6px;align-items:center;cursor:pointer}
 @media (max-width:900px){.cal .cell{min-height:64px;padding:3px}.chip{font-size:10px;padding:0 3px}}
-@media (max-width:600px){#topbar{gap:6px;padding:0 8px}.logo .lbl,#stxt{display:none}.tb-btn{padding:6px}}
+@media (max-width:600px){#topbar{gap:6px;padding:0 8px}.logo .lbl,#stxt,.lbl2{display:none}.tb-btn{padding:6px}}
 #tip{position:fixed;pointer-events:none;background:var(--text);color:var(--card);padding:6px 9px;border-radius:6px;font-size:12px;display:none;z-index:50;white-space:nowrap}
 #toast{position:fixed;bottom:18px;left:50%;transform:translateX(-50%);background:var(--text);color:var(--card);padding:9px 16px;border-radius:8px;z-index:60;display:none;max-width:90vw}
 .modal-bg{position:fixed;inset:0;background:rgba(0,0,0,.45);display:grid;place-items:center;z-index:40}.modal{background:var(--card);border-radius:10px;padding:22px;max-width:440px;width:92%}.modal h3{margin:0 0 8px}.modal .actions{justify-content:flex-end;margin-top:16px}
@@ -84,10 +95,13 @@ svg.ch{display:block;width:100%;height:auto;overflow:visible}svg.ch text{fill:va
 <header id="topbar"><button class="tb-btn" id="burger" aria-label="Menu"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 7h16M4 12h16M4 17h16"/></svg></button>
 <div class="logo"><i>A</i><span class="lbl">Aurum Outreach</span></div>
 <form id="gsearch" role="search"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg><input id="gq" placeholder="Search leads by name, email, city…" aria-label="Search leads"></form>
-<div class="tb-right"><a class="tb-btn" id="sendpill" href="#/settings" data-go="/settings" style="color:#fff"><span class="dot" id="sdot"></span><span id="stxt">Sending</span></a>
+<div class="tb-right"><button class="tb-btn" id="asbtn" aria-expanded="false"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8zM18 16l.8 2.2L21 19l-2.2.8L18 22l-.8-2.2L15 19l2.2-.8z"/></svg><span class="lbl2">Assistant</span></button><a class="tb-btn" id="sendpill" href="#/settings" data-go="/settings" style="color:#fff"><span class="dot" id="sdot"></span><span id="stxt">Sending</span></a>
 <div class="menu"><button class="tb-btn" id="usr">Kyle Fulwood ▾</button><div class="menu-list" id="usrm" hidden style="left:auto;right:0"><button data-act="theme">Toggle dark mode</button><button data-act="logout">Sign out</button></div></div></div></header>
 <aside id="side"><nav id="nav" aria-label="Main"></nav><div class="org">Aurum Ventura Enterprise LLC</div><button class="nav-i" id="mini"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 6l-6 6 6 6M5 5v14"/></svg><span class="lbl">Minimize</span></button></aside>
 <main id="main"><div id="notices"></div><div id="view"></div></main></div>
+<aside id="asdrawer" hidden aria-label="Assistant"><header><b>Assistant</b><button class="btn sm" id="asnew">New chat</button><button class="btn sm" id="asclose" aria-label="Close assistant">✕</button></header>
+<div id="asmsgs" aria-live="polite"></div><div id="asnote" class="sub-note" style="padding:0 14px 6px"></div>
+<form id="asform"><textarea id="asin" rows="1" maxlength="2000" placeholder="Ask me to find, check, or do something…" aria-label="Message the assistant"></textarea><button class="btn primary" id="assend">Send</button></form></aside>
 <div id="tip"></div><div id="toast" role="status"></div><div id="modal"></div>
 <script>
 const $=(s,r=document)=>r.querySelector(s),$$=(s,r=document)=>[...r.querySelectorAll(s)];
@@ -127,7 +141,7 @@ $('#mini').onclick=()=>document.body.classList.toggle('min');$('#burger').onclic
 $('#usr').onclick=e=>{e.stopPropagation();$('#usrm').hidden=!$('#usrm').hidden};
 $('#usrm').onclick=e=>{const a=e.target.dataset.act;if(a==='logout')logout();if(a==='theme'){const r=document.documentElement;r.dataset.theme=(r.dataset.theme||(matchMedia('(prefers-color-scheme:dark)').matches?'dark':'light'))==='dark'?'light':'dark'}$('#usrm').hidden=true};
 $('#gsearch').onsubmit=e=>{e.preventDefault();const q=$('#gq').value.trim();rs('leads').q=q;rs('leads').status='';rs('leads').page=0;go('/leads'+(q?'?q='+encodeURIComponent(q):''))};
-function logout(msg){key='';store('k',null);S.status=S.dash=S.agents=S.cal=S.contacts=S.contact=null;Object.keys(S.recs).forEach(k=>delete S.recs[k]);$('#shell').hidden=true;$('#login').hidden=false;$('#lerr').textContent=msg||''}
+function logout(msg){if(typeof asClose==='function')asClose();AS.id='';AS.view=null;key='';store('k',null);S.status=S.dash=S.agents=S.cal=S.contacts=S.contact=null;Object.keys(S.recs).forEach(k=>delete S.recs[k]);$('#shell').hidden=true;$('#login').hidden=false;$('#lerr').textContent=msg||''}
 $('#lf').onsubmit=e=>{e.preventDefault();key=$('#key').value;store('k',key);$('#key').value='';boot()};
 function head(title,sub,actions){return `<div class="page-head"><div><h1>${esc(title)}</h1>${sub?`<div class="sub-t">${sub}</div>`:''}</div><div class="actions">${actions||''}</div></div>`}
 function tabsBar(items,on){return `<div class="tabs">${items.map(([k,t,to])=>`<a href="#${to}" data-go="${to}" class="${k===on?'on':''}">${esc(t)}</a>`).join('')}</div>`}
@@ -331,6 +345,36 @@ function bCal(){const D=S.cal;if(!D||D.error||D.month!==CAL.month)return;
  $$('[data-layer]').forEach(c=>c.onchange=()=>{CAL.layers[c.dataset.layer]=c.checked;render(true)});
  $('#evadd').onclick=()=>{if(!CAL.sel)CAL.sel=D.days&&iso(new Date()).startsWith(CAL.month)?iso(new Date()):CAL.month+'-01';render(true);const t=$('#evt');if(t){t.scrollIntoView({block:'center'});t.focus()}};
  $('#evf')&&($('#evf').onsubmit=async e=>{e.preventDefault();try{await post('/api/calendar/events',{date:CAL.sel,title:$('#evt').value,note:$('#evn').value});toast('Event added.');await loadCal();render(true)}catch(x){toast(x.message)}})}
+/* assistant */
+const AS={open:false,id:null,view:null,info:null,poll:null};
+const ASK=['What needs my attention today?','Draft follow-ups for leads contacted 5+ days ago','Pause sending','Add a calendar reminder to review replies on 2026-10-30'];
+async function asInfo(){try{AS.info=await api('/api/assistant')}catch(x){AS.info={enabled:false,error:x.message}}}
+async function asLoad(){if(!AS.id){try{AS.id=sessionStorage.getItem('asid')||''}catch(e){}}
+ if(AS.id){try{AS.view=await api('/api/assistant/conversations/'+AS.id)}catch(x){AS.id='';AS.view=null}}
+ if(!AS.id){const r=await post('/api/assistant/conversations');AS.id=r.id;try{sessionStorage.setItem('asid',AS.id)}catch(e){}AS.view=await api('/api/assistant/conversations/'+AS.id)}}
+const nl=s=>esc(s).replace(/\n/g,'<br>');
+function asRender(){const V=AS.view,I=AS.info||{};if(!V)return;const box=$('#asmsgs');const atBottom=box.scrollHeight-box.scrollTop-box.clientHeight<60;
+ let h='';if(!V.ui.length)h=`<div class="sub-note">I can look things up and do tasks in this app. I will ask before changing anything.${window.__demo0?' <b>(Demo: scripted replies.)</b>':''}</div><div class="chips">${ASK.map(q=>`<button data-q="${esc(q)}">${esc(q)}</button>`).join('')}</div>`;
+ V.ui.forEach(i=>{if(i.role==='user'||i.role==='assistant')h+=`<div class="am ${i.role}">${nl(i.text)}</div>`;
+  else if(i.role==='tool')h+=`<div class="at ${i.status}"><i>${i.status==='error'?'✖':'✓'}</i>${esc(i.text)}</div>`;
+  else if(i.role==='approval'){const open=i.status==='pending';h+=`<div class="ac ${i.warn&&i.warn.startsWith('SENDS')?'warnc':''}"><b>${esc(i.description)}</b>${i.warn?`<div class="w">${esc(i.warn)}</div>`:''}${open?`<div class="actions"><button class="btn primary sm" data-d="1" data-c="${esc(i.call_id)}">Approve</button><button class="btn sm" data-d="0" data-c="${esc(i.call_id)}">Decline</button></div>`:`<div class="st ${i.status}">${esc(i.status)}${i.result&&i.status!=='executed'?' · '+esc(i.result):''}</div>`}</div>`}});
+ if(V.status==='running')h+='<div class="at"><i>…</i>Working on it</div>';if(V.status==='error')h+=`<div class="banner bad">${esc(V.error||'Something went wrong.')}</div>`;
+ box.innerHTML=h;if(atBottom||V.status!=='idle')box.scrollTop=box.scrollHeight;
+ const off=I.enabled===false;$('#asnote').textContent=off?'Set ANTHROPIC_API_KEY on the server to turn the assistant on.':(V.pending?'Decide the pending action above to continue.':'It sends the data it looks up to the AI service to answer. Nothing changes until you approve.');
+ $('#asin').disabled=off||V.pending>0;$('#assend').disabled=off||V.pending>0||V.status==='running'}
+async function asPoll(){clearTimeout(AS.poll);if(!AS.open||!AS.id)return;try{const prev=AS.view&&AS.view.ui.filter(i=>i.status==='executed').length;AS.view=await api('/api/assistant/conversations/'+AS.id);asRender();
+  const now=AS.view.ui.filter(i=>i.status==='executed').length;if(now!==prev)asRefreshApp()}catch(x){}
+ AS.poll=setTimeout(asPoll,AS.view&&AS.view.status!=='idle'?1000:6000)}
+async function asRefreshApp(){S.contacts=S.contact=S.cal=S.agents=S.dash=null;Object.keys(S.recs).forEach(k=>delete S.recs[k]);try{await loadStatus()}catch(e){}await route()}
+async function asOpen(){AS.open=true;$('#asdrawer').hidden=false;$('#asbtn').setAttribute('aria-expanded','true');await asInfo();try{await asLoad()}catch(x){toast(x.message);return}asRender();asPoll();$('#asin').focus()}
+function asClose(){AS.open=false;$('#asdrawer').hidden=true;$('#asbtn').setAttribute('aria-expanded','false');clearTimeout(AS.poll)}
+async function asSend(text){text=(text||$('#asin').value).trim();if(!text)return;$('#asin').value='';try{await post(`/api/assistant/conversations/${AS.id}/messages`,{text});AS.view.ui.push({role:'user',text});AS.view.status='running';asRender();asPoll()}catch(x){toast(x.message)}}
+$('#asbtn').onclick=()=>AS.open?asClose():asOpen();$('#asclose').onclick=asClose;
+$('#asnew').onclick=async()=>{try{const r=await post('/api/assistant/conversations');AS.id=r.id;try{sessionStorage.setItem('asid',AS.id)}catch(e){}AS.view=await api('/api/assistant/conversations/'+AS.id);asRender()}catch(x){toast(x.message)}};
+$('#asform').onsubmit=e=>{e.preventDefault();asSend()};$('#asin').onkeydown=e=>{if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();asSend()}};
+$('#asmsgs').onclick=async e=>{const q=e.target.dataset.q;if(q){asSend(q);return}const d=e.target.dataset.d;if(d===undefined)return;
+ try{await post(`/api/assistant/conversations/${AS.id}/decide`,{call_id:e.target.dataset.c,approve:d==='1'});AS.view=await api('/api/assistant/conversations/'+AS.id);asRender();asPoll();if(d==='1')asRefreshApp()}catch(x){toast(x.message)}};
+document.addEventListener('keydown',e=>{if(e.key==='Escape'&&AS.open)asClose()});
 /* ---------- render / data ---------- */
 const VIEWS={'/dashboard':[vDashboard,bDashboard,'dash'],'/contacts':[vContacts,bContacts,'contacts'],'/contact':[vContact,bContact,'contact'],'/calendar':[vCal,bCal,'cal'],'/leads':[()=>vRecords('leads'),()=>bRecords('leads'),'leads'],'/referrals':[()=>vRecords('referrals'),()=>bRecords('referrals'),'referrals'],'/log':[()=>vRecords('log'),()=>bRecords('log'),'log'],'/queue':[()=>vRecords('queue'),()=>bRecords('queue'),'queue'],
  '/followups':[vFollow,bFollow,'agents'],'/research':[vResearch,bResearch,'agents'],'/marketing':[vMarketing,bMarketing,'agents'],'/settings':[vSending,bSending,'status']};

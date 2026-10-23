@@ -1,7 +1,9 @@
 """Month data for the Calendar tab: sends per day, follow-ups due, scheduled job runs. Counts and names only (no emails)."""
 import datetime
 import re
+import uuid
 
+from .agents import store
 from .jobs import trigger
 
 MONTH_RE = re.compile(r"^\d{4}-(0[1-9]|1[0-2])$")
@@ -75,3 +77,21 @@ def build(leads, log, month, today, after_days, schedules, events):
         day(d)["jobs"] = jobs
     mine = sorted((e for e in events if first.isoformat() <= e["date"] <= last.isoformat()), key=lambda e: (e["date"], e["title"]))
     return {"month": month, "today": today.isoformat(), "after_days": after_days, "days": days, "events": mine}
+
+
+def add_event(date, title, note=""):
+    """Add a calendar event. Returns (event, error)."""
+    try:
+        datetime.date.fromisoformat(date or "")
+    except ValueError:
+        return None, "not a real date (use YYYY-MM-DD)"
+    title = (title or "").strip()
+    if not title or len(title) > 120:
+        return None, "title must be 1-120 characters"
+    def go(d):
+        if len(d["events"]) >= 500:
+            return None, "limit of 500 events"
+        ev = {"id": uuid.uuid4().hex[:8], "date": date, "title": title, "note": (note or "").strip()[:500]}
+        d["events"].append(ev)
+        return ev, ""
+    return store.mutate("calendar", go, {"events": []})

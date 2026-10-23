@@ -24,3 +24,10 @@ On-demand only; nothing runs on a timer and nothing posts. Needs `ANTHROPIC_API_
 - **Market research**: suggests where to prospect next from your own results (aggregates only go to the model).
 - **Marketing**: this week's Facebook posts (same rules as `create_fb_posts.py`) and SEO page ideas.
 Agent output is stored in `DATA_DIR/agents/`, not in your sheets. "They replied" / "Never email" add to `DATA_DIR/agents/suppression.json`, which the main sender also honors.
+
+## In-app assistant (top bar → Assistant)
+Type a task in plain English. It looks things up with read tools (contacts, dashboard, follow-up drafts, calendar, status) and
+PROPOSES changes (add note/contact/event, do-not-contact, approve/reject a follow-up draft, run an agent or job, pause/resume sending,
+set caps) as approval cards. Nothing changes until you approve, and the server runs exactly the call you approved. It can never send an
+email itself and cannot start the main outreach sender; follow-ups send only via the approved-drafts job, after you confirm.
+Executed actions are logged (`GET /api/assistant`). Needs `ANTHROPIC_API_KEY`. Note: it sends the data it looks up to the AI service.
