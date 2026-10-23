@@ -242,4 +242,6 @@ select t.ok('expired tokens do not resolve', (select count(*) from public.dms_re
 select t.ok('unknown tokens do not resolve', (select count(*) from public.dms_resolve_share('nope')) = 0);
 
 reset role;
+\ir team.sql
+reset role;
 \echo ALL RLS TESTS PASSED
