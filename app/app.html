@@ -66,7 +66,7 @@ svg.ch{display:block;width:100%;height:auto;overflow:visible}svg.ch text{fill:va
 <header id="topbar"><button class="tb-btn" id="burger" aria-label="Menu"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 7h16M4 12h16M4 17h16"/></svg></button>
 <div class="logo"><i>A</i><span class="lbl">Aurum Outreach</span></div>
 <form id="gsearch" role="search"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg><input id="gq" placeholder="Search leads by name, email, city…" aria-label="Search leads"></form>
-<div class="tb-right"><a class="tb-btn" id="sendpill" href="#/sending" data-go="/sending" style="color:#fff"><span class="dot" id="sdot"></span><span id="stxt">Sending</span></a>
+<div class="tb-right"><a class="tb-btn" id="sendpill" href="#/settings" data-go="/settings" style="color:#fff"><span class="dot" id="sdot"></span><span id="stxt">Sending</span></a>
 <div class="menu"><button class="tb-btn" id="usr">Kyle Fulwood ▾</button><div class="menu-list" id="usrm" hidden style="left:auto;right:0"><button data-act="theme">Toggle dark mode</button><button data-act="logout">Sign out</button></div></div></div></header>
 <aside id="side"><nav id="nav" aria-label="Main"></nav><div class="org">Aurum Ventura Enterprise LLC</div><button class="nav-i" id="mini"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 6l-6 6 6 6M5 5v14"/></svg><span class="lbl">Minimize</span></button></aside>
 <main id="main"><div id="notices"></div><div id="view"></div></main></div>
@@ -81,7 +81,7 @@ const ico=n=>`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-
 const CHEV='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg>';
 const NAV=[{i:'dash',t:'Dashboard',to:'/dashboard'},{i:'users',t:'Leads',g:'leads',kids:[['Leads','/leads'],['Referral partners','/referrals']]},
  {i:'mail',t:'Outreach',g:'out',kids:[['Follow-ups','/followups'],['Outreach log','/log'],['Campaign queue','/queue']]},
- {i:'spark',t:'Agents',g:'ag',kids:[['Market research','/research'],['Marketing','/marketing']]},{i:'gear',t:'Sending controls',to:'/sending'}];
+ {i:'spark',t:'Agents',g:'ag',kids:[['Market research','/research'],['Marketing','/marketing']]},{i:'gear',t:'Settings',to:'/settings'}];
 const OPEN={leads:true,out:true,ag:true};
 /* ---------- api ---------- */
 async function api(p,o={}){const r=await fetch(p,{...o,headers:{'x-api-key':key,'content-type':'application/json'}});
@@ -98,8 +98,8 @@ const nice=k=>({contacted:'Contacted',new:'Ready to contact',not_contactable:'No
 const tone=k=>({contacted:'good',sent:'good',enriched:'good',approved:'good',TRUE:'good',new:'info',pending:'info',replied:'info',send_failed:'bad',failed:'bad',hard_bounce:'bad',rejected:'bad',send_unknown:'warn',unknown:'warn',sending:'warn',skipped:'warn'}[k]||'');
 const pill=v=>v?`<span class="pill ${tone(v)}">${esc(nice(v))}</span>`:'';
 /* ---------- router / shell ---------- */
-function parseHash(){const h=(location.hash||'').slice(1);if(!h)return null;const [p,q]=h.split('?');return {path:p,q:new URLSearchParams(q||'')}}
-function go(to,push=true){const [p,q]=to.split('?');cur={path:p||'/dashboard',q:new URLSearchParams(q||'')};try{if(push)history.replaceState(null,'','#'+to)}catch(e){}document.body.classList.remove('nav-open');route()}
+function parseHash(){const h=(location.hash||'').slice(1);if(!h)return null;const [p,q]=h.split('?');return {path:p==='/sending'?'/settings':p,q:new URLSearchParams(q||'')}}
+function go(to,push=true){const [p,q]=to.split('?');cur={path:p==='/sending'?'/settings':(p||'/dashboard'),q:new URLSearchParams(q||'')};try{if(push)history.replaceState(null,'','#'+to)}catch(e){}document.body.classList.remove('nav-open');route()}
 document.addEventListener('click',e=>{const a=e.target.closest('[data-go]');if(a){e.preventDefault();go(a.dataset.go)}
  if(!e.target.closest('.menu'))$$('.menu-list').forEach(m=>m.hidden=true)});
 function nav(){const p=cur.path;$('#nav').innerHTML=NAV.map(n=>n.kids?`<div class="grp ${OPEN[n.g]||n.kids.some(k=>k[1]===p)?'open':''}"><button class="grp-h ${n.kids.some(k=>k[1]===p)?'has-on':''}" data-g="${n.g}">${ico(n.i)}<span class="lbl">${n.t}</span><span class="chev">${CHEV}</span></button><div class="sub">${n.kids.map(k=>`<a class="nav-i ${k[1]===p?'on':''}" href="#${k[1]}" data-go="${k[1]}"><span class="lbl">${k[0]}</span></a>`).join('')}</div></div>`
@@ -217,9 +217,9 @@ function vMarketing(){const A=S.agents;if(!A)return head('Marketing')+'<div clas
  <div class="card"><h2>SEO page ideas</h2><div class="body">${m.seo.map(s=>`<div style="margin-bottom:14px"><b>${esc(s.title)}</b><div class="sub-note">${esc(s.audience)} · ${esc(s.search_intent)} · keyword to try: ${esc(s.suggested_keyword)}</div><ul style="margin:6px 0">${(s.outline||[]).map(o=>`<li>${esc(o)}</li>`).join('')}</ul></div>`).join('')}</div></div>`)}
 function bMarketing(){$('#mrun').onclick=async()=>{try{await post('/api/agents/marketing/run');toast('Started.');await loadAgents()}catch(x){toast(x.message)}};
  $('#view').onclick=async e=>{const i=e.target.dataset.copy;if(i===undefined)return;try{await navigator.clipboard.writeText(S.agents.marketing.posts[i].post);e.target.textContent='Copied'}catch{toast('Could not copy. Select the text and copy it manually.')}}}
-/* sending controls */
-function vSending(){const T=S.status;if(!T)return head('Sending controls')+'<div class="empty">Loading…</div>';const p=T.sending_paused,cs=T.settings||{};
- return head('Sending controls','Pause sending, set caps, and run jobs.')+
+/* settings */
+function vSending(){const T=S.status;if(!T)return head('Settings')+'<div class="empty">Loading…</div>';const p=T.sending_paused,cs=T.settings||{};
+ return head('Settings','Email sending, daily caps, and scheduled jobs.')+
  `<div class="card"><h2>Email sending</h2><div class="body" style="display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;align-items:center"><div><span class="pill ${p?'bad':'good'}" style="font-size:13px">${p?'Paused':'Sending on'}</span><p class="sub-note" style="margin:8px 0 0">Pausing stops new sends at the next run. Lead scraping keeps running. A failed or uncertain email is never retried either way.</p></div><button class="btn ${p?'primary':''}" id="ptog">${p?'Resume sending':'Pause sending'}</button></div></div>
  <div class="card"><h2>Daily sending cap</h2><div class="body"><form id="cf" class="filters" style="margin:0"><label class="field">Per day<input id="cd" type="number" min="0" max="300" value="${cs.daily_send_cap??''}" placeholder="ramp"></label><label class="field">Per run<input id="cr" type="number" min="0" max="300" value="${cs.per_run_cap??''}" placeholder="auto"></label><button class="btn primary">Save caps</button></form><p class="sub-note">Caps can only lower the built-in ramp. Blank means use the ramp. Failed and uncertain attempts count toward the cap. They apply to follow-up sending, and to the main sender once it reads them.</p></div></div>
  <div class="card"><h2>Jobs</h2><div class="body scroll-x"><table class="plain"><tr><th>Job</th><th>Schedule (UTC)</th><th>Last result</th><th></th></tr>${Object.entries(T.schedules).map(([n,c])=>{const j=(T.jobs||{})[n]||{};return `<tr><td><b>${esc(n.replace(/_/g,' '))}</b></td><td class="sub-note">${c.length?c.map(esc).join('<br>'):'Manual only'}</td><td>${j.state?`<span class="pill ${j.state==='ok'?'good':j.state==='failed'?'bad':'warn'}">${esc(j.state)}</span> <span class="sub-note">${esc(j.finished||j.started||'')}</span>`:'<span class="sub-note">not run since start</span>'}</td><td><button class="btn sm" data-job="${esc(n)}" ${T.local_mode?'disabled':''}>Run now</button></td></tr>`}).join('')}</table></div></div>`}
@@ -229,7 +229,7 @@ function bSending(){$('#ptog').onclick=async()=>{try{await post(S.status.sending
   n.startsWith('send_')?confirmBox('Start a sending run?','It follows the caps and one-attempt rules.','Start run',go):go()})}
 /* ---------- render / data ---------- */
 const VIEWS={'/dashboard':[vDashboard,bDashboard,'dash'],'/leads':[()=>vRecords('leads'),()=>bRecords('leads'),'leads'],'/referrals':[()=>vRecords('referrals'),()=>bRecords('referrals'),'referrals'],'/log':[()=>vRecords('log'),()=>bRecords('log'),'log'],'/queue':[()=>vRecords('queue'),()=>bRecords('queue'),'queue'],
- '/followups':[vFollow,bFollow,'agents'],'/research':[vResearch,bResearch,'agents'],'/marketing':[vMarketing,bMarketing,'agents'],'/sending':[vSending,bSending,'status']};
+ '/followups':[vFollow,bFollow,'agents'],'/research':[vResearch,bResearch,'agents'],'/marketing':[vMarketing,bMarketing,'agents'],'/settings':[vSending,bSending,'status']};
 function typing(){const a=document.activeElement;return a&&['INPUT','TEXTAREA','SELECT'].includes(a.tagName)&&$('#view').contains(a)}
 function render(force){if(!VIEWS[cur.path])cur.path='/dashboard';if(!force&&typing())return;const v=VIEWS[cur.path];nav();$('#view').onclick=null;$('#view').innerHTML=v[0]();v[1]();
  const T=S.status;$('#sdot').className='dot'+(T&&T.sending_paused?' off':'');$('#stxt').textContent=T?(T.sending_paused?'Sending paused':'Sending on'):'Sending';

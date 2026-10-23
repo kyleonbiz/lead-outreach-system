@@ -135,6 +135,7 @@ def test_app_shell_served_and_has_no_external_resources():
     assert r.status_code == 200 and "Aurum Outreach" in r.text
     body = r.text.replace("http://www.w3.org/2000/svg", "")  # SVG namespace id, not a network request
     assert "<script src" not in body and "https://" not in body and "http://" not in body  # nothing loaded from outside
+    assert "t:'Settings',to:'/settings'" in r.text and "Sending controls" not in r.text  # sidebar item is Settings
     for old in ("/dashboard", "/agents"):  # old page URLs still land somewhere useful
         loc = TestClient(main.app).get(old, follow_redirects=False)
         assert loc.status_code in (302, 307) and loc.headers["location"].startswith("/#/")
