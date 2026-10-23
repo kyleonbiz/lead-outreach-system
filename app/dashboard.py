@@ -4,7 +4,7 @@ import os
 import time
 from collections import Counter
 
-from . import mail_core as se
+from . import sheet_stats as se
 
 DAYS = 30
 _cache = {"at": 0, "data": None}

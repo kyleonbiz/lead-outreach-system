@@ -9,8 +9,8 @@ from fastapi.testclient import TestClient
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 os.environ["SCHEDULER_ENABLED"] = "false"
 os.environ["APP_API_KEY"] = "test-key-123456"
-from app import calendar_data as cd, dashboard, main, runner  # noqa: E402
-from app.jobs import JOBS  # noqa: E402
+from app import calendar_data as cd, dashboard, main, store  # noqa: E402
+from app.jobs import SCHEDULES  # noqa: E402
 
 H = {"x-api-key": "test-key-123456"}
 TODAY = dt.date(2026, 10, 22)
@@ -32,7 +32,7 @@ def logrow(date, status):
 
 @pytest.fixture(autouse=True)
 def iso(tmp_path, monkeypatch):
-    monkeypatch.setattr(runner, "DATA_DIR", str(tmp_path))
+    monkeypatch.setattr(store, "DATA_DIR", str(tmp_path))
 
 
 def build(leads, log, month="2026-10", after=5, sched=None, events=()):
@@ -88,9 +88,7 @@ def test_cron_run_counts_match_real_calendar():
 
 
 def test_real_job_schedules_produce_runs():
-    sched = {j.name: list(j.crons) for j in JOBS.values() if j.crons}
-    assert "send_followups" not in sched  # manual-only jobs never appear as scheduled
-    d = build([], [], sched=sched)["days"]
+    d = build([], [], sched=SCHEDULES)["days"]
     assert d["2026-10-05"]["jobs"]["send_outreach"] >= 8
 
 
@@ -113,8 +111,7 @@ def test_calendar_api_auth_and_validation(api):
     assert api.get("/api/calendar?month=oct", headers=H).status_code == 400
     r = api.get("/api/calendar?month=2026-10&after_days=9999", headers=H).json()
     assert r["after_days"] == 60 and r["days"]["2026-10-05"]["sent"] == 1
-    assert "send_followups" not in str(r["days"].values())
-
+    
 
 def test_calendar_api_sheet_failure_is_clean(monkeypatch):
     def boom(*a, **k):
@@ -141,7 +138,6 @@ def test_event_crud_and_validation(api):
 
 
 def test_event_limit(api, monkeypatch):
-    from app.agents import store
     store.save("calendar", {"events": [{"id": str(i), "date": "2026-10-01", "title": "t", "note": ""} for i in range(500)]})
     assert api.post("/api/calendar/events", headers=H, json={"date": "2026-10-20", "title": "one too many"}).status_code == 400
 
@@ -164,14 +160,3 @@ def test_cron_weekdays_follow_standard_cron_not_apscheduler_numbering():
     assert trigger("0 12-22/2 * * 1-5").get_next_fire_time(None, dt.datetime(2026, 10, 3, 0, 0, tzinfo=utc)).hour == 12
     assert trigger("0 0 * * *").get_next_fire_time(None, fri_night).date() == dt.date(2026, 10, 3)  # daily
     assert trigger("0 9 * * 0").get_next_fire_time(None, fri_night).weekday() == 6  # cron 0 = Sunday
-
-
-def test_app_scheduler_uses_the_corrected_triggers():
-    main.add_schedules()
-    try:
-        by_id = {j.id: j for j in main.scheduler.get_jobs()}
-        send = by_id["send_outreach-0"]
-        nxt = send.trigger.get_next_fire_time(None, dt.datetime(2026, 10, 2, 23, 30, tzinfo=dt.timezone.utc))
-        assert nxt.date() == dt.date(2026, 10, 5)  # Friday night -> Monday, matching "0 16-23 * * 1-5"
-    finally:
-        main.scheduler.remove_all_jobs()

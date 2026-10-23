@@ -1,4 +1,4 @@
-"""Open the dashboard on your own computer, reading your local spreadsheets. Nothing is sent, nothing leaves your machine.
+"""Open the app on your own computer, reading your local spreadsheets. Nothing is sent, nothing leaves your machine.
 
     python run_local.py path/to/your_workbook.xlsx
     python run_local.py path/to/folder_with_csvs

@@ -1,17 +1,16 @@
-"""Tiny JSON file store for agent output (drafts, reports). Lives in DATA_DIR, never in your sheets."""
+"""Tiny JSON file store for the app's own data (calendar events). Lives in DATA_DIR, never in your sheets."""
 import json
 import os
 import threading
 
-from .. import runner
-
+REPO_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+DATA_DIR = os.environ.get("DATA_DIR", os.path.join(REPO_DIR, ".data"))
 _lock = threading.RLock()
 
 
 def _path(name):
-    d = os.path.join(runner.DATA_DIR, "agents")
-    os.makedirs(d, exist_ok=True)
-    return os.path.join(d, name + ".json")
+    os.makedirs(DATA_DIR, exist_ok=True)
+    return os.path.join(DATA_DIR, name + ".json")
 
 
 def load(name, default):
@@ -38,20 +37,3 @@ def mutate(name, fn, default):
         out = fn(data)
         save(name, data)
         return out
-
-
-def suppression_path():
-    return _path("suppression")
-
-
-def suppressed_emails():
-    return set(load("suppression", {"emails": []}).get("emails", []))
-
-
-def add_suppressed(email):
-    mutate("suppression", lambda d: d.setdefault("emails", []).append(email) if email not in d.setdefault("emails", []) else None,
-           {"emails": []})
-
-
-def remove_suppressed(email):
-    mutate("suppression", lambda d: d.__setitem__("emails", [e for e in d.get("emails", []) if e != email]), {"emails": []})

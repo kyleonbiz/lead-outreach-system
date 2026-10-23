@@ -9,7 +9,7 @@ Run exactly **one** instance (one scheduler). Required env: the same values as t
 (`SHEET_ID`, `MS_*`, `SENDER_EMAIL`, `PLACES_API_KEY`, `DISCORD_WEBHOOK_URL`, ...), plus
 `GOOGLE_SERVICE_ACCOUNT_JSON` (service-account key) and `APP_API_KEY` (protects the control API).
 Optional: `DAILY_SEND_CAP`, `PER_RUN_CAP`, `CAMPAIGN_ID`, `EMAIL_SENDING_ENABLED`.
-Open the service URL in a browser and sign in with `APP_API_KEY`. The sidebar has the dashboard, calendar, contacts (leads, referral partners and people you add, with notes and a do-not-contact switch), leads, referral partners, follow-ups, outreach log, campaign queue, market research, marketing, and settings (pause sending, daily caps, jobs).
+Open the service URL in a browser and sign in with `APP_API_KEY`. The sidebar has the dashboard, leads, referral partners, follow-ups, outreach log, campaign queue, market research, marketing, and sending controls.
 API (send `X-API-Key`): `GET /status`, `POST /jobs/{name}/run`, `POST /sending/pause`, `POST /sending/resume`, `GET|PUT /settings`.
 
 ## Local mode (no hosting, no Google, no email)
@@ -25,23 +25,21 @@ On-demand only; nothing runs on a timer and nothing posts. Needs `ANTHROPIC_API_
 - **Marketing**: this week's Facebook posts (same rules as `create_fb_posts.py`) and SEO page ideas.
 Agent output is stored in `DATA_DIR/agents/`, not in your sheets. "They replied" / "Never email" add to `DATA_DIR/agents/suppression.json`, which the main sender also honors.
 
-## In-app assistant (top bar → Assistant)
-Type a task in plain English. It looks things up with read tools (contacts, dashboard, follow-up drafts, calendar, status) and
-PROPOSES changes (add note/contact/event, do-not-contact, approve/reject a follow-up draft, run an agent or job, pause/resume sending,
-set caps) as approval cards. Nothing changes until you approve, and the server runs exactly the call you approved. It can never send an
-email itself and cannot start the main outreach sender; follow-ups send only via the approved-drafts job, after you confirm.
-Executed actions are logged (`GET /api/assistant`). Needs `ANTHROPIC_API_KEY`. Note: it sends the data it looks up to the AI service.
+## Aurum Outreach app (Dashboard and Calendar)
+A small web app with two screens. It reads your Google Sheet (or a local workbook) and **never sends email or runs jobs**; the
+GitHub Actions workflows keep doing the outreach.
 
-## AI learning mode (Settings → AI learning)
-A business profile plus memories you control. When ON, they are added to what the assistant and the follow-up, research and
-marketing agents are told (never overriding the safety rules); when OFF nothing is shared. Memories come from you, from the
-assistant (you approve each), or from suggestions based on how you edit follow-up drafts (you accept or dismiss each).
-Contact details and secrets are rejected. Stored in the app's own data; "Forget everything" deletes it all.
+- **Dashboard**: totals, today's sending vs the daily cap, bounce rate, items needing attention, sends per day, and breakdowns.
+- **Calendar**: sends per day, follow-ups due, when the workflows are scheduled to run, and your own events and reminders.
 
-## Connect ChatGPT / Claude Cowork (Settings → Connectors, and the Approvals inbox)
-The app serves an MCP connector at `/mcp` (POST; Bearer key, or the key in the URL as `/mcp/<key>`). Create keys in Settings → Connectors
-(read-only or "can propose", expiry, contact details hidden unless shared; shown once, stored hashed, revocable). Connected AI apps can look
-things up; anything that would change data is queued in **Approvals** and runs only when you approve it (they cannot approve their own
-requests). Never offered: sending email, resuming sending, changing caps, un-blocking contacts. Cloud apps (ChatGPT) need the app reachable
-over HTTPS. For Claude Cowork / Claude Desktop on your own computer use the stdio bridge `mcp_stdio.py` (config shown in the Connectors tab).
-Limitation: no OAuth yet, so the secret-URL / Bearer-key forms are used; treat a key like a password.
+Run it on your computer with a downloaded copy of your sheet (File → Download → .xlsx):
+
+    pip install -r requirements.txt
+    python run_local.py path/to/workbook.xlsx      # then open http://127.0.0.1:8000/  (key: local)
+
+Hosted: `docker build -t aurum . && docker run -p 8000:8000 -v aurum-data:/data -e SHEET_ID=... -e APP_API_KEY=... -e GOOGLE_SERVICE_ACCOUNT_JSON=... aurum`
+Run exactly one instance. Calendar events are the only thing the app stores itself (`DATA_DIR`).
+
+The earlier, larger version (leads and contacts screens, AI agents, assistant, connectors, settings) is preserved in the
+`claude/connectors` branch history.
+

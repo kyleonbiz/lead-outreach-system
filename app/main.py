@@ -1,34 +1,28 @@
-"""Hosted service: scheduler + a small authenticated control API. No UI, no dashboards.
+"""Aurum Outreach: a read-mostly web app with two screens, Dashboard and Calendar.
 
-Run exactly ONE instance. Sending safety relies on a single scheduler and the one-attempt
-state kept in Google Sheets (see send_emails.py).
-"""
+It reads your Google Sheet (or a local workbook in local mode). It does not send email and does not run jobs.
+Calendar events you add are the only thing it stores itself."""
 import datetime
 import hmac
 import json
 import logging
 import os
 import stat
-import threading
-import uuid
 
-from apscheduler.schedulers.background import BackgroundScheduler
-from apscheduler.triggers.cron import CronTrigger
-from typing import Optional
-
-from fastapi import Depends, FastAPI, Header, HTTPException, Request, Response
-from fastapi.responses import FileResponse, JSONResponse, RedirectResponse
+from fastapi import Depends, FastAPI, Header, HTTPException
+from fastapi.responses import FileResponse, RedirectResponse
 from pydantic import BaseModel, Field
 
-from . import calendar_data, contacts, dashboard, profile, runner
-from .assistant import engine as assistant
-from .mcp import connectors, proposals, server as mcp_server
-from .agents import followup, research as _research, service, store as agent_store
-from .jobs import JOBS, trigger
+from . import calendar_data, dashboard, store
+from .jobs import SCHEDULES
 
 logging.basicConfig(level=logging.INFO)
-app = FastAPI(title="Aurum outreach service")
-scheduler = BackgroundScheduler(timezone="UTC")  # in-memory store: missed runs are never replayed
+app = FastAPI(title="Aurum Outreach")
+
+
+def local_mode():
+    """Local-spreadsheet mode: reads a workbook or CSV folder on this computer instead of Google Sheets."""
+    return bool(os.environ.get("LOCAL_DATA_PATH", "").strip())
 
 
 def setup_google_credentials():
@@ -36,54 +30,24 @@ def setup_google_credentials():
     raw = os.environ.get("GOOGLE_SERVICE_ACCOUNT_JSON")
     if raw and not os.environ.get("GOOGLE_APPLICATION_CREDENTIALS"):
         json.loads(raw)  # fail fast on bad input
-        os.makedirs(runner.DATA_DIR, exist_ok=True)
-        path = os.path.join(runner.DATA_DIR, "sa.json")
+        os.makedirs(store.DATA_DIR, exist_ok=True)
+        path = os.path.join(store.DATA_DIR, "sa.json")
         fd = os.open(path, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, stat.S_IRUSR | stat.S_IWUSR)
         with os.fdopen(fd, "w") as f:
             f.write(raw)
         os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = path
 
 
+@app.on_event("startup")
+def startup():
+    if not local_mode():
+        setup_google_credentials()
+
+
 def require_key(x_api_key: str = Header(default="")):
     expected = os.environ.get("APP_API_KEY", "")
     if not expected or not hmac.compare_digest(x_api_key.encode(), expected.encode()):
         raise HTTPException(status_code=403, detail="forbidden")
-
-
-def add_schedules():
-    for job in JOBS.values():
-        for i, cron in enumerate(job.crons):
-            scheduler.add_job(
-                runner.run_job, trigger(cron), args=[job.name],
-                id=f"{job.name}-{i}", max_instances=1, coalesce=True, misfire_grace_time=300,
-                replace_existing=True,
-            )  # no retry/rescheduling on failure
-
-
-def local_mode():
-    """Local-spreadsheet mode: read-only dashboard, no scheduler, no jobs, so nothing can send email."""
-    return bool(os.environ.get("LOCAL_DATA_PATH", "").strip())
-
-
-@app.on_event("startup")
-def startup():
-    if local_mode():
-        return
-    setup_google_credentials()
-    if os.environ.get("SCHEDULER_ENABLED", "true").lower() == "true":
-        add_schedules()
-        scheduler.start()
-
-
-@app.on_event("shutdown")
-def shutdown():
-    if scheduler.running:
-        scheduler.shutdown(wait=False)
-
-
-class Settings(BaseModel):
-    daily_send_cap: Optional[int] = Field(default=None, ge=0, le=300)
-    per_run_cap: Optional[int] = Field(default=None, ge=0, le=300)
 
 
 @app.get("/")
@@ -96,42 +60,28 @@ def dashboard_page():
     return RedirectResponse("/#/dashboard")
 
 
-@app.get("/agents")
-def agents_page():
-    return RedirectResponse("/#/followups")
+@app.get("/calendar")
+def calendar_page():
+    return RedirectResponse("/#/calendar")
+
+
+@app.get("/health")
+def health():
+    return {"ok": True}
+
+
+@app.get("/api/info", dependencies=[Depends(require_key)])
+def info():
+    return {"local_mode": local_mode()}
 
 
 @app.get("/api/dashboard", dependencies=[Depends(require_key)])
 def dashboard_data():
     try:
-        return dashboard.fetch(runner.load_settings())
+        return dashboard.fetch()
     except Exception as e:  # sheet unreachable, missing tab, bad credentials
         logging.getLogger("dashboard").warning("dashboard fetch failed: %s", type(e).__name__)
         raise HTTPException(503, "could not read the sheet")
-
-
-@app.get("/api/records/{tab}", dependencies=[Depends(require_key)])
-def records(tab: str):
-    if tab not in dashboard.TABS:
-        raise HTTPException(404, "unknown tab")
-    try:
-        return dashboard.fetch_tab(tab)
-    except Exception as e:
-        logging.getLogger("dashboard").warning("records fetch failed: %s", type(e).__name__)
-        raise HTTPException(503, "could not read the sheet")
-
-
-class DraftEdit(BaseModel):
-    subject: Optional[str] = None
-    body: Optional[str] = None
-
-
-class Reject(BaseModel):
-    reason: str = "skip"
-
-
-class AgentRun(BaseModel):
-    after_days: int = Field(default=5, ge=1, le=60)
 
 
 class NewEvent(BaseModel):
@@ -150,9 +100,8 @@ def calendar_month(month: str, after_days: int = 5):
     except Exception as e:
         logging.getLogger("calendar").warning("calendar fetch failed: %s", type(e).__name__)
         raise HTTPException(503, "could not read the sheet")
-    events = agent_store.load("calendar", {"events": []})["events"]
-    schedules = {j.name: list(j.crons) for j in JOBS.values() if j.crons}
-    return calendar_data.build(leads, log, month, datetime.date.today(), after_days, schedules, events)
+    events = store.load("calendar", {"events": []})["events"]
+    return calendar_data.build(leads, log, month, datetime.date.today(), after_days, SCHEDULES, events)
 
 
 @app.post("/api/calendar/events", dependencies=[Depends(require_key)])
@@ -169,399 +118,6 @@ def calendar_event_delete(event_id: str):
         n = len(d["events"])
         d["events"] = [x for x in d["events"] if x["id"] != event_id]
         return len(d["events"]) < n
-    if not agent_store.mutate("calendar", go, {"events": []}):
+    if not store.mutate("calendar", go, {"events": []}):
         raise HTTPException(404, "no such event")
     return {"ok": True}
-
-
-class NewContact(BaseModel):
-    name: str = Field(min_length=1, max_length=120)
-    company: str = Field(default="", max_length=120)
-    email: str = Field(default="", max_length=200)
-    phone: str = Field(default="", max_length=40)
-    website: str = Field(default="", max_length=200)
-    notes: str = Field(default="", max_length=1000)
-
-
-class NewNote(BaseModel):
-    text: str = Field(min_length=1, max_length=1000)
-
-
-def _contact_tabs():
-    try:
-        return dashboard.fetch_tab("leads"), dashboard.fetch_tab("referrals"), dashboard.fetch_tab("log")
-    except Exception as e:
-        logging.getLogger("contacts").warning("contacts fetch failed: %s", type(e).__name__)
-        raise HTTPException(503, "could not read the sheet")
-
-
-def _contact_or_404(key):
-    leads, refs, log = _contact_tabs()
-    manual = agent_store.load("contacts", {"manual": [], "notes": {}})["manual"]
-    c = contacts.find(key, leads, refs, log, manual, agent_store.suppressed_emails())
-    if not c:
-        raise HTTPException(404, "no such contact")
-    return c, leads, refs, log, manual
-
-
-@app.get("/api/contacts", dependencies=[Depends(require_key)])
-def contacts_list():
-    leads, refs, log = _contact_tabs()
-    d = agent_store.load("contacts", {"manual": [], "notes": {}})
-    rows = contacts.directory(leads, refs, log, d["manual"], agent_store.suppressed_emails())
-    return {"contacts": rows, "total": len(rows)}
-
-
-@app.get("/api/contacts/{key}", dependencies=[Depends(require_key)])
-def contact_detail(key: str):
-    c, leads, refs, log, manual = _contact_or_404(key)
-    notes = agent_store.load("contacts", {"manual": [], "notes": {}})["notes"].get(key, [])
-    drafts = agent_store.load("followups", {"drafts": []})["drafts"]
-    return {"contact": c, "fields": contacts.fields_for(key, leads, refs, manual), "timeline": contacts.timeline(c, key, log, drafts, notes)}
-
-
-@app.post("/api/contacts", dependencies=[Depends(require_key)])
-def contact_add(c: NewContact):
-    m, err = contacts.add_manual(c.name, c.company, c.email, c.phone, c.website, c.notes)
-    if err:
-        raise HTTPException(400, err)
-    return {"key": "man:" + m["id"]}
-
-
-@app.delete("/api/contacts/{key}", dependencies=[Depends(require_key)])
-def contact_delete(key: str):
-    if not key.startswith("man:") or not contacts.remove_manual(key[4:]):
-        raise HTTPException(404, "only contacts you added yourself can be deleted")
-    return {"ok": True}
-
-
-@app.post("/api/contacts/{key}/notes", dependencies=[Depends(require_key)])
-def contact_note_add(key: str, n: NewNote):
-    _contact_or_404(key)
-    note, err = contacts.add_note(key, n.text)
-    if err:
-        raise HTTPException(400, err)
-    return note
-
-
-@app.delete("/api/contacts/{key}/notes/{note_id}", dependencies=[Depends(require_key)])
-def contact_note_delete(key: str, note_id: str):
-    if not contacts.delete_note(key, note_id):
-        raise HTTPException(404, "no such note")
-    return {"ok": True}
-
-
-@app.post("/api/contacts/{key}/do-not-contact", dependencies=[Depends(require_key)])
-def contact_dnc(key: str):
-    c = _contact_or_404(key)[0]
-    if not c["e"]:
-        raise HTTPException(400, "this contact has no email address to block")
-    agent_store.add_suppressed(c["e"])  # the main sender and follow-up agent both honor this list
-    contacts.add_note(key, "Marked do not contact.")
-    return {"ok": True}
-
-
-@app.post("/api/contacts/{key}/allow", dependencies=[Depends(require_key)])
-def contact_allow(key: str):
-    c = _contact_or_404(key)[0]
-    if not c["e"]:
-        raise HTTPException(400, "this contact has no email address")
-    agent_store.remove_suppressed(c["e"])
-    contacts.add_note(key, "Removed from do not contact.")
-    return {"ok": True}
-
-
-class AssistantMessage(BaseModel):
-    text: str = Field(min_length=1, max_length=2000)
-
-
-class AssistantDecision(BaseModel):
-    call_id: str = Field(max_length=100)
-    approve: bool
-
-
-def _assistant_guard():
-    if not os.environ.get("ANTHROPIC_API_KEY", "").strip():
-        raise HTTPException(409, "ANTHROPIC_API_KEY is not set")
-
-
-@app.get("/api/assistant", dependencies=[Depends(require_key)])
-def assistant_info():
-    return {"enabled": bool(os.environ.get("ANTHROPIC_API_KEY", "").strip()), "local_mode": local_mode(),
-            "conversations": assistant.listing(), "log": assistant.action_log()}
-
-
-@app.post("/api/assistant/conversations", dependencies=[Depends(require_key)])
-def assistant_new():
-    return {"id": assistant.new_conv()}
-
-
-@app.get("/api/assistant/conversations/{cid}", dependencies=[Depends(require_key)])
-def assistant_get(cid: str):
-    try:
-        return assistant.view(cid)
-    except assistant.NotFound:
-        raise HTTPException(404, "no such conversation")
-
-
-@app.delete("/api/assistant/conversations/{cid}", dependencies=[Depends(require_key)])
-def assistant_delete(cid: str):
-    try:
-        assistant.delete(cid)
-    except assistant.NotFound:
-        raise HTTPException(404, "no such conversation")
-    return {"ok": True}
-
-
-@app.post("/api/assistant/conversations/{cid}/messages", dependencies=[Depends(require_key)])
-def assistant_send(cid: str, m: AssistantMessage):
-    _assistant_guard()
-    try:
-        assistant.send(cid, m.text)
-    except assistant.NotFound:
-        raise HTTPException(404, "no such conversation")
-    except assistant.Busy as e:
-        raise HTTPException(409, str(e))
-    except ValueError as e:
-        raise HTTPException(400, str(e))
-    return {"ok": True}
-
-
-@app.post("/api/assistant/conversations/{cid}/decide", dependencies=[Depends(require_key)])
-def assistant_decide(cid: str, d: AssistantDecision):
-    try:
-        assistant.decide(cid, d.call_id, d.approve)
-    except assistant.NotFound:
-        raise HTTPException(404, "nothing is waiting for that decision")
-    return {"ok": True}
-
-
-class ProfileUpdate(BaseModel):
-    enabled: Optional[bool] = None
-    profile: Optional[dict] = None
-
-
-class MemoryNew(BaseModel):
-    text: str = Field(min_length=1, max_length=300)
-    category: str = "preferences"
-
-
-class MemoryEdit(BaseModel):
-    text: Optional[str] = Field(default=None, max_length=300)
-    enabled: Optional[bool] = None
-    category: Optional[str] = None
-
-
-@app.get("/api/ai-profile", dependencies=[Depends(require_key)])
-def ai_profile_get():
-    return profile.get()
-
-
-@app.put("/api/ai-profile", dependencies=[Depends(require_key)])
-def ai_profile_put(u: ProfileUpdate):
-    if u.profile is not None:
-        err = profile.update_profile(u.profile)
-        if err:
-            raise HTTPException(400, err)
-    if u.enabled is not None:
-        profile.set_enabled(u.enabled)
-    return profile.get()
-
-
-@app.post("/api/ai-profile/memories", dependencies=[Depends(require_key)])
-def ai_memory_add(m: MemoryNew):
-    out, err = profile.add_memory(m.text, m.category, "you")
-    if err:
-        raise HTTPException(400, err)
-    return out
-
-
-@app.put("/api/ai-profile/memories/{mid}", dependencies=[Depends(require_key)])
-def ai_memory_edit(mid: str, m: MemoryEdit):
-    err = profile.update_memory(mid, m.text, m.enabled, m.category)
-    if err:
-        raise HTTPException(404 if err == "no such memory" else 400, err)
-    return {"ok": True}
-
-
-@app.delete("/api/ai-profile/memories/{mid}", dependencies=[Depends(require_key)])
-def ai_memory_delete(mid: str):
-    if not profile.delete_memory(mid):
-        raise HTTPException(404, "no such memory")
-    return {"ok": True}
-
-
-@app.post("/api/ai-profile/suggestions/{sid}/{action}", dependencies=[Depends(require_key)])
-def ai_suggestion(sid: str, action: str):
-    if action not in ("accept", "dismiss"):
-        raise HTTPException(404, "unknown action")
-    err = profile.resolve_suggestion(sid, action == "accept")
-    if err:
-        raise HTTPException(404 if err == "no such suggestion" else 400, err)
-    return {"ok": True}
-
-
-@app.delete("/api/ai-profile", dependencies=[Depends(require_key)])
-def ai_profile_clear():
-    profile.clear()
-    return {"ok": True}
-
-
-# ---- connector endpoint for external AI apps (ChatGPT, Claude Cowork) ----
-def _mcp_key(request, token):
-    auth = request.headers.get("authorization", "")
-    tok = token or (auth[7:].strip() if auth.lower().startswith("bearer ") else "")
-    return connectors.verify(tok)
-
-
-async def _mcp(request: Request, token: Optional[str] = None):
-    origin = request.headers.get("origin")
-    if origin and origin.split("://", 1)[-1] != request.headers.get("host", ""):
-        return JSONResponse({"error": "cross-origin requests are not allowed"}, status_code=403)  # blocks browser-based abuse
-    key = _mcp_key(request, token)
-    if not key:
-        return JSONResponse({"error": "unauthorized"}, status_code=401)
-    if not connectors.rate_ok(key["id"]):
-        return JSONResponse({"jsonrpc": "2.0", "id": None, "error": {"code": -32000, "message": "rate limit: slow down"}}, status_code=429)
-    if int(request.headers.get("content-length") or 0) > 100_000:
-        return JSONResponse({"error": "request too large"}, status_code=413)
-    try:
-        body = await request.json()
-    except ValueError:
-        return JSONResponse({"jsonrpc": "2.0", "id": None, "error": {"code": -32700, "message": "parse error"}}, status_code=400)
-    resp = mcp_server.handle(body, key)
-    return Response(status_code=202) if resp is None else JSONResponse(resp)
-
-
-app.add_api_route("/mcp", _mcp, methods=["POST"])
-app.add_api_route("/mcp/{token}", _mcp, methods=["POST"])
-
-
-@app.get("/mcp")
-@app.get("/mcp/{token}")
-def mcp_get(token: Optional[str] = None):
-    return JSONResponse({"error": "this server does not stream; use POST"}, status_code=405)
-
-
-class NewConnector(BaseModel):
-    label: str = Field(min_length=1, max_length=60)
-    scope: str = "propose"
-    share_details: bool = False
-    days: int = Field(default=90, ge=1, le=365)
-
-
-class ProposalDecision(BaseModel):
-    approve: bool
-
-
-@app.get("/api/connectors", dependencies=[Depends(require_key)])
-def connectors_list():
-    keys, calls = connectors.listing()
-    return {"keys": keys, "calls": calls, "pending": proposals.pending_count(), "local_mode": local_mode()}
-
-
-@app.post("/api/connectors", dependencies=[Depends(require_key)])
-def connectors_create(c: NewConnector):
-    out, err = connectors.create(c.label, c.scope, c.share_details, c.days)
-    if err:
-        raise HTTPException(400, err)
-    return out
-
-
-@app.delete("/api/connectors/{kid}", dependencies=[Depends(require_key)])
-def connectors_revoke(kid: str):
-    if not connectors.revoke(kid):
-        raise HTTPException(404, "no such key")
-    return {"ok": True}
-
-
-@app.get("/api/proposals", dependencies=[Depends(require_key)])
-def proposals_list(status: Optional[str] = None):
-    return {"items": proposals.listing(status), "pending": proposals.pending_count()}
-
-
-@app.post("/api/proposals/{pid}/decide", dependencies=[Depends(require_key)])
-def proposals_decide(pid: str, d: ProposalDecision):
-    err = proposals.decide(pid, d.approve)
-    if err:
-        raise HTTPException(404, err)
-    return {"ok": True}
-
-
-@app.get("/api/agents/state", dependencies=[Depends(require_key)])
-def agents_state():
-    return {"local_mode": local_mode(), "runs": service.runs,
-            "drafts": agent_store.load("followups", {"drafts": []})["drafts"][::-1],
-            "research": agent_store.load("research", None), "marketing": agent_store.load("marketing", None),
-            "anthropic_key_set": bool(os.environ.get("ANTHROPIC_API_KEY", "").strip())}
-
-
-@app.post("/api/agents/{name}/run", dependencies=[Depends(require_key)])
-def agent_run(name: str, p: AgentRun = AgentRun()):
-    if name not in ("followup", "research", "marketing", "learn"):
-        raise HTTPException(404, "unknown agent")
-    if not os.environ.get("ANTHROPIC_API_KEY", "").strip():
-        raise HTTPException(409, "ANTHROPIC_API_KEY is not set")
-    if not service.start(name, p.after_days):
-        raise HTTPException(409, "already running")
-    return {"started": name}
-
-
-@app.post("/api/agents/followup/{draft_id}/approve", dependencies=[Depends(require_key)])
-def draft_approve(draft_id: str, e: DraftEdit = DraftEdit()):
-    err = followup.approve(draft_id, e.subject, e.body)
-    if err:
-        raise HTTPException(400 if err != "no such draft" else 404, err)
-    return {"ok": True}
-
-
-@app.post("/api/agents/followup/{draft_id}/reject", dependencies=[Depends(require_key)])
-def draft_reject(draft_id: str, r: Reject = Reject()):
-    err = followup.reject(draft_id, r.reason)
-    if err:
-        raise HTTPException(400 if err != "no such draft" else 404, err)
-    return {"ok": True}
-
-
-@app.get("/settings", dependencies=[Depends(require_key)])
-def get_settings():
-    return runner.load_settings()
-
-
-@app.put("/settings", dependencies=[Depends(require_key)])
-def put_settings(s: Settings):
-    return runner.save_settings(s.daily_send_cap, s.per_run_cap)
-
-
-@app.get("/health")
-def health():
-    return {"ok": True}
-
-
-@app.get("/status", dependencies=[Depends(require_key)])
-def status():
-    return {"local_mode": local_mode(), "sending_paused": runner.sending_paused(), "jobs": runner.last_runs, "settings": runner.load_settings(),
-            "schedules": {j.name: list(j.crons) for j in JOBS.values()}}
-
-
-@app.post("/jobs/{name}/run", dependencies=[Depends(require_key)])
-def run_now(name: str):
-    """Manual run in the background. Sender safety still applies (state in Sheets, lock, pause flag)."""
-    if name not in JOBS:
-        raise HTTPException(404, "unknown job")
-    if local_mode():
-        raise HTTPException(409, "jobs are disabled in local mode")
-    threading.Thread(target=runner.run_job, args=(name,), daemon=True).start()
-    return {"accepted": name}
-
-
-@app.post("/sending/pause", dependencies=[Depends(require_key)])
-def pause():
-    runner.set_sending_paused(True)
-    return {"sending_paused": True}
-
-
-@app.post("/sending/resume", dependencies=[Depends(require_key)])
-def resume():
-    runner.set_sending_paused(False)
-    return {"sending_paused": False}

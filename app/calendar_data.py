@@ -3,7 +3,7 @@ import datetime
 import re
 import uuid
 
-from .agents import store
+from . import store
 from .jobs import trigger
 
 MONTH_RE = re.compile(r"^\d{4}-(0[1-9]|1[0-2])$")
