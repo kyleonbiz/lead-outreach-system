@@ -1,0 +1,42 @@
+import { Upload } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import type { StorageUsage } from "@/lib/dms/types";
+import { StorageUsageIndicator } from "./storage-usage-indicator";
+
+export function DashboardHeader({
+  usage,
+  canUpload,
+  onUpload,
+}: {
+  usage: StorageUsage | null;
+  canUpload: boolean;
+  onUpload: () => void;
+}) {
+  return (
+    <header className="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
+      <div className="min-w-0">
+        <h2 className="text-2xl font-semibold tracking-tight sm:text-[26px]">Document Management</h2>
+        <p className="mt-1 text-sm text-muted-foreground">
+          Organize, store, and manage your business documents securely.
+        </p>
+      </div>
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-5">
+        {usage && (
+          <div className="rounded-xl border bg-muted/40 px-4 py-3 sm:w-64">
+            <StorageUsageIndicator usage={usage} compact />
+          </div>
+        )}
+        <Button
+          variant="gradient"
+          size="lg"
+          onClick={onUpload}
+          disabled={!canUpload}
+          title={canUpload ? undefined : "Your role cannot upload documents"}
+          className="w-full sm:w-auto"
+        >
+          <Upload /> Upload
+        </Button>
+      </div>
+    </header>
+  );
+}
