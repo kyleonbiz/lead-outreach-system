@@ -81,7 +81,7 @@ const ico=n=>`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-
 const CHEV='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg>';
 const NAV=[{i:'dash',t:'Dashboard',to:'/dashboard'},{i:'users',t:'Leads',g:'leads',kids:[['Leads','/leads'],['Referral partners','/referrals']]},
  {i:'mail',t:'Outreach',g:'out',kids:[['Follow-ups','/followups'],['Outreach log','/log'],['Campaign queue','/queue']]},
- {i:'spark',t:'Agents',g:'ag',kids:[['Market research','/research'],['Marketing','/marketing']]},{i:'gear',t:'Settings',to:'/settings'}];
+ {i:'spark',t:'Agents',g:'ag',kids:[['Market research','/research'],['Competitor intelligence','/competitors'],['Marketing','/marketing']]},{i:'gear',t:'Settings',to:'/settings'}];
 const OPEN={leads:true,out:true,ag:true};
 /* ---------- api ---------- */
 async function api(p,o={}){const r=await fetch(p,{...o,headers:{'x-api-key':key,'content-type':'application/json'}});
@@ -217,6 +217,28 @@ function vMarketing(){const A=S.agents;if(!A)return head('Marketing')+'<div clas
  <div class="card"><h2>SEO page ideas</h2><div class="body">${m.seo.map(s=>`<div style="margin-bottom:14px"><b>${esc(s.title)}</b><div class="sub-note">${esc(s.audience)} · ${esc(s.search_intent)} · keyword to try: ${esc(s.suggested_keyword)}</div><ul style="margin:6px 0">${(s.outline||[]).map(o=>`<li>${esc(o)}</li>`).join('')}</ul></div>`).join('')}</div></div>`)}
 function bMarketing(){$('#mrun').onclick=async()=>{try{await post('/api/agents/marketing/run');toast('Started.');await loadAgents()}catch(x){toast(x.message)}};
  $('#view').onclick=async e=>{const i=e.target.dataset.copy;if(i===undefined)return;try{await navigator.clipboard.writeText(S.agents.marketing.posts[i].post);e.target.textContent='Copied'}catch{toast('Could not copy. Select the text and copy it manually.')}}}
+/* competitor intelligence */
+function vComp(){const A=S.agents;if(!A)return head('Competitor intelligence')+'<div class="empty">Loading…</div>';const C=A.competitors||{list:[],reports:{},overview:null},run=(A.runs||{}).competitors,O=C.overview;
+ const L=x=>x&&x.length?`<ul style="margin:4px 0 10px;padding-left:18px">${x.map(i=>`<li>${esc(i)}</li>`).join('')}</ul>`:'<div class="sub-note" style="margin-bottom:8px">None found.</div>';
+ const status=c=>{const r=C.reports[c.id];if(!r)return '<span class="pill">Not analyzed</span>';if(r.error)return '<span class="pill bad">Problem</span>';if((r.changes||[]).length)return '<span class="pill warn">Changed</span>';return '<span class="pill good">No change</span>'};
+ const rows=C.list.map(c=>{const r=C.reports[c.id]||{},a=r.analysis;return `<div class="tr row" style="display:block"><details><summary style="cursor:pointer;display:flex;gap:12px;flex-wrap:wrap;align-items:center"><b>${esc(c.name)}</b><span class="sub-note">${esc(c.url.replace(/^https?:\/\//,''))}</span>${status(c)}<span class="sub-note" style="margin-left:auto">${r.checked?'Checked '+esc(r.checked):'Added '+esc(c.added)}</span></summary>
+  <div style="padding:10px 0 4px">${r.error?`<div class="banner bad">${esc(r.error)}</div>`:''}${(r.changes||[]).length?`<div class="banner"><b>What changed${r.changed_on?' ('+esc(r.changed_on)+')':''}</b>${L(r.changes)}</div>`:''}
+  ${a?`<div class="expand" style="grid-column:auto"><div><span>Positioning</span>${esc(a.positioning)}</div><div><span>Target customers</span>${esc(a.target_customers)}</div><div><span>Pricing (as stated)</span>${esc(a.pricing)}</div></div>
+  <div class="grid2" style="margin-top:10px"><div><b>Offers</b>${L(a.offers)}</div><div><b>Strengths</b>${L(a.strengths)}</div><div><b>Gaps buyers may notice</b>${L(a.gaps)}</div></div>`:'<p class="sub-note">Not analyzed yet. Press “Run analysis”.</p>'}
+  <button class="btn danger sm" data-rm="${esc(c.id)}" data-name="${esc(c.name)}">Remove competitor</button></div></details></div>`}).join('');
+ return head('Competitor intelligence','What competing admin and back-office services say on their own websites, and what changes.',`<button class="btn primary" id="crun" ${C.list.length?'':'disabled'}>Run analysis</button>`)+
+ (run?`<div class="banner ${run.state==='failed'?'bad':''}" style="${run.state==='ok'?'background:var(--good-bg);color:var(--good)':''}">${run.state==='running'?'Reading competitor websites…':esc(run.message)}</div>`:'')+
+ `<div class="card"><h2>Add a competitor</h2><div class="body"><form id="compf" class="filters" style="margin:0"><label class="field">Name<input id="cname" maxlength="80" placeholder="Example Virtual Admin Co" required></label><label class="field" style="flex:1;min-width:240px">Website address<input id="curl" style="width:100%" placeholder="https://example.com" required></label><button class="btn primary">Add</button></form>
+ <p class="sub-note">Only public websites are read, and robots.txt is respected. Summaries use only what the pages say. ${C.list.length} of 15 added.</p></div></div>`+
+ (C.list.length?`<div class="tbl" style="margin-bottom:16px">${rows}</div>`:'<div class="card"><div class="empty">No competitors yet. Add a few websites above.</div></div>')+
+ (O?`<div class="card"><h2>How Aurum can stand out <span class="sub-note" style="font-weight:400">· ${esc(O.generated||'')}</span></h2><div class="body"><p>${esc(O.summary)}</p><div class="grid2"><div><b>Where we differ</b>${L(O.where_we_differ)}</div><div><b>Gaps competitors leave open</b>${L(O.opportunities)}</div><div><b>Watch-outs</b>${L(O.watch_outs)}</div></div>
+  <h3 style="font-size:14px;margin:14px 0 6px">Messaging ideas for outreach</h3><div class="scroll-x"><table class="plain"><tr><th>Angle</th><th>Example line</th><th></th></tr>${O.messaging_ideas.map((m,i)=>`<tr><td><b>${esc(m.angle)}</b></td><td>${esc(m.example_line)}</td><td><button class="btn sm" data-cp="${i}">Copy</button></td></tr>`).join('')}</table></div></div></div>`:'')}
+function bComp(){const A=S.agents;if(!A)return;const C=A.competitors||{list:[],reports:{},overview:null};
+ $('#crun').onclick=async()=>{try{await post('/api/agents/competitors/run');toast('Started. This can take a minute.');await loadAgents()}catch(x){toast(x.message)}};
+ $('#compf').onsubmit=async e=>{e.preventDefault();try{await post('/api/agents/competitors',{name:$('#cname').value,url:$('#curl').value});toast('Added.');await loadAgents()}catch(x){toast(x.message)}};
+ $('#view').onclick=async e=>{const rm=e.target.dataset.rm,cp=e.target.dataset.cp;
+  if(rm)confirmBox('Remove competitor?',`${esc(e.target.dataset.name)} and its saved analysis will be removed.`,'Remove',async()=>{try{await api('/api/agents/competitors/'+rm,{method:'DELETE'});toast('Removed.');await loadAgents()}catch(x){toast(x.message)}},true);
+  if(cp!==undefined){try{await navigator.clipboard.writeText(C.overview.messaging_ideas[cp].example_line);e.target.textContent='Copied'}catch{toast('Could not copy. Select the text and copy it manually.')}}}}
 /* settings */
 function vSending(){const T=S.status;if(!T)return head('Settings')+'<div class="empty">Loading…</div>';const p=T.sending_paused,cs=T.settings||{};
  return head('Settings','Email sending, daily caps, and scheduled jobs.')+
@@ -229,7 +251,7 @@ function bSending(){$('#ptog').onclick=async()=>{try{await post(S.status.sending
   n.startsWith('send_')?confirmBox('Start a sending run?','It follows the caps and one-attempt rules.','Start run',go):go()})}
 /* ---------- render / data ---------- */
 const VIEWS={'/dashboard':[vDashboard,bDashboard,'dash'],'/leads':[()=>vRecords('leads'),()=>bRecords('leads'),'leads'],'/referrals':[()=>vRecords('referrals'),()=>bRecords('referrals'),'referrals'],'/log':[()=>vRecords('log'),()=>bRecords('log'),'log'],'/queue':[()=>vRecords('queue'),()=>bRecords('queue'),'queue'],
- '/followups':[vFollow,bFollow,'agents'],'/research':[vResearch,bResearch,'agents'],'/marketing':[vMarketing,bMarketing,'agents'],'/settings':[vSending,bSending,'status']};
+ '/followups':[vFollow,bFollow,'agents'],'/research':[vResearch,bResearch,'agents'],'/marketing':[vMarketing,bMarketing,'agents'],'/competitors':[vComp,bComp,'agents'],'/settings':[vSending,bSending,'status']};
 function typing(){const a=document.activeElement;return a&&['INPUT','TEXTAREA','SELECT'].includes(a.tagName)&&$('#view').contains(a)}
 function render(force){if(!VIEWS[cur.path])cur.path='/dashboard';if(!force&&typing())return;const v=VIEWS[cur.path];nav();$('#view').onclick=null;$('#view').innerHTML=v[0]();v[1]();
  const T=S.status;$('#sdot').className='dot'+(T&&T.sending_paused?' off':'');$('#stxt').textContent=T?(T.sending_paused?'Sending paused':'Sending on'):'Sending';

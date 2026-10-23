@@ -22,5 +22,6 @@ Read-only: the scheduler is off, jobs cannot run, and nothing is sent.
 On-demand only; nothing runs on a timer and nothing posts. Needs `ANTHROPIC_API_KEY` (optional `CLAUDE_MODEL`).
 - **Follow-up**: drafts follow-ups for contacted leads with no reply; you edit/approve; `send_followups` (manual job) sends approved drafts, one attempt each, under the same cap/suppression/stop rules. Disabled in local mode.
 - **Market research**: suggests where to prospect next from your own results (aggregates only go to the model).
+- **Competitor intelligence**: you add competitor websites; it reads their public pages (robots.txt respected, private/internal addresses blocked), summarizes only what the pages say, flags material changes between runs, and compares them with your own site.
 - **Marketing**: this week's Facebook posts (same rules as `create_fb_posts.py`) and SEO page ideas.
 Agent output is stored in `DATA_DIR/agents/`, not in your sheets. "They replied" / "Never email" add to `DATA_DIR/agents/suppression.json`, which the main sender also honors.

@@ -5,10 +5,10 @@ import threading
 from .. import mail_core as se
 
 from .. import dashboard
-from . import followup, llm, marketing, research, store
+from . import competitors, followup, llm, marketing, research, store
 
 runs = {}  # name -> {state, message, finished}
-_locks = {n: threading.Lock() for n in ("followup", "research", "marketing")}
+_locks = {n: threading.Lock() for n in ("followup", "research", "marketing", "competitors")}
 
 
 def _rows(sheet, tab):
@@ -19,6 +19,14 @@ def _rows(sheet, tab):
 
 
 def _do(name, after_days):
+    if name == "competitors":
+        try:
+            import create_fb_posts as fb
+            ours = fb.get_site_text()
+        except Exception:
+            ours = ""  # comparison still works without our own site text
+        r = competitors.run(our_text=ours)
+        return f"Analyzed {r['analyzed']} competitor(s); {r['changed']} changed; {r['errors']} problem(s)."
     if name == "marketing":
         r = marketing.run()
         return f"Drafted {len(r['posts'])} posts and {len(r['seo'])} page ideas."

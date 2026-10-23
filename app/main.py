@@ -19,7 +19,7 @@ from fastapi.responses import FileResponse, RedirectResponse
 from pydantic import BaseModel, Field
 
 from . import dashboard, runner
-from .agents import followup, research as _research, service, store as agent_store
+from .agents import competitors, followup, research as _research, service, store as agent_store
 from .jobs import JOBS
 
 logging.basicConfig(level=logging.INFO)
@@ -130,17 +130,38 @@ class AgentRun(BaseModel):
     after_days: int = Field(default=5, ge=1, le=60)
 
 
+class NewCompetitor(BaseModel):
+    name: str = Field(max_length=80)
+    url: str = Field(max_length=500)
+
+
+@app.post("/api/agents/competitors", dependencies=[Depends(require_key)])
+def competitor_add(c: NewCompetitor):
+    out, err = competitors.add(c.name, c.url)
+    if err:
+        raise HTTPException(400, err)
+    return out
+
+
+@app.delete("/api/agents/competitors/{cid}", dependencies=[Depends(require_key)])
+def competitor_remove(cid: str):
+    if not competitors.remove(cid):
+        raise HTTPException(404, "no such competitor")
+    return {"ok": True}
+
+
 @app.get("/api/agents/state", dependencies=[Depends(require_key)])
 def agents_state():
     return {"local_mode": local_mode(), "runs": service.runs,
             "drafts": agent_store.load("followups", {"drafts": []})["drafts"][::-1],
             "research": agent_store.load("research", None), "marketing": agent_store.load("marketing", None),
+            "competitors": agent_store.load("competitors", {"list": [], "reports": {}, "overview": None}),
             "anthropic_key_set": bool(os.environ.get("ANTHROPIC_API_KEY", "").strip())}
 
 
 @app.post("/api/agents/{name}/run", dependencies=[Depends(require_key)])
 def agent_run(name: str, p: AgentRun = AgentRun()):
-    if name not in ("followup", "research", "marketing"):
+    if name not in ("followup", "research", "marketing", "competitors"):
         raise HTTPException(404, "unknown agent")
     if not os.environ.get("ANTHROPIC_API_KEY", "").strip():
         raise HTTPException(409, "ANTHROPIC_API_KEY is not set")
