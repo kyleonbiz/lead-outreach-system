@@ -42,7 +42,7 @@ export function createLocalApi(): DmsApi {
 
   return {
     mode: "demo",
-    capabilities: { share: false },
+    capabilities: { share: false, team: false },
     bootstrap: () => run(() => service.bootstrap()),
     listDocuments: (q: DocumentQuery) => run(() => service.listDocuments(q)),
     getDocument: (id) => run(() => service.getDocument(id)),
@@ -53,6 +53,13 @@ export function createLocalApi(): DmsApi {
     getFileLink: (id, opts) => run(() => service.getFileLink(id, opts)),
     createShareLink: () =>
       Promise.reject(new DmsError("unavailable", "Share links need a connected workspace.")),
+    listShareLinks: (id) => run(() => service.listShareLinks(id)),
+    revokeShareLink: (id, linkId) => run(() => service.revokeShareLink(id, linkId)),
+    getTeam: () => run(() => service.listTeam()),
+    inviteMember: (email, role) => run(() => service.inviteMember({ email, role })),
+    revokeInvite: (id) => run(() => service.revokeInvite(id)),
+    changeMemberRole: (userId, role) => run(() => service.changeMemberRole(userId, { role })),
+    removeMember: (userId) => run(() => service.removeMember(userId)),
     createFolder: (name) => run(() => service.createFolder({ name })),
     renameFolder: (id, name) => run(() => service.renameFolder(id, { name })),
     deleteFolder: (id) => run(() => service.deleteFolder(id)),

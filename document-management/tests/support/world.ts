@@ -35,6 +35,9 @@ export function makeWorld(opts: { limits?: Partial<UploadLimits>; quotaA?: numbe
     createdAt: NOW.toISOString(), status: "ready",
   }]);
 
+  store.members.set(`${WS_B}:${USER_B}`, {
+    workspaceId: WS_B, userId: USER_B, displayName: "Bea", email: "bea@beta.test", role: "owner", joinedAt: NOW.toISOString(),
+  });
   const repo = new MemoryRepository(store, { now: () => NOW });
   const storage = new MemoryStorage(store, { synthesize: createSampleSynthesizer(store) });
   storage.put(keyB, new TextEncoder().encode("%PDF-beta"), "application/pdf");
@@ -42,7 +45,7 @@ export function makeWorld(opts: { limits?: Partial<UploadLimits>; quotaA?: numbe
 
   const as = (workspaceId: string, role: Role, userId = workspaceId === WS_A ? USER_A : USER_B) =>
     new DocumentService({
-      repo, storage, limits, now: () => NOW,
+      repo, team: repo, storage, limits, now: () => NOW,
       ctx: { workspaceId, userId, userName: userId === USER_A ? "Kyle" : "Bea", role },
     });
 

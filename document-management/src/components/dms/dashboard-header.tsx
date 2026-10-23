@@ -1,4 +1,4 @@
-import { Upload } from "lucide-react";
+import { Upload, Users } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import type { StorageUsage } from "@/lib/dms/types";
 import { StorageUsageIndicator } from "./storage-usage-indicator";
@@ -7,10 +7,13 @@ export function DashboardHeader({
   usage,
   canUpload,
   onUpload,
+  onTeam,
 }: {
   usage: StorageUsage | null;
   canUpload: boolean;
   onUpload: () => void;
+  /** Present only when the caller may manage the team. */
+  onTeam?: () => void;
 }) {
   return (
     <header className="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
@@ -25,6 +28,11 @@ export function DashboardHeader({
           <div className="rounded-xl border bg-muted/40 px-4 py-3 sm:w-64">
             <StorageUsageIndicator usage={usage} compact />
           </div>
+        )}
+        {onTeam && (
+          <Button variant="outline" size="lg" onClick={onTeam} className="w-full sm:w-auto">
+            <Users /> Team
+          </Button>
         )}
         <Button
           variant="gradient"

@@ -310,6 +310,7 @@ export function useDocumentManager(api: DmsApi) {
       share: can(role, "share"),
       folders: can(role, "manage_folders"),
       purge: can(role, "purge"),
+      team: can(role, "manage_team"),
     };
   }, [boot?.role]);
 

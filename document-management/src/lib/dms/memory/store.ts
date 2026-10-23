@@ -7,6 +7,7 @@ import type {
   DocumentPatch,
   DocumentRepository,
   ObjectStorage,
+  TeamRepository,
 } from "../ports";
 import type {
   DocumentQuery,
@@ -16,6 +17,10 @@ import type {
   Folder,
   FolderColor,
   FolderWithCount,
+  Invite,
+  Member,
+  Role,
+  ShareLinkInfo,
   StorageUsage,
   UploadTarget,
   Workspace,
@@ -31,12 +36,18 @@ export interface StoredAudit extends AuditEntry {
 }
 
 export interface StoredShare {
+  id: string;
   workspaceId: string;
   documentId: string;
   tokenHash: string;
   expiresAt: string;
+  createdAt: string;
+  revokedAt: string | null;
   createdBy: string;
 }
+
+export type StoredMember = Member & { workspaceId: string };
+export type StoredInvite = Invite & { workspaceId: string };
 
 /** Plain data container so a store can be seeded, shared and inspected in tests. */
 export class MemoryStore {
@@ -47,11 +58,14 @@ export class MemoryStore {
   /** documentId -> tag names */
   tags = new Map<string, string[]>();
   shares: StoredShare[] = [];
+  /** keyed by `${workspaceId}:${userId}` */
+  members = new Map<string, StoredMember>();
+  invites: StoredInvite[] = [];
   audit: StoredAudit[] = [];
   blobs = new Map<string, { bytes: Uint8Array; mimeType: string }>();
 }
 
-export class MemoryRepository implements DocumentRepository {
+export class MemoryRepository implements DocumentRepository, TeamRepository {
   constructor(
     private readonly store: MemoryStore,
     private readonly opts: { newId?: () => string; now?: () => Date } = {},
@@ -328,12 +342,90 @@ export class MemoryRepository implements DocumentRepository {
   }) {
     this.doc(a.workspaceId, a.documentId);
     this.store.shares.push({
+      id: this.id(),
+      createdAt: this.now().toISOString(),
+      revokedAt: null,
       workspaceId: a.workspaceId,
       documentId: a.documentId,
       tokenHash: a.tokenHash,
       expiresAt: a.expiresAt,
       createdBy: a.userId,
     });
+  }
+
+  async listShareLinks(ws: string, documentId: string): Promise<ShareLinkInfo[]> {
+    const now = this.now().getTime();
+    return this.store.shares
+      .filter((l) => l.workspaceId === ws && l.documentId === documentId && !l.revokedAt && Date.parse(l.expiresAt) > now)
+      .sort((a, b) => b.createdAt.localeCompare(a.createdAt))
+      .map((l) => ({
+        id: l.id,
+        createdAt: l.createdAt,
+        expiresAt: l.expiresAt,
+        createdBy: l.createdBy,
+        createdByName: this.store.members.get(`${ws}:${l.createdBy}`)?.displayName ?? "",
+      }));
+  }
+
+  async revokeShareLink(ws: string, linkId: string) {
+    const link = this.store.shares.find((l) => l.id === linkId && l.workspaceId === ws && !l.revokedAt);
+    if (!link) throw new DmsError("not_found", "Share link not found.");
+    link.revokedAt = this.now().toISOString();
+  }
+
+  /* ------------------------------ team ------------------------------ */
+
+  async listMembers(ws: string): Promise<Member[]> {
+    return [...this.store.members.values()]
+      .filter((m) => m.workspaceId === ws)
+      .map(({ workspaceId: _w, ...m }) => (void _w, m))
+      .sort((a, b) => a.joinedAt.localeCompare(b.joinedAt) || a.email.localeCompare(b.email));
+  }
+
+  async listInvites(ws: string): Promise<Invite[]> {
+    const now = this.now().getTime();
+    return this.store.invites
+      .filter((i) => i.workspaceId === ws && Date.parse(i.expiresAt) > now)
+      .map(({ workspaceId: _w, ...i }) => (void _w, i))
+      .sort((a, b) => b.invitedAt.localeCompare(a.invitedAt));
+  }
+
+  async createInvite(a: { workspaceId: string; userId: string; email: string; role: Role }): Promise<Invite> {
+    const nowD = this.now();
+    const existing = this.store.invites.find((i) => i.workspaceId === a.workspaceId && i.email === a.email);
+    const base = {
+      email: a.email,
+      role: a.role,
+      invitedAt: nowD.toISOString(),
+      expiresAt: new Date(nowD.getTime() + 14 * 86_400_000).toISOString(),
+    };
+    if (existing) {
+      Object.assign(existing, base);
+      const { workspaceId: _w, ...out } = existing;
+      return (void _w, out);
+    }
+    const invite = { id: this.id(), workspaceId: a.workspaceId, ...base };
+    this.store.invites.push(invite);
+    const { workspaceId: _w, ...out } = invite;
+    return (void _w, out);
+  }
+
+  async revokeInvite(ws: string, inviteId: string): Promise<Invite | null> {
+    const i = this.store.invites.findIndex((x) => x.id === inviteId && x.workspaceId === ws);
+    if (i < 0) return null;
+    const [gone] = this.store.invites.splice(i, 1);
+    const { workspaceId: _w, ...out } = gone;
+    return (void _w, out);
+  }
+
+  async setMemberRole(ws: string, userId: string, role: Role) {
+    const m = this.store.members.get(`${ws}:${userId}`);
+    if (!m) throw new DmsError("not_found", "Member not found.");
+    this.store.members.set(`${ws}:${userId}`, { ...m, role });
+  }
+
+  async removeMember(ws: string, userId: string) {
+    if (!this.store.members.delete(`${ws}:${userId}`)) throw new DmsError("not_found", "Member not found.");
   }
 
   async recordAudit(ws: string, userId: string, entry: AuditEntry) {

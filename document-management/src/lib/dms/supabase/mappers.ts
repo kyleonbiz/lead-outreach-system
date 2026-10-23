@@ -59,6 +59,7 @@ export function mapDbError(error: { code?: string; message?: string } | null | u
   const msg = error?.message ?? "";
   const code = error?.code ?? "";
   if (msg.includes("quota_exceeded")) return new DmsError("quota_exceeded", "Not enough storage left in this workspace.");
+  if (msg.includes("last_owner")) return new DmsError("conflict", "A workspace must keep at least one owner.");
   if (msg.includes("protected_column") || msg.includes("forbidden") || code === "42501") {
     return new DmsError("forbidden", "You do not have permission to do that.");
   }

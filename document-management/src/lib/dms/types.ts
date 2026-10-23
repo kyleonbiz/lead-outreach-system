@@ -161,3 +161,32 @@ export interface FileLink {
   url: string;
   expiresAt: string;
 }
+
+export interface Member {
+  userId: string;
+  displayName: string;
+  email: string;
+  role: Role;
+  joinedAt: string;
+}
+
+export interface Invite {
+  id: string;
+  email: string;
+  role: Role;
+  invitedAt: string;
+  expiresAt: string;
+}
+
+export interface Team {
+  members: Member[];
+  invites: Invite[];
+}
+
+export interface ShareLinkInfo {
+  id: string;
+  createdAt: string;
+  expiresAt: string;
+  createdBy: string;
+  createdByName: string;
+}

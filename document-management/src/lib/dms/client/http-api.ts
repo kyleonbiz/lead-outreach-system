@@ -9,6 +9,10 @@ import type {
   FileLink,
   Folder,
   InitiateUploadResult,
+  Invite,
+  Role,
+  ShareLinkInfo,
+  Team,
   UploadTarget,
 } from "../types";
 
@@ -99,7 +103,7 @@ export function xhrUpload(
 export function createHttpApi(mode: Exclude<ApiMode, "demo">): DmsApi {
   return {
     mode,
-    capabilities: { share: mode === "live" },
+    capabilities: { share: mode === "live", team: true },
     bootstrap: () => call<Bootstrap>("/bootstrap"),
     listDocuments: (q) => call<DocumentPage>(`/documents?${queryString(q)}`),
     getDocument: (id) => call<DocumentDetail>(`/documents/${id}`),
@@ -116,6 +120,13 @@ export function createHttpApi(mode: Exclude<ApiMode, "demo">): DmsApi {
     },
     createShareLink: (id, ttlMinutes) =>
       call<{ url: string; expiresAt: string }>(`/documents/${id}/share`, { json: { ttlMinutes } }),
+    listShareLinks: (id) => call<ShareLinkInfo[]>(`/documents/${id}/share`),
+    revokeShareLink: (id, linkId) => call<void>(`/documents/${id}/share/${linkId}`, { method: "DELETE" }),
+    getTeam: () => call<Team>("/team"),
+    inviteMember: (email, role: Role) => call<Invite>("/team/invites", { json: { email, role } }),
+    revokeInvite: (inviteId) => call<void>(`/team/invites/${inviteId}`, { method: "DELETE" }),
+    changeMemberRole: (userId, role: Role) => call<void>(`/team/members/${userId}`, { method: "PATCH", json: { role } }),
+    removeMember: (userId) => call<void>(`/team/members/${userId}`, { method: "DELETE" }),
     createFolder: (name) => call<Folder>("/folders", { json: { name } }),
     renameFolder: (id, name) => call<Folder>(`/folders/${id}`, { method: "PATCH", json: { name } }),
     deleteFolder: (id) => call<void>(`/folders/${id}`, { method: "DELETE" }),

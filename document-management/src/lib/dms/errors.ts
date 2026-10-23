@@ -7,6 +7,7 @@ export type DmsErrorCode =
   | "conflict"
   | "storage_failed"
   | "unavailable"
+  | "rate_limited"
   | "internal";
 
 const STATUS: Record<DmsErrorCode, number> = {
@@ -18,6 +19,7 @@ const STATUS: Record<DmsErrorCode, number> = {
   conflict: 409,
   storage_failed: 502,
   unavailable: 503,
+  rate_limited: 429,
   internal: 500,
 };
 

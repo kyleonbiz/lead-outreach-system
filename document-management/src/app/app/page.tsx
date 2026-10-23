@@ -4,7 +4,7 @@ import { AppHeader } from "@/components/app-header";
 import { AuthCard } from "@/components/auth/auth-card";
 import { OnboardingForm } from "@/components/auth/onboarding-form";
 import { LiveWorkspace } from "@/components/dms/live-workspace";
-import { findMembership } from "@/lib/dms/server/context";
+import { acceptPendingInvites, findMembership } from "@/lib/dms/server/context";
 import { devModeAllowed, getSupabaseEnv } from "@/lib/supabase/env";
 import { createServerSupabase } from "@/lib/supabase/server";
 
@@ -18,6 +18,8 @@ export default async function AppPage() {
     if (!data.user) redirect("/login?next=/app");
     const email = data.user.email ?? "";
     const fullName = (data.user.user_metadata?.full_name as string | undefined) ?? email.split("@")[0];
+    // Pending invites for this (verified) email take effect before onboarding is offered.
+    await acceptPendingInvites(supabase, fullName);
     const membership = await findMembership(supabase, data.user.id);
     if (!membership) {
       return (

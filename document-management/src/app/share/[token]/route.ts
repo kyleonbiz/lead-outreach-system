@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { sha256Hex } from "@/lib/dms/service";
+import { PUBLIC_SHARE_RATE, checkRate, clientKey } from "@/lib/dms/server/rate-limit";
 import { DOCUMENTS_BUCKET } from "@/lib/dms/supabase/storage";
 import { createServiceSupabase } from "@/lib/supabase/server";
 
@@ -11,9 +12,17 @@ const text = (body: string, status: number) =>
 /**
  * Public, unauthenticated download for an unexpired share link. The token is
  * 256 random bits and only its SHA-256 hash is stored. Uses the service-role
- * key server-side only, and redirects to a 60-second signed URL.
+ * key server-side only, and redirects to a 60-second signed URL. Each use is
+ * audit-logged by `dms_resolve_share`; requests are rate-limited per client
+ * address (in memory, per instance).
  */
-export async function GET(_req: Request, ctx: RouteContext<"/share/[token]">) {
+export async function GET(req: Request, ctx: RouteContext<"/share/[token]">) {
+  const limited = checkRate(clientKey(req), PUBLIC_SHARE_RATE);
+  if (!limited.ok) {
+    const res = text("Too many requests. Try again shortly.", 429);
+    res.headers.set("retry-after", String(limited.retryAfterSec));
+    return res;
+  }
   const { token } = await ctx.params;
   if (!/^[A-Za-z0-9_-]{20,64}$/.test(token)) return text("This link is not valid.", 404);
   const admin = createServiceSupabase();

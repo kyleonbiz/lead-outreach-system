@@ -257,6 +257,20 @@ export const createWorkspaceSchema = z.object({
   name: z.string().trim().min(2, "Name is too short").max(80, "Name is too long"),
 });
 
+export const roleSchema = z.enum(["viewer", "editor", "admin", "owner"]);
+
+export const inviteMemberSchema = z.object({
+  email: z
+    .string()
+    .trim()
+    .toLowerCase()
+    .max(254)
+    .regex(/^[^@\s]+@[^@\s]+\.[^@\s]+$/, "Enter a valid email address"),
+  role: roleSchema,
+});
+
+export const changeRoleSchema = z.object({ role: roleSchema });
+
 export const signInSchema = z.object({
   email: z.string().trim().email("Enter a valid email"),
   password: z.string().min(8, "Use at least 8 characters").max(200),

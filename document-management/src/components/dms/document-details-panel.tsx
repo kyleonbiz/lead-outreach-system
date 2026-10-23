@@ -258,6 +258,8 @@ export function DocumentDetailsPanel({
               fileName={doc.displayName}
               onOpenChange={setSharing}
               onCreate={(ttl) => api.createShareLink(doc.id, ttl)}
+              loadLinks={() => api.listShareLinks(doc.id)}
+              onRevoke={(linkId) => api.revokeShareLink(doc.id, linkId)}
             />
             <DeleteConfirmationDialog
               open={confirmDelete}

@@ -9,6 +9,7 @@ import type {
   DocumentPatch,
   DocumentRepository,
   ObjectStorage,
+  TeamRepository,
 } from "./ports";
 import type {
   Bootstrap,
@@ -20,16 +21,21 @@ import type {
   FileLink,
   Folder,
   InitiateUploadResult,
+  Invite,
   Role,
+  ShareLinkInfo,
+  Team,
   UploadLimits,
 } from "./types";
 import {
   buildStorageKey,
   categoryForFolderName,
+  changeRoleSchema,
   createFolderSchema,
   documentQuerySchema,
   getExtension,
   initiateUploadSchema,
+  inviteMemberSchema,
   magicBytesMatch,
   normalizeRename,
   renameFolderSchema,
@@ -45,7 +51,8 @@ type Action =
   | "delete"
   | "share"
   | "manage_folders"
-  | "purge";
+  | "purge"
+  | "manage_team";
 
 const MIN_ROLE: Record<Action, Role> = {
   read: "viewer",
@@ -54,6 +61,7 @@ const MIN_ROLE: Record<Action, Role> = {
   share: "editor",
   manage_folders: "editor",
   purge: "admin",
+  manage_team: "admin",
 };
 const RANK: Record<Role, number> = { viewer: 0, editor: 1, admin: 2, owner: 3 };
 
@@ -63,6 +71,8 @@ export function can(role: Role, action: Action): boolean {
 
 export interface ServiceDeps {
   repo: DocumentRepository;
+  /** Membership persistence; omit where team management is not offered (public demo). */
+  team?: TeamRepository;
   storage: ObjectStorage;
   limits: UploadLimits;
   ctx: DmsContext;
@@ -80,6 +90,7 @@ const defaultId = () => globalThis.crypto.randomUUID();
  */
 export class DocumentService {
   private readonly repo: DocumentRepository;
+  private readonly team: TeamRepository | undefined;
   private readonly storage: ObjectStorage;
   private readonly limits: UploadLimits;
   private readonly ctx: DmsContext;
@@ -90,6 +101,7 @@ export class DocumentService {
 
   constructor(deps: ServiceDeps) {
     this.repo = deps.repo;
+    this.team = deps.team;
     this.storage = deps.storage;
     this.limits = deps.limits;
     this.ctx = deps.ctx;
@@ -440,6 +452,102 @@ export class DocumentService {
     });
     await this.audit("document.shared", "document", id, { ttlMinutes });
     return { token, expiresAt };
+  }
+
+  async listShareLinks(id: string): Promise<ShareLinkInfo[]> {
+    this.require("share");
+    await this.loadDocument(id);
+    return this.repo.listShareLinks(this.ctx.workspaceId, id);
+  }
+
+  /** Editors revoke their own links; admins can revoke anyone's. */
+  async revokeShareLink(documentId: string, linkId: string): Promise<void> {
+    this.require("share");
+    await this.loadDocument(documentId);
+    const link = (await this.repo.listShareLinks(this.ctx.workspaceId, documentId)).find((l) => l.id === linkId);
+    if (!link) throw new DmsError("not_found", "Share link not found.");
+    if (link.createdBy !== this.ctx.userId && !can(this.ctx.role, "purge")) {
+      throw new DmsError("forbidden", "Only the link's creator or an admin can revoke it.");
+    }
+    await this.repo.revokeShareLink(this.ctx.workspaceId, linkId);
+    await this.audit("document.share_revoked", "document", documentId, { linkId });
+  }
+
+  /* ------------------------------- team ----------------------------- */
+
+  private teamRepo(): TeamRepository {
+    this.require("manage_team");
+    if (!this.team) throw new DmsError("unavailable", "Team management is not available here.");
+    return this.team;
+  }
+
+  /** Whether the current role may grant/modify `target` (owners: anything; admins: viewer/editor only). */
+  private canAssign(target: Role): boolean {
+    return this.ctx.role === "owner" || RANK[target] < RANK.admin;
+  }
+
+  async listTeam(): Promise<Team> {
+    const team = this.teamRepo();
+    const [members, invites] = await Promise.all([
+      team.listMembers(this.ctx.workspaceId),
+      team.listInvites(this.ctx.workspaceId),
+    ]);
+    return { members, invites };
+  }
+
+  async inviteMember(raw: unknown): Promise<Invite> {
+    const team = this.teamRepo();
+    const { email, role } = inviteMemberSchema.parse(raw);
+    if (!this.canAssign(role)) throw new DmsError("forbidden", "Only an owner can invite admins or owners.");
+    const members = await team.listMembers(this.ctx.workspaceId);
+    if (members.some((m) => m.email.toLowerCase() === email)) {
+      throw new DmsError("conflict", "That person is already a member.");
+    }
+    const invite = await team.createInvite({ workspaceId: this.ctx.workspaceId, userId: this.ctx.userId, email, role });
+    await this.audit("member.invited", "workspace", invite.id, { email, role });
+    return invite;
+  }
+
+  async revokeInvite(inviteId: string): Promise<void> {
+    const team = this.teamRepo();
+    const invites = await team.listInvites(this.ctx.workspaceId);
+    const invite = invites.find((i) => i.id === inviteId);
+    if (!invite) throw new DmsError("not_found", "Invite not found.");
+    if (!this.canAssign(invite.role)) throw new DmsError("forbidden", "Only an owner can revoke this invite.");
+    await team.revokeInvite(this.ctx.workspaceId, inviteId);
+    await this.audit("member.invite_revoked", "workspace", inviteId, { email: invite.email, role: invite.role });
+  }
+
+  async changeMemberRole(userId: string, raw: unknown): Promise<void> {
+    const team = this.teamRepo();
+    const { role } = changeRoleSchema.parse(raw);
+    if (userId === this.ctx.userId) throw new DmsError("forbidden", "You cannot change your own role.");
+    const member = (await team.listMembers(this.ctx.workspaceId)).find((m) => m.userId === userId);
+    if (!member) throw new DmsError("not_found", "Member not found.");
+    if (!this.canAssign(member.role) || !this.canAssign(role)) {
+      throw new DmsError("forbidden", "Only an owner can change admin or owner roles.");
+    }
+    await this.assertOwnerRemains(member, role);
+    await team.setMemberRole(this.ctx.workspaceId, userId, role);
+    await this.audit("member.role_changed", "workspace", userId, { email: member.email, from: member.role, to: role });
+  }
+
+  async removeMember(userId: string): Promise<void> {
+    const team = this.teamRepo();
+    if (userId === this.ctx.userId) throw new DmsError("forbidden", "You cannot remove yourself.");
+    const member = (await team.listMembers(this.ctx.workspaceId)).find((m) => m.userId === userId);
+    if (!member) throw new DmsError("not_found", "Member not found.");
+    if (!this.canAssign(member.role)) throw new DmsError("forbidden", "Only an owner can remove admins or owners.");
+    await this.assertOwnerRemains(member, null);
+    await team.removeMember(this.ctx.workspaceId, userId);
+    await this.audit("member.removed", "workspace", userId, { email: member.email, role: member.role });
+  }
+
+  /** A workspace must always keep at least one owner. */
+  private async assertOwnerRemains(member: { userId: string; role: Role }, nextRole: Role | null) {
+    if (member.role !== "owner" || nextRole === "owner") return;
+    const owners = (await this.team!.listMembers(this.ctx.workspaceId)).filter((m) => m.role === "owner");
+    if (owners.length <= 1) throw new DmsError("conflict", "A workspace must keep at least one owner.");
   }
 
   /* ----------------------------- folders ---------------------------- */

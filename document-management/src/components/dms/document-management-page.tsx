@@ -11,6 +11,7 @@ import { DocumentToolbar } from "./document-toolbar";
 import { FolderGrid } from "./folder-grid";
 import { EmptyState, ErrorState, LoadingSkeleton } from "./states";
 import { Toaster } from "./toaster";
+import { TeamDialog } from "./team-dialog";
 import { UploadDialog } from "./upload-dialog";
 import { useDocumentManager } from "./use-document-manager";
 
@@ -25,6 +26,7 @@ export function DocumentManagementPage({ api }: { api: DmsApi }) {
   const m = useDocumentManager(api);
   const [uploadOpen, setUploadOpen] = useState(false);
   const [uploadFolder, setUploadFolder] = useState<string | null>(null);
+  const [teamOpen, setTeamOpen] = useState(false);
 
   const openUpload = () => {
     setUploadFolder(m.query.folderId);
@@ -80,7 +82,12 @@ export function DocumentManagementPage({ api }: { api: DmsApi }) {
           <ErrorState title="Could not load your workspace" message={m.bootError} onRetry={m.retryBootstrap} />
         ) : (
           <>
-            <DashboardHeader usage={boot?.usage ?? null} canUpload={m.perms.write && !!boot} onUpload={openUpload} />
+            <DashboardHeader
+              usage={boot?.usage ?? null}
+              canUpload={m.perms.write && !!boot}
+              onUpload={openUpload}
+              onTeam={api.capabilities.team && m.perms.team && boot ? () => setTeamOpen(true) : undefined}
+            />
 
             <FolderGrid
               folders={boot?.folders ?? []}
@@ -147,6 +154,16 @@ export function DocumentManagementPage({ api }: { api: DmsApi }) {
           onFolderChange={setUploadFolder}
           usage={boot.usage}
           onUploaded={onUploaded}
+        />
+      )}
+      {boot && api.capabilities.team && m.perms.team && (
+        <TeamDialog
+          open={teamOpen}
+          onOpenChange={setTeamOpen}
+          api={api}
+          myRole={boot.role}
+          myUserId={boot.user.id}
+          onNotify={m.notify}
         />
       )}
       <DocumentDetailsPanel manager={m} onUploadVersion={uploadVersion} />

@@ -1,16 +1,17 @@
 import "server-only";
 import { toDmsError } from "../errors";
 import { getDms, type Dms } from "./context";
+import { MUTATION_RATE, checkRate, type RateRule } from "./rate-limit";
 
 const NO_STORE = { "cache-control": "no-store" };
 
 /** Storage object keys are internal; they are never sent to the browser. */
 const hideInternal = (key: string, value: unknown) => (key === "storageKey" ? undefined : value);
 
-export function json(body: unknown, status = 200) {
+export function json(body: unknown, status = 200, headers: Record<string, string> = {}) {
   return new Response(JSON.stringify(body, hideInternal), {
     status,
-    headers: { ...NO_STORE, "content-type": "application/json" },
+    headers: { ...NO_STORE, "content-type": "application/json", ...headers },
   });
 }
 
@@ -35,11 +36,32 @@ export async function readJson(req: Request): Promise<unknown> {
   }
 }
 
-/** Wraps a handler: authenticates, converts every failure to a safe JSON envelope. */
-export async function route<T>(req: Request, fn: (dms: Dms) => Promise<T>): Promise<Response> {
+/**
+ * Wraps a handler: authenticates, rate-limits mutations per user (in-memory,
+ * per instance; see rate-limit.ts), and converts every failure to a safe JSON
+ * envelope. `opts.rate` adds a stricter limit on top of the general one.
+ */
+export async function route<T>(
+  req: Request,
+  fn: (dms: Dms) => Promise<T>,
+  opts: { rate?: RateRule } = {},
+): Promise<Response> {
   try {
     if (!sameOrigin(req)) return json({ ok: false, error: { code: "forbidden", message: "Cross-origin request blocked." } }, 403);
     const dms = await getDms();
+    if (req.method !== "GET" && req.method !== "HEAD") {
+      for (const rule of [MUTATION_RATE, opts.rate]) {
+        if (!rule) continue;
+        const r = checkRate(dms.userId, rule);
+        if (!r.ok) {
+          return json(
+            { ok: false, error: { code: "rate_limited", message: "Too many requests. Please wait a moment and try again." } },
+            429,
+            { "retry-after": String(r.retryAfterSec) },
+          );
+        }
+      }
+    }
     const data = await fn(dms);
     return json({ ok: true, data: data ?? null });
   } catch (e) {

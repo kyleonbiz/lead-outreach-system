@@ -6,6 +6,7 @@ import type {
   BeginUploadResult,
   DocumentPatch,
   DocumentRepository,
+  TeamRepository,
 } from "../ports";
 import type {
   DocumentQuery,
@@ -14,19 +15,26 @@ import type {
   Folder,
   FolderColor,
   FolderWithCount,
+  Invite,
+  Member,
+  Role,
+  ShareLinkInfo,
   StorageUsage,
   Workspace,
 } from "../types";
 import { documentFromRow, folderFromRow, mapDbError, versionFromRow } from "./mappers";
 
-/** Events the database records itself through triggers. */
+/**
+ * Audit rows are written by the database itself (triggers, and the member/share
+ * RPCs). Only these events need an explicit RPC call from the app.
+ */
 const RPC_AUDITED = new Set(["document.downloaded", "document.shared", "document.tags_updated"]);
 
 /**
  * Runs every statement as the signed-in user, so Postgres RLS is the tenant
  * boundary. Never construct this with a service-role client.
  */
-export class SupabaseRepository implements DocumentRepository {
+export class SupabaseRepository implements DocumentRepository, TeamRepository {
   constructor(private readonly db: SupabaseClient) {}
 
   private async rpc<T>(fn: string, args: Record<string, unknown>): Promise<T> {
@@ -292,6 +300,81 @@ export class SupabaseRepository implements DocumentRepository {
     if (error) throw mapDbError(error);
   }
 
+  async listShareLinks(ws: string, documentId: string): Promise<ShareLinkInfo[]> {
+    const rows = await this.rpc<
+      { id: string; created_at: string; expires_at: string; created_by: string | null; created_by_name: string }[]
+    >("dms_list_share_links", { p_workspace: ws, p_document: documentId });
+    return (rows ?? []).map((r) => ({
+      id: r.id,
+      createdAt: r.created_at,
+      expiresAt: r.expires_at,
+      createdBy: r.created_by ?? "",
+      createdByName: r.created_by_name ?? "",
+    }));
+  }
+
+  async revokeShareLink(ws: string, linkId: string) {
+    await this.rpc("dms_revoke_share_link", { p_workspace: ws, p_link: linkId });
+  }
+
+  /* ------------------------------ team ------------------------------ */
+
+  async listMembers(ws: string): Promise<Member[]> {
+    const { data, error } = await this.db
+      .from("workspace_members")
+      .select("user_id,display_name,email,role,created_at")
+      .eq("workspace_id", ws)
+      .order("created_at", { ascending: true });
+    if (error) throw mapDbError(error);
+    return (data ?? []).map((r) => ({
+      userId: r.user_id,
+      displayName: r.display_name ?? "",
+      email: r.email ?? "",
+      role: r.role as Role,
+      joinedAt: r.created_at,
+    }));
+  }
+
+  async listInvites(ws: string): Promise<Invite[]> {
+    const { data, error } = await this.db
+      .from("workspace_invites")
+      .select("id,email,role,created_at,expires_at")
+      .eq("workspace_id", ws)
+      .is("accepted_at", null)
+      .gt("expires_at", new Date().toISOString())
+      .order("created_at", { ascending: false });
+    if (error) throw mapDbError(error);
+    return (data ?? []).map(inviteFromRow);
+  }
+
+  async createInvite(a: { workspaceId: string; userId: string; email: string; role: Role }): Promise<Invite> {
+    const id = await this.rpc<string>("dms_invite_member", {
+      p_workspace: a.workspaceId,
+      p_email: a.email,
+      p_role: a.role,
+    });
+    const { data, error } = await this.db
+      .from("workspace_invites")
+      .select("id,email,role,created_at,expires_at")
+      .eq("id", id)
+      .single();
+    if (error) throw mapDbError(error);
+    return inviteFromRow(data);
+  }
+
+  async revokeInvite(ws: string, inviteId: string): Promise<Invite | null> {
+    await this.rpc("dms_revoke_invite", { p_workspace: ws, p_invite: inviteId });
+    return null;
+  }
+
+  async setMemberRole(ws: string, userId: string, role: Role) {
+    await this.rpc("dms_set_member_role", { p_workspace: ws, p_user: userId, p_role: role });
+  }
+
+  async removeMember(ws: string, userId: string) {
+    await this.rpc("dms_remove_member", { p_workspace: ws, p_user: userId });
+  }
+
   async recordAudit(ws: string, _userId: string, entry: AuditEntry) {
     if (!RPC_AUDITED.has(entry.action) || !entry.entityId) return; // others are written by DB triggers
     await this.rpc("dms_record_audit", {
@@ -301,4 +384,8 @@ export class SupabaseRepository implements DocumentRepository {
       p_meta: entry.metadata ?? {},
     });
   }
+}
+
+function inviteFromRow(r: { id: string; email: string; role: string; created_at: string; expires_at: string }): Invite {
+  return { id: r.id, email: r.email, role: r.role as Role, invitedAt: r.created_at, expiresAt: r.expires_at };
 }

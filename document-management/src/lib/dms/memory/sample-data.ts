@@ -90,6 +90,23 @@ export function seedSampleStore(now: Date = new Date()): MemoryStore {
     store.folders.set(folder.id, folder);
   }
 
+  store.members.set(`${workspace.id}:${SAMPLE_USER_ID}`, {
+    workspaceId: workspace.id,
+    userId: SAMPLE_USER_ID,
+    displayName: SAMPLE_USER_NAME,
+    email: "kyle@aurumventura.net",
+    role: "owner",
+    joinedAt: created(220),
+  });
+  store.members.set(`${workspace.id}:${uid(0xbb)}`, {
+    workspaceId: workspace.id,
+    userId: uid(0xbb),
+    displayName: "Maya Chen",
+    email: "maya@aurumventura.net",
+    role: "editor",
+    joinedAt: created(120),
+  });
+
   DOCS.forEach((d, i) => {
     const id = uid(100 + i);
     const ext = d.name.split(".").pop()!.toLowerCase();

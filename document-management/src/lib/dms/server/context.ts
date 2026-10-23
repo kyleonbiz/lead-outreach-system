@@ -12,6 +12,7 @@ import { getDevKit } from "./dev-store";
 
 export interface Dms {
   mode: "live" | "dev";
+  userId: string;
   service: DocumentService;
 }
 
@@ -38,6 +39,18 @@ export async function findMembership(
 }
 
 /**
+ * Joins the signed-in user to workspaces that invited their verified email.
+ * Failure must never block sign-in, so errors are swallowed.
+ */
+export async function acceptPendingInvites(
+  supabase: Awaited<ReturnType<typeof createServerSupabase>>,
+  displayName: string,
+): Promise<number> {
+  const { data, error } = await supabase.rpc("dms_accept_invites", { p_display_name: displayName });
+  return error ? 0 : Number(data ?? 0);
+}
+
+/**
  * Resolves the caller. With Supabase configured the user is authenticated by
  * the auth server (never trusted from a cookie alone) and all data access runs
  * under their session, so RLS applies.
@@ -50,10 +63,13 @@ export async function getDms(): Promise<Dms> {
     const membership = await findMembership(supabase, data.user.id);
     if (!membership) throw new DmsError("not_found", "You do not belong to a workspace yet.");
     const email = data.user.email ?? "";
+    const repo = new SupabaseRepository(supabase);
     return {
       mode: "live",
+      userId: data.user.id,
       service: new DocumentService({
-        repo: new SupabaseRepository(supabase),
+        repo,
+        team: repo,
         storage: new SupabaseStorage(supabase),
         limits: loadUploadLimits(),
         userEmail: email,
@@ -72,8 +88,10 @@ export async function getDms(): Promise<Dms> {
   const kit = getDevKit();
   return {
     mode: "dev",
+    userId: SAMPLE_USER_ID,
     service: new DocumentService({
       repo: kit.repo,
+      team: kit.repo,
       storage: kit.storage,
       limits: loadUploadLimits(),
       userEmail: "dev@localhost",

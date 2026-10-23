@@ -6,6 +6,9 @@ import type {
   FileLink,
   Folder,
   FolderColor,
+  Invite,
+  Member,
+  ShareLinkInfo,
   FolderWithCount,
   Role,
   StorageUsage,
@@ -127,7 +130,23 @@ export interface DocumentRepository {
     userId: string;
   }): Promise<void>;
 
+  listShareLinks(workspaceId: string, documentId: string): Promise<ShareLinkInfo[]>;
+  revokeShareLink(workspaceId: string, linkId: string): Promise<void>;
+
   recordAudit(workspaceId: string, userId: string, entry: AuditEntry): Promise<void>;
+}
+
+/**
+ * Membership persistence. The service decides who may do what; the Supabase
+ * adapter additionally re-checks every rule inside SECURITY DEFINER functions.
+ */
+export interface TeamRepository {
+  listMembers(workspaceId: string): Promise<Member[]>;
+  listInvites(workspaceId: string): Promise<Invite[]>;
+  createInvite(args: { workspaceId: string; userId: string; email: string; role: Role }): Promise<Invite>;
+  revokeInvite(workspaceId: string, inviteId: string): Promise<Invite | null>;
+  setMemberRole(workspaceId: string, userId: string, role: Role): Promise<void>;
+  removeMember(workspaceId: string, userId: string): Promise<void>;
 }
 
 export interface ObjectStorage {

@@ -1,6 +1,7 @@
+import { UPLOAD_RATE } from "@/lib/dms/server/rate-limit";
 import { readJson, route } from "@/lib/dms/server/respond";
 
 export async function POST(req: Request) {
   const body = await readJson(req);
-  return route(req, ({ service }) => service.initiateUpload(body));
+  return route(req, ({ service }) => service.initiateUpload(body), { rate: UPLOAD_RATE });
 }
