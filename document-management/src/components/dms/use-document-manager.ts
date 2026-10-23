@@ -41,6 +41,8 @@ export function useDocumentManager(api: DmsApi) {
   const noticeId = useRef(0);
   const listSeq = useRef(0);
   const detailSeq = useRef(0);
+  // The dialog is controlled (no Radix Trigger), so remember the opener to restore focus on close.
+  const opener = useRef<HTMLElement | null>(null);
 
   const notify = useCallback((kind: Notice["kind"], message: string) => {
     const id = ++noticeId.current;
@@ -133,6 +135,7 @@ export function useDocumentManager(api: DmsApi) {
 
   const openDocument = useCallback(
     async (id: string | null) => {
+      if (id && document.activeElement instanceof HTMLElement) opener.current = document.activeElement;
       setSelectedId(id);
       setDetail(null);
       setDetailError("");
@@ -332,6 +335,7 @@ export function useDocumentManager(api: DmsApi) {
     detail,
     detailError,
     openDocument,
+    restoreFocus: () => opener.current?.isConnected && opener.current.focus(),
     reloadDetail,
     update,
     toggleStar,

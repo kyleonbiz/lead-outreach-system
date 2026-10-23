@@ -70,6 +70,10 @@ export function DocumentDetailsPanel({
         className="sm:h-[min(780px,calc(100dvh-3rem))] sm:max-w-5xl"
         aria-describedby="details-desc"
         closeLabel="Close details"
+        onCloseAutoFocus={(e) => {
+          e.preventDefault();
+          manager.restoreFocus();
+        }}
       >
         <DialogDescription id="details-desc" className="sr-only">
           Document details, preview and actions
