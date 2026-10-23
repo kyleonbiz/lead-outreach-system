@@ -361,3 +361,47 @@ def specs():
 def result_text(obj):
     s = json.dumps(obj, default=str)
     return s if len(s) <= RESULT_LIMIT else s[:RESULT_LIMIT] + '..."(truncated)"'
+
+
+# ---------------- shared execution + connector (MCP) view ----------------
+def execute(name, args):
+    """Validate and run one write tool. Returns (ok, result_or_error_text). Used for approved actions from any source."""
+    tool = TOOLS.get(name)
+    if not tool or tool.kind != "write" or not isinstance(args, dict):
+        return False, "unknown tool"
+    try:
+        err = tool.validate(args) if tool.validate else ""
+        if err:
+            return False, err
+        return True, tool.run(args)
+    except (ToolError, ValueError, TypeError, KeyError) as e:
+        return False, str(e)
+
+
+# What an external AI (ChatGPT, Claude Cowork) may use. Sending or loosening sending, and un-blocking people, are never offered.
+EXTERNAL_BLOCKED = {"resume_sending", "set_sending_caps", "allow_contact"}
+
+
+def external_validate(name, args):
+    """Extra checks for calls that came through a connector (run both when proposed and again when approved)."""
+    if name in EXTERNAL_BLOCKED:
+        return "that action is not available to connectors"
+    if name == "run_job" and args.get("name") == "send_followups":
+        return "sending jobs cannot be started from a connector"
+    return ""
+
+
+def external_specs(scope):
+    out = []
+    for t in TOOLS.values():
+        if t.name in EXTERNAL_BLOCKED or (t.kind == "write" and scope == "read"):
+            continue
+        schema = json.loads(json.dumps(t.schema))
+        desc = t.description
+        if t.kind == "write":
+            desc += " This only QUEUES a proposal; the owner must approve it inside the app before anything happens."
+            if t.name == "run_job":
+                schema["properties"]["name"]["enum"] = [j for j in RUNNABLE_JOBS if j != "send_followups"]
+        out.append({"name": t.name, "description": desc, "inputSchema": schema,
+                    "annotations": {"readOnlyHint": t.kind == "read", "destructiveHint": False, "openWorldHint": False}})
+    return out

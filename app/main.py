@@ -16,12 +16,13 @@ from apscheduler.schedulers.background import BackgroundScheduler
 from apscheduler.triggers.cron import CronTrigger
 from typing import Optional
 
-from fastapi import Depends, FastAPI, Header, HTTPException
-from fastapi.responses import FileResponse, RedirectResponse
+from fastapi import Depends, FastAPI, Header, HTTPException, Request, Response
+from fastapi.responses import FileResponse, JSONResponse, RedirectResponse
 from pydantic import BaseModel, Field
 
 from . import calendar_data, contacts, dashboard, profile, runner
 from .assistant import engine as assistant
+from .mcp import connectors, proposals, server as mcp_server
 from .agents import followup, research as _research, service, store as agent_store
 from .jobs import JOBS, trigger
 
@@ -403,6 +404,87 @@ def ai_suggestion(sid: str, action: str):
 @app.delete("/api/ai-profile", dependencies=[Depends(require_key)])
 def ai_profile_clear():
     profile.clear()
+    return {"ok": True}
+
+
+# ---- connector endpoint for external AI apps (ChatGPT, Claude Cowork) ----
+def _mcp_key(request, token):
+    auth = request.headers.get("authorization", "")
+    tok = token or (auth[7:].strip() if auth.lower().startswith("bearer ") else "")
+    return connectors.verify(tok)
+
+
+async def _mcp(request: Request, token: Optional[str] = None):
+    origin = request.headers.get("origin")
+    if origin and origin.split("://", 1)[-1] != request.headers.get("host", ""):
+        return JSONResponse({"error": "cross-origin requests are not allowed"}, status_code=403)  # blocks browser-based abuse
+    key = _mcp_key(request, token)
+    if not key:
+        return JSONResponse({"error": "unauthorized"}, status_code=401)
+    if not connectors.rate_ok(key["id"]):
+        return JSONResponse({"jsonrpc": "2.0", "id": None, "error": {"code": -32000, "message": "rate limit: slow down"}}, status_code=429)
+    if int(request.headers.get("content-length") or 0) > 100_000:
+        return JSONResponse({"error": "request too large"}, status_code=413)
+    try:
+        body = await request.json()
+    except ValueError:
+        return JSONResponse({"jsonrpc": "2.0", "id": None, "error": {"code": -32700, "message": "parse error"}}, status_code=400)
+    resp = mcp_server.handle(body, key)
+    return Response(status_code=202) if resp is None else JSONResponse(resp)
+
+
+app.add_api_route("/mcp", _mcp, methods=["POST"])
+app.add_api_route("/mcp/{token}", _mcp, methods=["POST"])
+
+
+@app.get("/mcp")
+@app.get("/mcp/{token}")
+def mcp_get(token: Optional[str] = None):
+    return JSONResponse({"error": "this server does not stream; use POST"}, status_code=405)
+
+
+class NewConnector(BaseModel):
+    label: str = Field(min_length=1, max_length=60)
+    scope: str = "propose"
+    share_details: bool = False
+    days: int = Field(default=90, ge=1, le=365)
+
+
+class ProposalDecision(BaseModel):
+    approve: bool
+
+
+@app.get("/api/connectors", dependencies=[Depends(require_key)])
+def connectors_list():
+    keys, calls = connectors.listing()
+    return {"keys": keys, "calls": calls, "pending": proposals.pending_count(), "local_mode": local_mode()}
+
+
+@app.post("/api/connectors", dependencies=[Depends(require_key)])
+def connectors_create(c: NewConnector):
+    out, err = connectors.create(c.label, c.scope, c.share_details, c.days)
+    if err:
+        raise HTTPException(400, err)
+    return out
+
+
+@app.delete("/api/connectors/{kid}", dependencies=[Depends(require_key)])
+def connectors_revoke(kid: str):
+    if not connectors.revoke(kid):
+        raise HTTPException(404, "no such key")
+    return {"ok": True}
+
+
+@app.get("/api/proposals", dependencies=[Depends(require_key)])
+def proposals_list(status: Optional[str] = None):
+    return {"items": proposals.listing(status), "pending": proposals.pending_count()}
+
+
+@app.post("/api/proposals/{pid}/decide", dependencies=[Depends(require_key)])
+def proposals_decide(pid: str, d: ProposalDecision):
+    err = proposals.decide(pid, d.approve)
+    if err:
+        raise HTTPException(404, err)
     return {"ok": True}
 
 

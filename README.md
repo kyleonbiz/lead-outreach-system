@@ -37,3 +37,11 @@ A business profile plus memories you control. When ON, they are added to what th
 marketing agents are told (never overriding the safety rules); when OFF nothing is shared. Memories come from you, from the
 assistant (you approve each), or from suggestions based on how you edit follow-up drafts (you accept or dismiss each).
 Contact details and secrets are rejected. Stored in the app's own data; "Forget everything" deletes it all.
+
+## Connect ChatGPT / Claude Cowork (Settings → Connectors, and the Approvals inbox)
+The app serves an MCP connector at `/mcp` (POST; Bearer key, or the key in the URL as `/mcp/<key>`). Create keys in Settings → Connectors
+(read-only or "can propose", expiry, contact details hidden unless shared; shown once, stored hashed, revocable). Connected AI apps can look
+things up; anything that would change data is queued in **Approvals** and runs only when you approve it (they cannot approve their own
+requests). Never offered: sending email, resuming sending, changing caps, un-blocking contacts. Cloud apps (ChatGPT) need the app reachable
+over HTTPS. For Claude Cowork / Claude Desktop on your own computer use the stdio bridge `mcp_stdio.py` (config shown in the Connectors tab).
+Limitation: no OAuth yet, so the secret-URL / Bearer-key forms are used; treat a key like a password.
