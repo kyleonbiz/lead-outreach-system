@@ -41,6 +41,7 @@ export function useUploadQueue(opts: {
     setItems((list) => list.map((i) => (i.id === id ? { ...i, ...p } : i)));
   }, []);
 
+  const pumpRef = useRef<() => void>(() => undefined);
   const pump = useCallback(() => {
     while (running.current < CONCURRENCY && pending.current.length > 0) {
       const job = pending.current.shift()!;
@@ -66,10 +67,13 @@ export function useUploadQueue(opts: {
         .finally(() => {
           controllers.current.delete(job.id);
           running.current--;
-          pump();
+          pumpRef.current();
         });
     }
   }, [api, patch]);
+  useEffect(() => {
+    pumpRef.current = pump;
+  }, [pump]);
 
   const enqueue = useCallback(
     (id: number, file: File) => {

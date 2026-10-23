@@ -16,10 +16,8 @@ import {
 /* ------------------------------------------------------------------ */
 
 const MAX_NAME_LENGTH = 150;
-// eslint-disable-next-line no-control-regex
 const CONTROL_CHARS = /[\u0000-\u001f\u007f]/g;
 const PATH_CHARS = /[\\/:*?"<>|]/g;
-// eslint-disable-next-line no-misleading-character-class
 const BIDI_CHARS = /[‎‏‪-‮⁦-⁩]/g;
 
 /**

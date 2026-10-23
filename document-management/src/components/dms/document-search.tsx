@@ -20,7 +20,7 @@ export function DocumentSearch({
   useEffect(() => {
     if (value !== last.current) {
       last.current = value;
-      // eslint-disable-next-line react-hooks/set-state-in-effect
+       
       setText(value);
     }
   }, [value]);
