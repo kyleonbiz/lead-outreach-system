@@ -20,7 +20,7 @@ from fastapi import Depends, FastAPI, Header, HTTPException
 from fastapi.responses import FileResponse, RedirectResponse
 from pydantic import BaseModel, Field
 
-from . import calendar_data, dashboard, runner
+from . import calendar_data, contacts, dashboard, runner
 from .agents import followup, research as _research, service, store as agent_store
 from .jobs import JOBS, trigger
 
@@ -179,6 +179,103 @@ def calendar_event_delete(event_id: str):
         return len(d["events"]) < n
     if not agent_store.mutate("calendar", go, {"events": []}):
         raise HTTPException(404, "no such event")
+    return {"ok": True}
+
+
+class NewContact(BaseModel):
+    name: str = Field(min_length=1, max_length=120)
+    company: str = Field(default="", max_length=120)
+    email: str = Field(default="", max_length=200)
+    phone: str = Field(default="", max_length=40)
+    website: str = Field(default="", max_length=200)
+    notes: str = Field(default="", max_length=1000)
+
+
+class NewNote(BaseModel):
+    text: str = Field(min_length=1, max_length=1000)
+
+
+def _contact_tabs():
+    try:
+        return dashboard.fetch_tab("leads"), dashboard.fetch_tab("referrals"), dashboard.fetch_tab("log")
+    except Exception as e:
+        logging.getLogger("contacts").warning("contacts fetch failed: %s", type(e).__name__)
+        raise HTTPException(503, "could not read the sheet")
+
+
+def _contact_or_404(key):
+    leads, refs, log = _contact_tabs()
+    manual = agent_store.load("contacts", {"manual": [], "notes": {}})["manual"]
+    c = contacts.find(key, leads, refs, log, manual, agent_store.suppressed_emails())
+    if not c:
+        raise HTTPException(404, "no such contact")
+    return c, leads, refs, log, manual
+
+
+@app.get("/api/contacts", dependencies=[Depends(require_key)])
+def contacts_list():
+    leads, refs, log = _contact_tabs()
+    d = agent_store.load("contacts", {"manual": [], "notes": {}})
+    rows = contacts.directory(leads, refs, log, d["manual"], agent_store.suppressed_emails())
+    return {"contacts": rows, "total": len(rows)}
+
+
+@app.get("/api/contacts/{key}", dependencies=[Depends(require_key)])
+def contact_detail(key: str):
+    c, leads, refs, log, manual = _contact_or_404(key)
+    notes = agent_store.load("contacts", {"manual": [], "notes": {}})["notes"].get(key, [])
+    drafts = agent_store.load("followups", {"drafts": []})["drafts"]
+    return {"contact": c, "fields": contacts.fields_for(key, leads, refs, manual), "timeline": contacts.timeline(c, key, log, drafts, notes)}
+
+
+@app.post("/api/contacts", dependencies=[Depends(require_key)])
+def contact_add(c: NewContact):
+    m, err = contacts.add_manual(c.name, c.company, c.email, c.phone, c.website, c.notes)
+    if err:
+        raise HTTPException(400, err)
+    return {"key": "man:" + m["id"]}
+
+
+@app.delete("/api/contacts/{key}", dependencies=[Depends(require_key)])
+def contact_delete(key: str):
+    if not key.startswith("man:") or not contacts.remove_manual(key[4:]):
+        raise HTTPException(404, "only contacts you added yourself can be deleted")
+    return {"ok": True}
+
+
+@app.post("/api/contacts/{key}/notes", dependencies=[Depends(require_key)])
+def contact_note_add(key: str, n: NewNote):
+    _contact_or_404(key)
+    note, err = contacts.add_note(key, n.text)
+    if err:
+        raise HTTPException(400, err)
+    return note
+
+
+@app.delete("/api/contacts/{key}/notes/{note_id}", dependencies=[Depends(require_key)])
+def contact_note_delete(key: str, note_id: str):
+    if not contacts.delete_note(key, note_id):
+        raise HTTPException(404, "no such note")
+    return {"ok": True}
+
+
+@app.post("/api/contacts/{key}/do-not-contact", dependencies=[Depends(require_key)])
+def contact_dnc(key: str):
+    c = _contact_or_404(key)[0]
+    if not c["e"]:
+        raise HTTPException(400, "this contact has no email address to block")
+    agent_store.add_suppressed(c["e"])  # the main sender and follow-up agent both honor this list
+    contacts.add_note(key, "Marked do not contact.")
+    return {"ok": True}
+
+
+@app.post("/api/contacts/{key}/allow", dependencies=[Depends(require_key)])
+def contact_allow(key: str):
+    c = _contact_or_404(key)[0]
+    if not c["e"]:
+        raise HTTPException(400, "this contact has no email address")
+    agent_store.remove_suppressed(c["e"])
+    contacts.add_note(key, "Removed from do not contact.")
     return {"ok": True}
 
 

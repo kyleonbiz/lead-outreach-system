@@ -51,3 +51,7 @@ def suppressed_emails():
 def add_suppressed(email):
     mutate("suppression", lambda d: d.setdefault("emails", []).append(email) if email not in d.setdefault("emails", []) else None,
            {"emails": []})
+
+
+def remove_suppressed(email):
+    mutate("suppression", lambda d: d.__setitem__("emails", [e for e in d.get("emails", []) if e != email]), {"emails": []})

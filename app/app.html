@@ -54,6 +54,13 @@ table.plain{border-collapse:collapse;width:100%;font-size:13px}table.plain th,ta
 .draft textarea,.draft input.subj,.form input{width:100%;padding:8px 10px;border:1px solid var(--line);border-radius:6px;background:var(--card);color:var(--text)}.draft textarea{min-height:190px;resize:vertical;margin-top:6px}
 .legend{display:flex;gap:16px;flex-wrap:wrap;font-size:12px;color:var(--muted);margin-bottom:6px}.sw{display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:6px}
 svg.ch{display:block;width:100%;height:auto;overflow:visible}svg.ch text{fill:var(--muted);font-size:11px}.scroll-x{overflow-x:auto}
+/* contacts */
+.av{width:36px;height:36px;border-radius:50%;background:var(--info-bg);color:var(--info);display:grid;place-items:center;font-weight:700;font-size:13px;flex:none}.av.lg{width:56px;height:56px;font-size:20px}
+.tr.c-row{grid-template-columns:44px 1.5fr 1.4fr 1.3fr 1.5fr 24px;cursor:pointer;align-items:center}
+.tl{border-left:2px solid var(--line);margin:8px 0 0 6px;padding-left:16px}.tl-i{position:relative;padding:0 0 14px}.tl-i::before{content:"";position:absolute;left:-23px;top:6px;width:10px;height:10px;border-radius:50%;background:var(--card);border:2px solid var(--primary)}
+.tl-i .d{font-size:12px;color:var(--muted)}.kv{display:grid;grid-template-columns:130px 1fr;gap:6px 12px;font-size:13px}.kv span{color:var(--muted);text-transform:capitalize}.kv div{overflow-wrap:anywhere}
+.cols2{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.5fr);gap:16px;align-items:start}
+@media (max-width:900px){.tr.c-row{grid-template-columns:44px 1fr 24px}.cols2{grid-template-columns:1fr}}
 /* calendar */
 .cal{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));border-top:1px solid var(--line);border-left:1px solid var(--line);background:var(--card);border-radius:8px;overflow:hidden}
 .cal .dow{padding:8px;font-size:12px;font-weight:600;color:var(--muted);background:var(--grey-bg);border-right:1px solid var(--line);border-bottom:1px solid var(--line)}
@@ -87,10 +94,10 @@ const $=(s,r=document)=>r.querySelector(s),$$=(s,r=document)=>[...r.querySelecto
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 let key='';try{key=sessionStorage.getItem('k')||''}catch(e){}
 const store=(k,v)=>{try{v==null?sessionStorage.removeItem(k):sessionStorage.setItem(k,v)}catch(e){}};
-const IC={dash:'<path d="M4 4h7v7H4zM13 4h7v7h-7zM4 13h7v7H4zM13 13h7v7h-7z"/>',users:'<circle cx="9" cy="8" r="3.5"/><path d="M2.5 20c.7-3.5 3.2-5 6.5-5s5.8 1.5 6.5 5M16 11a3 3 0 100-6M18 15c2 .5 3.2 2 3.5 5"/>',mail:'<rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 7l9 6 9-6"/>',spark:'<path d="M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8zM18 16l.8 2.2L21 19l-2.2.8L18 22l-.8-2.2L15 19l2.2-.8z"/>',cal:'<rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/>',gear:'<circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M5 5l2 2M17 17l2 2M19 5l-2 2M7 17l-2 2"/>'};
+const IC={dash:'<path d="M4 4h7v7H4zM13 4h7v7h-7zM4 13h7v7H4zM13 13h7v7h-7z"/>',users:'<circle cx="9" cy="8" r="3.5"/><path d="M2.5 20c.7-3.5 3.2-5 6.5-5s5.8 1.5 6.5 5M16 11a3 3 0 100-6M18 15c2 .5 3.2 2 3.5 5"/>',mail:'<rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 7l9 6 9-6"/>',spark:'<path d="M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8zM18 16l.8 2.2L21 19l-2.2.8L18 22l-.8-2.2L15 19l2.2-.8z"/>',cal:'<rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/>',user:'<circle cx="12" cy="8" r="4"/><path d="M4 21c.8-4.5 4-6.5 8-6.5s7.2 2 8 6.5"/>',gear:'<circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M5 5l2 2M17 17l2 2M19 5l-2 2M7 17l-2 2"/>'};
 const ico=n=>`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">${IC[n]}</svg>`;
 const CHEV='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg>';
-const NAV=[{i:'dash',t:'Dashboard',to:'/dashboard'},{i:'cal',t:'Calendar',to:'/calendar'},{i:'users',t:'Leads',g:'leads',kids:[['Leads','/leads'],['Referral partners','/referrals']]},
+const NAV=[{i:'dash',t:'Dashboard',to:'/dashboard'},{i:'cal',t:'Calendar',to:'/calendar'},{i:'users',t:'Leads',g:'leads',kids:[['Leads','/leads'],['Referral partners','/referrals']]},{i:'user',t:'Contacts',to:'/contacts'},
  {i:'mail',t:'Outreach',g:'out',kids:[['Follow-ups','/followups'],['Outreach log','/log'],['Campaign queue','/queue']]},
  {i:'spark',t:'Agents',g:'ag',kids:[['Market research','/research'],['Marketing','/marketing']]},{i:'gear',t:'Settings',to:'/settings'}];
 const OPEN={leads:true,out:true,ag:true};
@@ -113,14 +120,14 @@ function parseHash(){const h=(location.hash||'').slice(1);if(!h)return null;cons
 function go(to,push=true){const [p,q]=to.split('?');cur={path:p==='/sending'?'/settings':(p||'/dashboard'),q:new URLSearchParams(q||'')};try{if(push)history.replaceState(null,'','#'+to)}catch(e){}document.body.classList.remove('nav-open');route()}
 document.addEventListener('click',e=>{const a=e.target.closest('[data-go]');if(a){e.preventDefault();go(a.dataset.go)}
  if(!e.target.closest('.menu'))$$('.menu-list').forEach(m=>m.hidden=true)});
-function nav(){const p=cur.path;$('#nav').innerHTML=NAV.map(n=>n.kids?`<div class="grp ${OPEN[n.g]||n.kids.some(k=>k[1]===p)?'open':''}"><button class="grp-h ${n.kids.some(k=>k[1]===p)?'has-on':''}" data-g="${n.g}">${ico(n.i)}<span class="lbl">${n.t}</span><span class="chev">${CHEV}</span></button><div class="sub">${n.kids.map(k=>`<a class="nav-i ${k[1]===p?'on':''}" href="#${k[1]}" data-go="${k[1]}"><span class="lbl">${k[0]}</span></a>`).join('')}</div></div>`
+function nav(){const p=cur.path==='/contact'?'/contacts':cur.path;$('#nav').innerHTML=NAV.map(n=>n.kids?`<div class="grp ${OPEN[n.g]||n.kids.some(k=>k[1]===p)?'open':''}"><button class="grp-h ${n.kids.some(k=>k[1]===p)?'has-on':''}" data-g="${n.g}">${ico(n.i)}<span class="lbl">${n.t}</span><span class="chev">${CHEV}</span></button><div class="sub">${n.kids.map(k=>`<a class="nav-i ${k[1]===p?'on':''}" href="#${k[1]}" data-go="${k[1]}"><span class="lbl">${k[0]}</span></a>`).join('')}</div></div>`
   :`<a class="nav-i ${n.to===p?'on':''}" href="#${n.to}" data-go="${n.to}">${ico(n.i)}<span class="lbl">${n.t}</span></a>`).join('')}
 $('#nav').onclick=e=>{const g=e.target.closest('[data-g]');if(g){OPEN[g.dataset.g]=!g.parentElement.classList.contains('open');nav()}};
 $('#mini').onclick=()=>document.body.classList.toggle('min');$('#burger').onclick=()=>document.body.classList.toggle('nav-open');
 $('#usr').onclick=e=>{e.stopPropagation();$('#usrm').hidden=!$('#usrm').hidden};
 $('#usrm').onclick=e=>{const a=e.target.dataset.act;if(a==='logout')logout();if(a==='theme'){const r=document.documentElement;r.dataset.theme=(r.dataset.theme||(matchMedia('(prefers-color-scheme:dark)').matches?'dark':'light'))==='dark'?'light':'dark'}$('#usrm').hidden=true};
 $('#gsearch').onsubmit=e=>{e.preventDefault();const q=$('#gq').value.trim();rs('leads').q=q;rs('leads').status='';rs('leads').page=0;go('/leads'+(q?'?q='+encodeURIComponent(q):''))};
-function logout(msg){key='';store('k',null);S.status=S.dash=S.agents=S.cal=null;Object.keys(S.recs).forEach(k=>delete S.recs[k]);$('#shell').hidden=true;$('#login').hidden=false;$('#lerr').textContent=msg||''}
+function logout(msg){key='';store('k',null);S.status=S.dash=S.agents=S.cal=S.contacts=S.contact=null;Object.keys(S.recs).forEach(k=>delete S.recs[k]);$('#shell').hidden=true;$('#login').hidden=false;$('#lerr').textContent=msg||''}
 $('#lf').onsubmit=e=>{e.preventDefault();key=$('#key').value;store('k',key);$('#key').value='';boot()};
 function head(title,sub,actions){return `<div class="page-head"><div><h1>${esc(title)}</h1>${sub?`<div class="sub-t">${sub}</div>`:''}</div><div class="actions">${actions||''}</div></div>`}
 function tabsBar(items,on){return `<div class="tabs">${items.map(([k,t,to])=>`<a href="#${to}" data-go="${to}" class="${k===on?'on':''}">${esc(t)}</a>`).join('')}</div>`}
@@ -238,6 +245,53 @@ function bSending(){$('#ptog').onclick=async()=>{try{await post(S.status.sending
  $('#cf').onsubmit=async e=>{e.preventDefault();const n=v=>v===''?null:parseInt(v,10);try{await api('/settings',{method:'PUT',body:JSON.stringify({daily_send_cap:n($('#cd').value),per_run_cap:n($('#cr').value)})});await loadStatus();toast('Caps saved.')}catch(x){toast(x.message)}};
  $$('[data-job]').forEach(b=>b.onclick=()=>{const n=b.dataset.job,go=async()=>{try{await post(`/jobs/${n}/run`);toast(n.replace(/_/g,' ')+' started.');setTimeout(async()=>{await loadStatus();render(true)},1500)}catch(x){toast(x.message)}};
   n.startsWith('send_')?confirmBox('Start a sending run?','It follows the caps and one-attempt rules.','Start run',go):go()})}
+/* contacts */
+const CT={q:'',type:'',status:'',email:false,dnc:false,sort:'name',page:0};
+const TYPE={lead:'Lead',referral:'Referral partner',manual:'My contact'};
+const ini=n=>(String(n||'?').trim().split(/\s+/).slice(0,2).map(w=>w[0]).join('')||'?').toUpperCase();
+async function loadContacts(){try{S.contacts=await api('/api/contacts');S.contacts.contacts.forEach(c=>c._s=[c.n,c.c,c.e,c.p,c.l,c.i,c.w].join(' ').toLowerCase())}catch(x){if(x.message!=='auth')S.contacts={error:x.message}}}
+async function loadContact(){const key=cur.q.get('key');if(!key)return;try{const d=await api('/api/contacts/'+encodeURIComponent(key));S.contact={...d,key}}catch(x){if(x.message!=='auth')S.contact={error:x.message,key}}}
+function cFiltered(){const q=CT.q.toLowerCase();let L=S.contacts.contacts.filter(c=>(!q||c._s.includes(q))&&(!CT.type||c.t===CT.type)&&(!CT.status||c.s===CT.status)&&(!CT.email||c.e)&&(!CT.dnc||c.d));
+ if(CT.sort==='recent')L.sort((a,b)=>(b.a||'').localeCompare(a.a||''));else if(CT.sort==='emails')L.sort((a,b)=>b.m-a.m);else L.sort((a,b)=>(a.n||'').localeCompare(b.n||''));return L}
+function vContacts(){const D=S.contacts;const add=`<button class="btn primary" id="cadd">+ Add contact</button>`;if(!D)return head('Contacts','',add)+'<div class="empty">Loading…</div>';if(D.error)return head('Contacts')+`<div class="banner bad">${esc(D.error)}</div>`;
+ const L=cFiltered(),PER=25,pages=Math.max(1,Math.ceil(L.length/PER));CT.page=Math.min(CT.page,pages-1);const shown=L.slice(CT.page*PER,CT.page*PER+PER);
+ const sts=[...new Set(D.contacts.map(c=>c.s).filter(Boolean))].sort(),cnt=t=>D.contacts.filter(c=>c.t===t).length;
+ const rows=shown.map(c=>`<div class="tr row c-row" data-ck="${esc(c.k)}" tabindex="0" role="link" aria-label="Open ${esc(c.n)}"><div class="av">${esc(ini(c.n))}</div>
+  <div class="c"><b>${esc(c.n||'(no name)')}</b><small>${esc(c.c||TYPE[c.t])}</small></div>
+  <div class="c h"><b>${esc(c.e||'No email')}</b><small>${esc(c.p)}</small></div>
+  <div class="c h"><b>${esc(c.l||'—')}</b><small>${esc(c.i)}</small></div>
+  <div class="c h">${c.s?pill(c.s):''} ${c.d?'<span class="pill bad">Do not contact</span>':''}<small>${c.a?'Last email '+esc(c.a)+' · '+c.m+' sent':'No emails yet'} · ${TYPE[c.t]}</small></div>
+  <span class="sub-note">›</span></div>`).join('');
+ return head('Contacts',`${D.total.toLocaleString()} people and businesses: ${cnt('lead').toLocaleString()} leads, ${cnt('referral')} referral partners, ${cnt('manual')} added by you.`,add)+
+ `<div class="filters"><label class="field">Search<input id="cq" value="${esc(CT.q)}" placeholder="Name, email, phone, city…"></label>
+  <label class="field">Type<select id="ct"><option value="">All</option>${Object.entries(TYPE).map(([k,v])=>`<option value="${k}" ${CT.type===k?'selected':''}>${v}</option>`).join('')}</select></label>
+  <label class="field">Status<select id="cs"><option value="">All</option>${sts.map(s=>`<option value="${esc(s)}" ${CT.status===s?'selected':''}>${esc(nice(s))}</option>`).join('')}</select></label>
+  <div class="links"><label style="display:flex;gap:6px;align-items:center"><input type="checkbox" id="ce" ${CT.email?'checked':''}>Has email</label><label style="display:flex;gap:6px;align-items:center"><input type="checkbox" id="cd" ${CT.dnc?'checked':''}>Do not contact</label><a href="#" id="crs">Reset Filters</a></div>
+  <label class="field right">Sort by<select id="so2"><option value="name" ${CT.sort==='name'?'selected':''}>Name (A–Z)</option><option value="recent" ${CT.sort==='recent'?'selected':''}>Recently emailed</option><option value="emails" ${CT.sort==='emails'?'selected':''}>Most emails sent</option></select></label></div>
+ <div class="tbl">${rows||'<div class="empty">No contacts match these filters.</div>'}<div class="pager"><span>${L.length?`${CT.page*PER+1}–${Math.min(L.length,CT.page*PER+PER)} of ${L.length.toLocaleString()}`:'0 contacts'}</span><span><button class="btn sm" id="cpv" ${CT.page?'':'disabled'}>← Prev</button> <button class="btn sm" id="cnx" ${CT.page<pages-1?'':'disabled'}>Next →</button></span></div></div>`}
+function bContacts(){const D=S.contacts;if(!D||D.error)return;const re=()=>render(true);
+ $('#cq').oninput=e=>{CT.q=e.target.value;CT.page=0;clearTimeout(bContacts.t);bContacts.t=setTimeout(()=>{re();const f=$('#cq');if(f){f.focus();f.setSelectionRange(f.value.length,f.value.length)}},250)};
+ $('#ct').onchange=e=>{CT.type=e.target.value;CT.page=0;re()};$('#cs').onchange=e=>{CT.status=e.target.value;CT.page=0;re()};$('#ce').onchange=e=>{CT.email=e.target.checked;CT.page=0;re()};$('#cd').onchange=e=>{CT.dnc=e.target.checked;CT.page=0;re()};$('#so2').onchange=e=>{CT.sort=e.target.value;re()};
+ $('#crs').onclick=e=>{e.preventDefault();Object.assign(CT,{q:'',type:'',status:'',email:false,dnc:false,page:0});re()};$('#cpv').onclick=()=>{CT.page--;re()};$('#cnx').onclick=()=>{CT.page++;re()};
+ $$('.c-row').forEach(r=>{const open=()=>go('/contact?key='+encodeURIComponent(r.dataset.ck));r.onclick=open;r.onkeydown=e=>{if(e.key==='Enter')open()}});
+ $('#cadd').onclick=()=>{$('#modal').innerHTML=`<div class="modal-bg"><div class="modal" role="dialog" aria-modal="true"><h3>Add contact</h3><form id="caf" class="form" style="display:grid;gap:8px"><input id="an" placeholder="Full name *" maxlength="120" required aria-label="Name"><input id="ac" placeholder="Company" maxlength="120" aria-label="Company"><input id="ae" placeholder="Email" maxlength="200" aria-label="Email"><input id="ap" placeholder="Phone" maxlength="40" aria-label="Phone"><input id="aw" placeholder="Website" maxlength="200" aria-label="Website"><input id="ano" placeholder="Note" maxlength="1000" aria-label="Note"><div class="actions" style="justify-content:flex-end"><button type="button" class="btn" data-m="no">Cancel</button><button class="btn primary">Add contact</button></div></form></div></div>`;
+  $('#an').focus();$('#modal').onclick=e=>{if(e.target.dataset.m||e.target.classList.contains('modal-bg'))$('#modal').innerHTML=''};
+  $('#caf').onsubmit=async e=>{e.preventDefault();try{const r=await post('/api/contacts',{name:$('#an').value,company:$('#ac').value,email:$('#ae').value,phone:$('#ap').value,website:$('#aw').value,notes:$('#ano').value});$('#modal').innerHTML='';S.contacts=null;toast('Contact added.');go('/contact?key='+encodeURIComponent(r.key))}catch(x){toast(x.message)}}}}
+function vContact(){const D=S.contact;const back='<a href="#/contacts" data-go="/contacts">← Contacts</a>';
+ if(!D||D.key!==cur.q.get('key'))return `<p>${back}</p><div class="empty">Loading…</div>`;if(D.error)return `<p>${back}</p><div class="banner bad">${esc(D.error)}</div>`;
+ const c=D.contact,F=D.fields||{};const kinds={email:'Email',followup:'Follow-up',note:'Note'};
+ const tl=D.timeline.map(i=>`<div class="tl-i"><div class="d">${esc(i.date)} · <span class="pill">${kinds[i.kind]}</span> ${i.status?pill(i.status):''} ${i.kind==='note'?`<button class="btn sm" data-ndel="${esc(i.id)}" style="margin-left:6px">Delete</button>`:''}</div><div>${esc(i.text)}</div>${i.detail&&i.kind==='email'?`<div class="sub-note">${esc(i.detail)}</div>`:''}</div>`).join('');
+ const kv=Object.entries(F).filter(([k])=>k.toLowerCase()!=='email').map(([k,v])=>`<span>${esc(k.replace(/_/g,' '))}</span><div>${esc(v)}</div>`).join('');
+ return `<p style="margin:0 0 6px">${back}</p><div class="page-head"><div style="display:flex;gap:14px;align-items:center"><div class="av lg">${esc(ini(c.n))}</div><div><h1>${esc(c.n||'(no name)')}</h1><div class="sub-t">${esc(c.c||TYPE[c.t])}${c.s?' · ':''}${c.s?pill(c.s):''} ${c.d?'<span class="pill bad">Do not contact</span>':''}</div></div></div>
+  <div class="actions">${c.e?`<button class="btn" id="cpe">Copy email</button><button class="btn ${c.d?'primary':'danger'}" id="cdnc">${c.d?'Allow contact again':'Mark do not contact'}</button>`:''}${c.t==='manual'?'<button class="btn" id="cdel">Delete contact</button>':''}</div></div>
+ <div class="cols2"><div class="card"><h2>Details</h2><div class="body"><div class="kv"><span>Type</span><div>${TYPE[c.t]}</div><span>Email</span><div>${esc(c.e||'None')}</div><span>Emails sent</span><div>${c.m}${c.a?' · last '+esc(c.a):''}</div>${kv}</div></div></div>
+ <div class="card"><h2>Activity</h2><div class="body"><form id="nf" class="form" style="display:grid;gap:6px;margin-bottom:12px"><textarea id="nt" rows="2" maxlength="1000" placeholder="Add a note about this contact…" aria-label="Note" style="width:100%;padding:8px 10px;border:1px solid var(--line);border-radius:6px;background:var(--card);color:var(--text)"></textarea><button class="btn primary sm" style="justify-self:start">Add note</button></form>${tl?`<div class="tl">${tl}</div>`:'<p class="sub-note">No activity yet.</p>'}</div></div></div>`}
+function bContact(){const D=S.contact;if(!D||D.error||D.key!==cur.q.get('key'))return;const c=D.contact,key=D.key,reload=async()=>{await loadContact();S.contacts=null;render(true)};
+ $('#nf').onsubmit=async e=>{e.preventDefault();try{await post(`/api/contacts/${encodeURIComponent(key)}/notes`,{text:$('#nt').value});toast('Note added.');await reload()}catch(x){toast(x.message)}};
+ $$('[data-ndel]').forEach(b=>b.onclick=async()=>{try{await api(`/api/contacts/${encodeURIComponent(key)}/notes/${b.dataset.ndel}`,{method:'DELETE'});await reload()}catch(x){toast(x.message)}});
+ $('#cpe')&&($('#cpe').onclick=async()=>{try{await navigator.clipboard.writeText(c.e);toast('Email copied.')}catch{toast('Could not copy. Select the address and copy it manually.')}});
+ $('#cdnc')&&($('#cdnc').onclick=()=>{const dnc=c.d;confirmBox(dnc?'Allow contact again?':'Mark do not contact?',dnc?`${esc(c.e)} will be removed from the do-not-contact list.`:`${esc(c.e)} will never be emailed by the sender or the follow-up agent until you allow it again.`,dnc?'Allow':'Mark do not contact',async()=>{try{await post(`/api/contacts/${encodeURIComponent(key)}/${dnc?'allow':'do-not-contact'}`);toast(dnc?'Removed from do not contact.':'Marked do not contact.');await reload()}catch(x){toast(x.message)}},!dnc)});
+ $('#cdel')&&($('#cdel').onclick=()=>confirmBox('Delete contact?',`${esc(c.n)} and its notes will be removed. This cannot be undone.`,'Delete',async()=>{try{await api('/api/contacts/'+encodeURIComponent(key),{method:'DELETE'});S.contacts=null;S.contact=null;toast('Contact deleted.');go('/contacts')}catch(x){toast(x.message)}},true))}
 /* calendar */
 const CAL={month:null,sel:null,layers:{sends:true,due:true,jobs:true,events:true}};
 const iso=d=>d.toISOString().slice(0,10);
@@ -278,7 +332,7 @@ function bCal(){const D=S.cal;if(!D||D.error||D.month!==CAL.month)return;
  $('#evadd').onclick=()=>{if(!CAL.sel)CAL.sel=D.days&&iso(new Date()).startsWith(CAL.month)?iso(new Date()):CAL.month+'-01';render(true);const t=$('#evt');if(t){t.scrollIntoView({block:'center'});t.focus()}};
  $('#evf')&&($('#evf').onsubmit=async e=>{e.preventDefault();try{await post('/api/calendar/events',{date:CAL.sel,title:$('#evt').value,note:$('#evn').value});toast('Event added.');await loadCal();render(true)}catch(x){toast(x.message)}})}
 /* ---------- render / data ---------- */
-const VIEWS={'/dashboard':[vDashboard,bDashboard,'dash'],'/calendar':[vCal,bCal,'cal'],'/leads':[()=>vRecords('leads'),()=>bRecords('leads'),'leads'],'/referrals':[()=>vRecords('referrals'),()=>bRecords('referrals'),'referrals'],'/log':[()=>vRecords('log'),()=>bRecords('log'),'log'],'/queue':[()=>vRecords('queue'),()=>bRecords('queue'),'queue'],
+const VIEWS={'/dashboard':[vDashboard,bDashboard,'dash'],'/contacts':[vContacts,bContacts,'contacts'],'/contact':[vContact,bContact,'contact'],'/calendar':[vCal,bCal,'cal'],'/leads':[()=>vRecords('leads'),()=>bRecords('leads'),'leads'],'/referrals':[()=>vRecords('referrals'),()=>bRecords('referrals'),'referrals'],'/log':[()=>vRecords('log'),()=>bRecords('log'),'log'],'/queue':[()=>vRecords('queue'),()=>bRecords('queue'),'queue'],
  '/followups':[vFollow,bFollow,'agents'],'/research':[vResearch,bResearch,'agents'],'/marketing':[vMarketing,bMarketing,'agents'],'/settings':[vSending,bSending,'status']};
 function typing(){const a=document.activeElement;return a&&['INPUT','TEXTAREA','SELECT'].includes(a.tagName)&&$('#view').contains(a)}
 function render(force){if(!VIEWS[cur.path])cur.path='/dashboard';if(!force&&typing())return;const v=VIEWS[cur.path];nav();$('#view').onclick=null;$('#view').innerHTML=v[0]();v[1]();
@@ -286,12 +340,12 @@ function render(force){if(!VIEWS[cur.path])cur.path='/dashboard';if(!force&&typi
  $('#notices').innerHTML=T&&T.local_mode?'<div class="banner">Local mode: read-only. Nothing is sent and jobs cannot run.</div>':''}
 async function ensure(path){const v=VIEWS[path];if(!v)return;const w=v[2];try{
  if(w==='dash'&&!S.dash)S.dash=await api('/api/dashboard');else if(TABS[w]&&!S.recs[w]){render();try{S.recs[w]=await api('/api/records/'+TABS[w].api)}catch(x){if(x.message!=='auth')S.recs[w]={error:x.message}}}
- else if(w==='agents'&&!S.agents)await loadAgents(true);else if(w==='cal'&&(!S.cal||S.cal.month!==CAL.month))await loadCal()}catch(x){if(x.message!=='auth'){if(w==='dash')toast(x.message)}}}
+ else if(w==='agents'&&!S.agents)await loadAgents(true);else if(w==='cal'&&(!S.cal||S.cal.month!==CAL.month))await loadCal();else if(w==='contacts'&&!S.contacts)await loadContacts();else if(w==='contact'&&(!S.contact||S.contact.key!==cur.q.get('key')))await loadContact()}catch(x){if(x.message!=='auth'){if(w==='dash')toast(x.message)}}}
 async function loadStatus(){S.status=await api('/status')}
 async function loadAgents(quiet){S.agents=await api('/api/agents/state');if(!quiet||true)render()}
 async function route(){render();await ensure(cur.path);render()}
 async function boot(){if(!key){$('#login').hidden=false;$('#shell').hidden=true;return}try{await loadStatus()}catch(x){return}
  $('#login').hidden=true;$('#shell').hidden=false;const h=parseHash();if(h&&VIEWS[h.path])cur=h;await route();
- clearInterval(boot.t);boot.t=setInterval(async()=>{if(!key)return;try{await loadStatus();if(VIEWS[cur.path][2]==='agents'||(S.agents&&Object.values(S.agents.runs||{}).some(r=>r.state==='running')))S.agents=await api('/api/agents/state');if(VIEWS[cur.path][2]==='dash'){S.dash=await api('/api/dashboard')}if(VIEWS[cur.path][2]==='cal')await loadCal();Object.keys(S.recs).forEach(k=>{if(k!==VIEWS[cur.path][2])delete S.recs[k]});if(TABS[VIEWS[cur.path][2]]&&!S.recs[VIEWS[cur.path][2]])await ensure(cur.path);render()}catch(e){}},8000)}
+ clearInterval(boot.t);boot.t=setInterval(async()=>{if(!key)return;try{await loadStatus();if(VIEWS[cur.path][2]==='agents'||(S.agents&&Object.values(S.agents.runs||{}).some(r=>r.state==='running')))S.agents=await api('/api/agents/state');if(VIEWS[cur.path][2]==='dash'){S.dash=await api('/api/dashboard')}if(VIEWS[cur.path][2]==='cal')await loadCal();if(VIEWS[cur.path][2]==='contact')await loadContact();Object.keys(S.recs).forEach(k=>{if(k!==VIEWS[cur.path][2])delete S.recs[k]});if(TABS[VIEWS[cur.path][2]]&&!S.recs[VIEWS[cur.path][2]])await ensure(cur.path);render()}catch(e){}},8000)}
 boot();
 </script></body></html>
