@@ -1,7 +1,7 @@
 "use client";
 
 import { useId } from "react";
-import { History, Download } from "lucide-react";
+import { Download, History } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -16,95 +16,107 @@ import {
 import { formatBytes } from "@/lib/dms/validation";
 import { formatDate, formatDateTime } from "./format";
 import { fileKindOf } from "./file-kind";
-import { FolderPicker } from "./folder-picker";
+
+export function SectionLabel({ children, id }: { children: React.ReactNode; id?: string }) {
+  return (
+    <h4 id={id} className="mb-2.5 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+      {children}
+    </h4>
+  );
+}
 
 function Row({ label, children }: { label: string; children: React.ReactNode }) {
   return (
-    <div className="flex items-baseline justify-between gap-4 py-2 text-sm">
+    <div className="flex items-baseline justify-between gap-4 py-1.5 text-xs">
       <dt className="shrink-0 text-muted-foreground">{label}</dt>
-      <dd className="min-w-0 text-right font-medium">{children}</dd>
+      <dd className="min-w-0 break-words text-right font-medium">{children}</dd>
     </div>
   );
 }
 
+/** Read-only FILE DETAILS rows. */
+export function FileDetails({ doc, folders }: { doc: DocumentDetail; folders: FolderWithCount[] }) {
+  const kind = fileKindOf(doc.mimeType, doc.originalName);
+  const folder = folders.find((f) => f.id === doc.folderId)?.name ?? "—";
+  return (
+    <section aria-labelledby="details-heading">
+      <SectionLabel id="details-heading">File details</SectionLabel>
+      <dl>
+        <Row label="Type">{kind.noun}</Row>
+        <Row label="Size">{formatBytes(doc.sizeBytes)}</Row>
+        <Row label="Category">{CATEGORY_LABELS[doc.category]}</Row>
+        <Row label="Folder">{folder}</Row>
+        <Row label="Uploaded">{formatDate(doc.createdAt)}</Row>
+        <Row label="By">{doc.uploadedByName}</Row>
+        <Row label="Version">v{doc.currentVersion}.0</Row>
+      </dl>
+    </section>
+  );
+}
+
+/** Editable properties (category, expiry) and version history. */
 export function DocumentMetadata({
   doc,
-  folders,
   canEdit,
-  onMove,
   onCategory,
   onExpiry,
   onDownloadVersion,
 }: {
   doc: DocumentDetail;
-  folders: FolderWithCount[];
   canEdit: boolean;
-  onMove: (folderId: string | null) => void;
   onCategory: (c: DocumentDetail["category"]) => void;
   onExpiry: (iso: string | null) => void;
   onDownloadVersion: (v: DocumentVersion) => void;
 }) {
-  const kind = fileKindOf(doc.mimeType, doc.originalName);
-  const folderId = useId();
   const catId = useId();
   const expId = useId();
 
   return (
     <div className="space-y-5">
-      <dl className="divide-y rounded-xl border px-4">
-        <Row label="File type">{kind.label}</Row>
-        <Row label="Size">{formatBytes(doc.sizeBytes)}</Row>
-        <Row label="Uploaded">{formatDate(doc.createdAt)}</Row>
-        <Row label="Uploaded by">{doc.uploadedByName}</Row>
-        <Row label="Version">v{doc.currentVersion}</Row>
-      </dl>
-
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-1">
-        <div className="space-y-1.5">
-          <Label htmlFor={folderId}>Folder</Label>
-          <FolderPicker
-            id={folderId}
-            folders={folders}
-            value={doc.folderId}
-            onChange={onMove}
-            disabled={!canEdit}
-            noneLabel="No folder"
-            ariaLabel="Move to folder"
-          />
+      <section aria-labelledby="props-heading">
+        <SectionLabel id="props-heading">Properties</SectionLabel>
+        <div className="space-y-3">
+          <div className="space-y-1">
+            <Label htmlFor={catId} className="text-xs text-muted-foreground">
+              Category
+            </Label>
+            <Select value={doc.category} onValueChange={(v) => onCategory(v as DocumentDetail["category"])} disabled={!canEdit}>
+              <SelectTrigger id={catId} className="h-9 rounded-lg text-xs">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {CATEGORIES.map((c) => (
+                  <SelectItem key={c} value={c}>
+                    {CATEGORY_LABELS[c]}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="space-y-1">
+            <Label htmlFor={expId} className="text-xs text-muted-foreground">
+              Expiration date (optional)
+            </Label>
+            <Input
+              id={expId}
+              type="date"
+              disabled={!canEdit}
+              value={doc.expiresAt ? doc.expiresAt.slice(0, 10) : ""}
+              onChange={(e) => onExpiry(e.target.value ? new Date(`${e.target.value}T12:00:00Z`).toISOString() : null)}
+              className="h-9 rounded-lg text-xs"
+            />
+          </div>
         </div>
-        <div className="space-y-1.5">
-          <Label htmlFor={catId}>Category</Label>
-          <Select value={doc.category} onValueChange={(v) => onCategory(v as DocumentDetail["category"])} disabled={!canEdit}>
-            <SelectTrigger id={catId}>
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {CATEGORIES.map((c) => (
-                <SelectItem key={c} value={c}>
-                  {CATEGORY_LABELS[c]}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-        <div className="space-y-1.5">
-          <Label htmlFor={expId}>Expiration date (optional)</Label>
-          <Input
-            id={expId}
-            type="date"
-            disabled={!canEdit}
-            value={doc.expiresAt ? doc.expiresAt.slice(0, 10) : ""}
-            onChange={(e) => onExpiry(e.target.value ? new Date(`${e.target.value}T12:00:00Z`).toISOString() : null)}
-          />
-        </div>
-      </div>
+      </section>
 
       {doc.versions.length > 0 && (
         <section aria-labelledby="versions-heading">
-          <h4 id="versions-heading" className="mb-2 flex items-center gap-1.5 text-sm font-semibold">
-            <History className="size-4 text-muted-foreground" aria-hidden /> Version history
-          </h4>
-          <ul className="divide-y rounded-xl border">
+          <SectionLabel id="versions-heading">
+            <span className="inline-flex items-center gap-1.5">
+              <History className="size-3.5" aria-hidden /> Version history
+            </span>
+          </SectionLabel>
+          <ul className="divide-y rounded-xl border bg-card">
             {doc.versions.map((v) => (
               <li key={v.id} className="flex items-center gap-3 px-3 py-2 text-xs">
                 <span className="rounded-md bg-accent px-1.5 py-0.5 font-semibold text-accent-foreground">v{v.versionNumber}</span>

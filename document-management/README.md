@@ -244,7 +244,7 @@ abandoned uploads · per-user and per-address rate limiting.
 * Previews: PDF, images, CSV, text only. No dark mode.
 * Development mode data is in server memory (lost on restart); seeded sample images have no
   bytes there, so their preview/download reports "not available".
-* The reference screenshot was never supplied, so styling follows the written spec.
+* Styling follows the supplied reference screenshot (glass frame, centred document cards, floating upload and details panels) but is an interpretation, not a pixel match; fonts are Geist, bundled locally.
   Responsive behaviour is checked at 1440, 820, 390 and 360 px in Chromium (Playwright layout
   specs plus a manual look at the screenshots), not across other browsers or real devices;
   there is no visual-regression testing.

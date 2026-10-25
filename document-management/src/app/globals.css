@@ -3,24 +3,24 @@
 @custom-variant dark (&:is(.dark *));
 
 :root {
-  --background: #f6f7fb;
+  --background: #eef0ff;
   --foreground: #18181f;
   --card: #ffffff;
   --card-foreground: #18181f;
   --popover: #ffffff;
   --popover-foreground: #18181f;
-  --primary: #6446e8;
+  --primary: #4f46e5;
   --primary-foreground: #ffffff;
   --secondary: #eef0f8;
   --secondary-foreground: #2b2b3a;
-  --muted: #f3f4f9;
+  --muted: #f1f3fa;
   --muted-foreground: #6b6e82;
-  --accent: #eeeafd;
-  --accent-foreground: #4a2fc0;
+  --accent: #eceafd;
+  --accent-foreground: #4338ca;
   --destructive: #dc2626;
   --border: #e4e6f0;
   --input: #dcdfeb;
-  --ring: #7c62f0;
+  --ring: #6366f1;
   --radius: 0.75rem;
 }
 
@@ -50,7 +50,8 @@
   --radius-2xl: calc(var(--radius) + 8px);
   --font-sans: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
   --font-mono: var(--font-geist-mono), ui-monospace, monospace;
-  --shadow-panel: 0 1px 2px rgb(24 24 40 / 0.04), 0 12px 32px -8px rgb(60 40 140 / 0.14);
+  --shadow-panel: 0 1px 2px rgb(24 24 60 / 0.04), 0 2px 6px rgb(24 24 60 / 0.03), 0 12px 32px -10px rgb(60 50 160 / 0.14);
+  --shadow-glass: 0 30px 80px -20px rgb(30 20 120 / 0.45);
   --shadow-float: 0 24px 64px -12px rgb(40 24 120 / 0.35);
   --animate-fade-in: fade-in 0.15s ease-out;
   --animate-pop-in: pop-in 0.18s cubic-bezier(0.2, 0.9, 0.3, 1.1);
@@ -95,7 +96,16 @@
 
 .hero-gradient {
   background:
-    radial-gradient(60% 80% at 15% 0%, rgb(96 165 250 / 0.55), transparent 60%),
-    radial-gradient(50% 70% at 90% 20%, rgb(192 132 252 / 0.5), transparent 60%),
-    linear-gradient(135deg, #2f5bea 0%, #5b3fe0 48%, #7a35d6 100%);
+    radial-gradient(55% 30% at 0% 100%, rgb(251 146 100 / 0.75), transparent 72%),
+    radial-gradient(55% 30% at 100% 100%, rgb(253 186 140 / 0.7), transparent 72%),
+    linear-gradient(180deg, #4338ca 0%, #4f46e5 45%, #4a5ae8 100%);
+}
+
+/* Translucent frame that holds the dashboard card on the public page. */
+.glass-frame {
+  background: rgb(255 255 255 / 0.14);
+  border: 1px solid rgb(255 255 255 / 0.32);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  box-shadow: var(--shadow-glass);
 }

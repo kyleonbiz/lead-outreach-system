@@ -58,7 +58,7 @@ export function FolderGrid({
             isAll
             name="All Files"
             count={totalCount}
-            color="slate"
+            color="violet"
             active={activeFolderId === null}
             onSelect={() => onSelect(null)}
           />

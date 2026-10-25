@@ -18,25 +18,24 @@ export function DashboardHeader({
   return (
     <header className="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
       <div className="min-w-0">
-        <h2 className="text-2xl font-semibold tracking-tight sm:text-[26px]">Document Management</h2>
+        <h2 className="text-2xl font-bold tracking-tight sm:text-[28px]">Document Management</h2>
         <p className="mt-1 text-sm text-muted-foreground">
           Organize, store, and manage your business documents securely.
         </p>
       </div>
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-5">
         {usage && (
-          <div className="rounded-xl border bg-muted/40 px-4 py-3 sm:w-64">
+          <div className="rounded-xl border bg-card px-4 py-2.5 shadow-sm sm:w-56">
             <StorageUsageIndicator usage={usage} compact />
           </div>
         )}
         {onTeam && (
-          <Button variant="outline" size="lg" onClick={onTeam} className="w-full sm:w-auto">
+          <Button variant="outline" onClick={onTeam} className="w-full sm:w-auto">
             <Users /> Team
           </Button>
         )}
         <Button
           variant="gradient"
-          size="lg"
           onClick={onUpload}
           disabled={!canUpload}
           title={canUpload ? undefined : "Your role cannot upload documents"}

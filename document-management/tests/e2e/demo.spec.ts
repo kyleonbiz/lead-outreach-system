@@ -36,7 +36,7 @@ test.describe("public demo page", () => {
     await page.goto("/");
     await page.getByRole("button", { name: /Open AR_Aging_Report_Oct.xlsx/ }).click();
     await expect(page.getByTestId("preview-unsupported")).toContainText("Preview not available");
-    await expect(page.getByRole("button", { name: /Download to view/ })).toBeVisible();
+    await expect(page.getByRole("button", { name: /Download to view/i })).toBeVisible();
   });
 
   test("upload dialog validates files and reports progress", async ({ page }) => {

@@ -54,7 +54,7 @@ export function DocumentToolbar({
                 onClick={() => onChange({ view: id })}
                 className={cn(
                   "flex min-w-0 items-center justify-center gap-1.5 whitespace-nowrap rounded-lg px-1.5 py-2 text-[13px] font-medium transition-colors min-[420px]:px-3.5 min-[420px]:text-sm lg:py-1.5",
-                  active ? "bg-card text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground",
+                  active ? "bg-card text-indigo-700 shadow-sm" : "text-muted-foreground hover:text-foreground",
                 )}
               >
                 <Icon className={cn("hidden size-4 min-[420px]:block", active && id === "starred" && "fill-amber-400 text-amber-500")} aria-hidden />
@@ -66,14 +66,14 @@ export function DocumentToolbar({
             );
           })}
         </div>
-        <div className="lg:w-80">
+        <div className="lg:w-[28rem]">
           <DocumentSearch value={query.search} onChange={(search) => onChange({ search })} />
         </div>
       </div>
 
       <div className="grid grid-cols-2 gap-2 md:grid-cols-4">
         <Select value={query.category ?? ANY} onValueChange={(v) => onChange({ category: v === ANY ? null : (v as DocumentQuery["category"]) })}>
-          <SelectTrigger aria-label="Filter by category">
+          <SelectTrigger className="h-11 rounded-xl" aria-label="Filter by category">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
@@ -86,7 +86,7 @@ export function DocumentToolbar({
           </SelectContent>
         </Select>
         <Select value={query.fileType ?? ANY} onValueChange={(v) => onChange({ fileType: v === ANY ? null : v })}>
-          <SelectTrigger aria-label="Filter by file type">
+          <SelectTrigger className="h-11 rounded-xl" aria-label="Filter by file type">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
@@ -100,7 +100,7 @@ export function DocumentToolbar({
           </SelectContent>
         </Select>
         <Select value={query.tag ?? ANY} onValueChange={(v) => onChange({ tag: v === ANY ? null : v })}>
-          <SelectTrigger aria-label="Filter by tag">
+          <SelectTrigger className="h-11 rounded-xl" aria-label="Filter by tag">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
@@ -113,7 +113,7 @@ export function DocumentToolbar({
           </SelectContent>
         </Select>
         <Select value={query.sort} onValueChange={(v) => onChange({ sort: v as DocumentSort })}>
-          <SelectTrigger aria-label="Sort documents">
+          <SelectTrigger className="h-11 rounded-xl" aria-label="Sort documents">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>

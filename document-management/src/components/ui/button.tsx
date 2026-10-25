@@ -11,7 +11,7 @@ const buttonVariants = cva(
         default:
           "bg-primary text-primary-foreground shadow-sm shadow-primary/30 hover:bg-primary/90",
         gradient:
-          "bg-gradient-to-r from-blue-600 to-violet-600 text-white shadow-sm shadow-violet-500/30 hover:from-blue-600/90 hover:to-violet-600/90",
+          "bg-primary text-primary-foreground shadow-sm shadow-primary/25 hover:bg-primary/90",
         destructive: "bg-destructive text-white hover:bg-destructive/90",
         outline: "border border-input bg-card hover:bg-muted",
         secondary: "bg-secondary text-secondary-foreground hover:bg-secondary/70",

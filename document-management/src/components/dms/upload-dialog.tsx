@@ -1,8 +1,8 @@
 "use client";
 
-import { AlertCircle, CheckCircle2, Loader2, RotateCw, X } from "lucide-react";
+import { AlertCircle, CheckCircle2, CloudUpload, Info, Loader2, RotateCw, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogClose, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Progress } from "@/components/ui/progress";
 import type { DmsApi } from "@/lib/dms/client/api";
@@ -12,7 +12,6 @@ import { cn } from "@/lib/utils";
 import { fileKindOf } from "./file-kind";
 import { FileDropzone } from "./file-dropzone";
 import { FolderPicker } from "./folder-picker";
-import { StorageUsageIndicator } from "./storage-usage-indicator";
 import { useUploadQueue, type UploadItem } from "./use-upload-queue";
 
 export function UploadDialog({
@@ -45,21 +44,35 @@ export function UploadDialog({
   });
 
   const accept = [...new Set(limits.allowedTypes.map((t) => `.${t.extension}`))].join(",");
-  const hint = `${[...new Set(limits.allowedTypes.map((t) => t.label))].slice(0, 6).join(", ")} and more · up to ${formatBytes(limits.maxFileSizeBytes)} each`;
+  const exts = [...new Set(limits.allowedTypes.map((t) => t.extension.toUpperCase()))].filter((e) => e !== "JPEG");
+  const hint = `${exts.slice(0, 7).join(", ")}${exts.length > 7 ? " and more" : ""} • Max ${formatBytes(limits.maxFileSizeBytes)} each`;
+  const pct = usage.quotaBytes > 0 ? Math.min(100, Math.round((usage.usedBytes / usage.quotaBytes) * 100)) : 0;
+  const folderLabel = folders.find((f) => f.id === folderId)?.name ?? "All Files";
   const done = queue.items.filter((i) => i.status === "success").length;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[520px]" aria-describedby="upload-desc">
+      <DialogContent variant="upload" aria-describedby="upload-desc" showClose={false}>
         <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
-          <div className="px-5 pb-3 pt-5 sm:px-6 sm:pt-6">
-            <DialogTitle>Upload documents</DialogTitle>
-            <DialogDescription id="upload-desc" className="mt-1">
-              Files are stored privately in your workspace.
-            </DialogDescription>
+          <div className="flex items-center gap-3 border-b px-5 py-4">
+            <span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-primary text-primary-foreground">
+              <CloudUpload className="size-5" aria-hidden />
+            </span>
+            <div className="min-w-0 flex-1">
+              <DialogTitle className="text-base">Upload Documents</DialogTitle>
+              <DialogDescription id="upload-desc" className="text-xs">
+                Drag and drop or browse your files
+              </DialogDescription>
+            </div>
+            <DialogClose
+              aria-label="Close"
+              className="inline-flex size-8 items-center justify-center rounded-full text-muted-foreground hover:bg-muted hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring"
+            >
+              <X className="size-4" />
+            </DialogClose>
           </div>
 
-          <div className="min-h-0 flex-1 space-y-4 overflow-y-auto px-5 pb-2 sm:px-6">
+          <div className="min-h-0 flex-1 space-y-4 overflow-y-auto p-5">
             <div className="space-y-1.5">
               <Label htmlFor="upload-folder">Destination folder</Label>
               <FolderPicker id="upload-folder" folders={folders} value={folderId} onChange={onFolderChange} />
@@ -75,12 +88,20 @@ export function UploadDialog({
               </ul>
             )}
 
-            <div className="rounded-xl border bg-muted/40 px-4 py-3">
-              <StorageUsageIndicator usage={usage} compact />
+            <div className="flex gap-2.5 rounded-xl bg-slate-50 px-4 py-3 text-xs text-muted-foreground">
+              <Info className="mt-0.5 size-3.5 shrink-0" aria-hidden />
+              <div>
+                <p>
+                  Files will be uploaded to <strong className="text-foreground">{folderLabel}</strong>
+                </p>
+                <p className="mt-0.5 text-[11px]">
+                  Storage {formatBytes(usage.usedBytes)} of {formatBytes(usage.quotaBytes)} used ({pct}%)
+                </p>
+              </div>
             </div>
           </div>
 
-          <div className="flex items-center justify-between gap-3 border-t px-5 py-3 sm:px-6">
+          <div className="flex items-center justify-between gap-3 border-t px-5 py-3">
             <p className="text-xs text-muted-foreground" aria-live="polite">
               {queue.busy ? "Uploading…" : done > 0 ? `${done} uploaded` : "Nothing uploaded yet"}
             </p>

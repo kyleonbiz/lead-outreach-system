@@ -66,18 +66,18 @@ export function DocumentManagementPage({ api }: { api: DmsApi }) {
   else if (query.folderId) emptyVariant = "folder";
 
   return (
-    <div className="rounded-2xl border bg-card shadow-panel" data-testid="workspace">
+    <div className="rounded-2xl border border-white/70 bg-[#f7f8fc] shadow-panel" data-testid="workspace">
       {notice && (
         <div
           role="note"
-          className="flex items-start gap-2.5 rounded-t-2xl border-b border-amber-200 bg-amber-50 px-5 py-2.5 text-xs text-amber-900 sm:px-8"
+          className="flex items-start gap-2 rounded-t-2xl px-5 pt-3 text-[11px] text-muted-foreground sm:px-8"
         >
-          {api.mode === "demo" ? <Info className="mt-0.5 size-3.5 shrink-0" aria-hidden /> : <FlaskConical className="mt-0.5 size-3.5 shrink-0" aria-hidden />}
+          {api.mode === "demo" ? <Info className="mt-px size-3 shrink-0 text-indigo-400" aria-hidden /> : <FlaskConical className="mt-px size-3 shrink-0 text-amber-500" aria-hidden />}
           <p>{notice}</p>
         </div>
       )}
 
-      <div className="space-y-7 p-5 sm:p-8">
+      <div className="space-y-6 p-5 sm:p-8">
         {m.bootState === "error" ? (
           <ErrorState title="Could not load your workspace" message={m.bootError} onRetry={m.retryBootstrap} />
         ) : (

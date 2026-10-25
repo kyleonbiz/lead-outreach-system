@@ -36,7 +36,7 @@ describe("state components", () => {
   });
   it("computes storage usage", () => {
     render(<StorageUsageIndicator usage={{ usedBytes: 25 * 1024 * 1024, quotaBytes: 100 * 1024 * 1024, documentCount: 3 }} />);
-    expect(screen.getByText("25.0 MB of 100 MB")).toBeInTheDocument();
+    expect(screen.getByText("25.0 MB / 100 MB")).toBeInTheDocument();
     expect(screen.getByRole("progressbar", { name: /25%/ })).toBeInTheDocument();
   });
 });
@@ -116,12 +116,12 @@ describe("workspace (demo data)", () => {
     await user.type(input, "Sept expenses{Enter}");
     expect(await within(dialog).findByRole("heading", { name: "Sept expenses.csv" })).toBeInTheDocument();
 
-    await user.click(within(dialog).getByRole("button", { name: /^Delete$/ }));
+    await user.click(within(dialog).getByRole("button", { name: /^Delete File$/ }));
     const confirm = await screen.findByRole("alertdialog");
     expect(confirm).toHaveTextContent(/Move to Trash|moves to Trash/i);
     await user.click(within(confirm).getByRole("button", { name: "Cancel" }));
     expect(screen.queryByRole("alertdialog")).not.toBeInTheDocument();
-    await user.click(within(dialog).getByRole("button", { name: /^Delete$/ }));
+    await user.click(within(dialog).getByRole("button", { name: /^Delete File$/ }));
     await user.click(within(await screen.findByRole("alertdialog")).getByRole("button", { name: "Move to trash" }));
     await waitFor(() => expect(screen.queryByRole("button", { name: /Open Sept expenses/ })).not.toBeInTheDocument());
     expect(await screen.findByText(/Moved to trash/)).toBeInTheDocument();

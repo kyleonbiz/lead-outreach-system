@@ -39,26 +39,24 @@ export function FileDropzone({
         if (!disabled && e.dataTransfer.files.length) onFiles(Array.from(e.dataTransfer.files));
       }}
       className={cn(
-        "relative flex flex-col items-center justify-center rounded-xl border-2 border-dashed px-4 py-8 text-center transition-colors",
-        over ? "border-violet-400 bg-violet-50" : "border-input bg-muted/30 hover:bg-muted/50",
+        "relative rounded-2xl border-2 border-dashed transition-colors",
+        over ? "border-indigo-400 bg-indigo-50" : "border-slate-200 bg-white hover:border-indigo-300 hover:bg-indigo-50/30",
         disabled && "pointer-events-none opacity-60",
       )}
       data-testid="dropzone"
     >
-      <span className="flex size-12 items-center justify-center rounded-full bg-gradient-to-br from-blue-100 to-violet-100 text-violet-600">
-        <CloudUpload className="size-6" aria-hidden />
-      </span>
-      <p className="mt-3 text-sm font-medium">{over ? "Drop to upload" : "Drag and drop files here"}</p>
-      <p className="mt-0.5 text-xs text-muted-foreground">or</p>
       <button
         type="button"
         onClick={() => input.current?.click()}
         disabled={disabled}
-        className="mt-1 rounded-md px-2 py-1 text-sm font-semibold text-primary underline-offset-4 hover:underline focus-visible:ring-2 focus-visible:ring-ring"
+        className="flex w-full flex-col items-center justify-center rounded-2xl px-4 py-9 text-center focus-visible:ring-2 focus-visible:ring-ring"
       >
-        Browse files
+        <span className="flex size-12 items-center justify-center rounded-xl bg-slate-100 text-slate-500">
+          <CloudUpload className="size-6" aria-hidden />
+        </span>
+        <span className="mt-3 text-sm font-bold">{over ? "Drop to upload" : "Drag files here or click to browse"}</span>
+        <span className="mt-1.5 text-[11px] text-muted-foreground">{hint}</span>
       </button>
-      <p className="mt-2 text-[11px] text-muted-foreground">{hint}</p>
       <input
         ref={input}
         type="file"

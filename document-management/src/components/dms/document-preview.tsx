@@ -66,11 +66,11 @@ export function DocumentPreview({
           <kind.Icon className="size-10" aria-hidden />
         </span>
         <div>
-          <p className="text-sm font-semibold">Preview not available for {kind.label} files</p>
-          <p className="mt-1 text-xs text-muted-foreground">Download the file to view it on your device.</p>
+          <p className="text-sm font-bold break-words">{doc.displayName}</p>
+          <p className="mt-1 text-xs text-muted-foreground">Preview not available for this file type</p>
         </div>
         <Button variant="outline" onClick={onDownload}>
-          <Download /> Download to view
+          <Download /> Download to View
         </Button>
       </div>
     );

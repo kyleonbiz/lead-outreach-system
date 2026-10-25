@@ -1,6 +1,6 @@
 "use client";
 
-import { Folder as FolderIcon, FolderOpen, MoreHorizontal, Pencil, Trash2, Files } from "lucide-react";
+import { Folder as FolderIcon, FolderOpen, MoreHorizontal, Pencil, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -25,13 +25,13 @@ export interface FolderCardProps {
 
 export function FolderCard({ name, count, color, active, isAll, onSelect, onRename, onDelete }: FolderCardProps) {
   const style = FOLDER_STYLES[color];
-  const Icon = isAll ? Files : active ? FolderOpen : FolderIcon;
+  const Icon = isAll || active ? FolderOpen : FolderIcon;
   const hasMenu = Boolean(onRename || onDelete);
   return (
     <div
       className={cn(
         "group relative rounded-xl border bg-card transition-all hover:-translate-y-0.5 hover:shadow-panel",
-        active ? cn("border-transparent ring-2", style.ring, "shadow-panel") : "hover:border-input",
+        active ? "border-indigo-400 bg-indigo-50/70 shadow-panel" : "hover:border-input",
       )}
     >
       <button
@@ -41,11 +41,11 @@ export function FolderCard({ name, count, color, active, isAll, onSelect, onRena
         aria-label={`${name}, ${count} ${count === 1 ? "document" : "documents"}`}
         className="flex w-full items-center gap-3 rounded-xl p-3.5 text-left outline-none focus-visible:ring-2 focus-visible:ring-ring"
       >
-        <span className={cn("flex size-11 shrink-0 items-center justify-center rounded-xl", style.tile)}>
+        <span className={cn("flex size-10 shrink-0 items-center justify-center rounded-xl", style.tile)}>
           <Icon className={cn("size-5", style.icon)} aria-hidden />
         </span>
         <span className="min-w-0 flex-1 pr-5">
-          <span className="block truncate text-sm font-semibold">{name}</span>
+          <span className={cn("block truncate text-sm font-semibold", active && "text-indigo-700")}>{name}</span>
           <span className="block text-xs text-muted-foreground tabular-nums">
             {count} {count === 1 ? "file" : "files"}
           </span>

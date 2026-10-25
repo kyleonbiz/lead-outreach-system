@@ -36,15 +36,15 @@ export function DocumentSearch({
 
   return (
     <div className="relative w-full">
-      <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" aria-hidden />
+      <Search className="pointer-events-none absolute left-3.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" aria-hidden />
       <Input
         type="search"
         role="searchbox"
-        aria-label="Search documents by name, tag or category"
-        placeholder="Search by name, tag or category…"
+        aria-label="Search documents by name, tag, category or uploader"
+        placeholder="Search by name, tag, category, or uploader…"
         value={text}
         onChange={(e) => setText(e.target.value)}
-        className="pl-9 pr-9 [&::-webkit-search-cancel-button]:hidden"
+        className="h-11 rounded-xl bg-card pl-10 pr-9 [&::-webkit-search-cancel-button]:hidden"
       />
       {text && (
         <button
