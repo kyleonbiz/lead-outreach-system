@@ -276,7 +276,7 @@ export const signInSchema = z.object({
   password: z.string().min(8, "Use at least 8 characters").max(200),
 });
 
-const sortValues = ["newest", "oldest", "name-asc", "name-desc", "size-desc", "size-asc"] as const;
+const sortValues = ["newest", "oldest", "name-asc", "name-desc", "size-desc", "size-asc", "relevance"] as const;
 
 export const documentQuerySchema = z.object({
   view: z.enum(["all", "recent", "starred", "trash"]).default("all"),

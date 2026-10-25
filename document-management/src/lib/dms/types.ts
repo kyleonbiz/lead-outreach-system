@@ -52,6 +52,9 @@ export type FolderWithCount = Folder & { documentCount: number };
 
 export type DocumentStatus = "pending" | "ready";
 
+/** Whether a document's text is searchable. Only `indexed` documents match on content. */
+export type ContentStatus = "pending" | "indexed" | "unsupported" | "failed";
+
 export interface DocumentRecord {
   id: string;
   workspaceId: string;
@@ -72,6 +75,14 @@ export interface DocumentRecord {
   status: DocumentStatus;
   deletedAt: string | null;
   currentVersion: number;
+  contentStatus: ContentStatus;
+  /** Why content is not (fully) searchable: an extraction reason code, or "truncated". */
+  contentReason: string | null;
+  contentIndexedAt: string | null;
+  /** Search results only: a short plain-text excerpt; matches are wrapped in U+E000 / U+E001. */
+  snippet?: string | null;
+  /** Search results only: true when the match came from the document's text. */
+  contentMatch?: boolean;
 }
 
 export interface DocumentVersion {
@@ -103,7 +114,9 @@ export type DocumentSort =
   | "name-asc"
   | "name-desc"
   | "size-desc"
-  | "size-asc";
+  | "size-asc"
+  /** Best match first. Only meaningful with a search term. */
+  | "relevance";
 
 export interface DocumentQuery {
   view: DocumentView;

@@ -3,6 +3,7 @@ import type {
   DocumentQuery,
   DocumentRecord,
   DocumentVersion,
+  ContentStatus,
   FileLink,
   Folder,
   FolderColor,
@@ -119,6 +120,24 @@ export interface DocumentRepository {
   /** Hard-deletes the document and all versions; returns every storage key to remove. */
   purge(workspaceId: string, documentId: string): Promise<string[]>;
 
+  /**
+   * Stores extracted text for the document's CURRENT version. Resolves false
+   * (and stores nothing) if the document moved to a newer version meanwhile.
+   */
+  setDocumentContent(args: {
+    workspaceId: string;
+    documentId: string;
+    versionNumber: number;
+    status: Exclude<ContentStatus, "pending">;
+    reason: string | null;
+    text: string | null;
+  }): Promise<boolean>;
+  /** Ready, non-deleted documents whose text has not been extracted yet. */
+  listDocumentsNeedingIndex(
+    workspaceId: string,
+    opts: { limit: number; includeFailed: boolean },
+  ): Promise<{ id: string; currentVersion: number }[]>;
+
   getUsage(workspaceId: string): Promise<StorageUsage>;
   countTrash(workspaceId: string): Promise<number>;
 
@@ -156,6 +175,8 @@ export interface ObjectStorage {
   ): Promise<UploadTarget>;
   stat(key: string): Promise<{ sizeBytes: number; mimeType: string | null } | null>;
   readHead(key: string, bytes: number): Promise<Uint8Array | null>;
+  /** Reads a whole object, refusing (without downloading it) if it is larger than `maxBytes`. */
+  read(key: string, maxBytes: number): Promise<{ bytes: Uint8Array } | { tooLarge: true } | null>;
   createDownloadUrl(
     key: string,
     opts: { fileName: string; disposition: "inline" | "attachment"; ttlSeconds: number },
