@@ -22,9 +22,15 @@ export interface ExtractLimits {
   timeoutMs: number;
 }
 
+/**
+ * Characters of text kept per document. Matches the database cap (dms__store_content), which keeps
+ * the generated tsvector under PostgreSQL's 1 MB limit.
+ */
+export const MAX_STORED_TEXT = 400_000;
+
 export const DEFAULT_EXTRACT_LIMITS: ExtractLimits = {
   maxInputBytes: 25 * 1024 * 1024,
-  maxTextChars: 1_000_000,
+  maxTextChars: MAX_STORED_TEXT,
   maxZipEntries: 3000,
   maxEntryBytes: 40 * 1024 * 1024,
   maxTotalBytes: 80 * 1024 * 1024,

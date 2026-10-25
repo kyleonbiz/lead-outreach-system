@@ -41,6 +41,43 @@ export class SupabaseStorage implements ObjectStorage {
     }
   }
 
+  async read(key: string, maxBytes: number) {
+    const { data } = await this.bucket.createSignedUrl(key, 60);
+    if (!data) return null;
+    try {
+      const res = await fetch(data.signedUrl, { cache: "no-store" });
+      if (!res.ok || !res.body) return null;
+      const declared = Number(res.headers.get("content-length") ?? 0);
+      if (declared > maxBytes) {
+        await res.body.cancel().catch(() => undefined);
+        return { tooLarge: true as const };
+      }
+      // Count while reading: a missing or wrong Content-Length must not let a large body through.
+      const reader = res.body.getReader();
+      const chunks: Uint8Array[] = [];
+      let total = 0;
+      for (;;) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        total += value.byteLength;
+        if (total > maxBytes) {
+          await reader.cancel().catch(() => undefined);
+          return { tooLarge: true as const };
+        }
+        chunks.push(value);
+      }
+      const bytes = new Uint8Array(total);
+      let at = 0;
+      for (const c of chunks) {
+        bytes.set(c, at);
+        at += c.byteLength;
+      }
+      return { bytes };
+    } catch {
+      return null;
+    }
+  }
+
   async createDownloadUrl(
     key: string,
     o: { fileName: string; disposition: "inline" | "attachment"; ttlSeconds: number },

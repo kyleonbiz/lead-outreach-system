@@ -149,3 +149,50 @@ test.describe("team management (dev mode API + UI)", () => {
     expect((await json(await request.get(`/api/dms/documents/${id}/share`))).data).toEqual([]);
   });
 });
+
+test.describe("content search (dev mode)", () => {
+  test("uploaded text becomes searchable after indexing, with a highlighted snippet", async ({ page, request }) => {
+    const body = Buffer.from("Minutes of the annual meeting. The quarterly zeppelin audit was approved unanimously.");
+    const init = await json(await request.post("/api/dms/uploads", {
+      data: { fileName: "e2e-minutes.txt", size: body.length, mimeType: "text/plain", folderId: null },
+    }));
+    expect(init.ok).toBe(true);
+    expect((await request.put(init.data.target.url, { data: body, headers: { "content-type": "text/plain" } })).ok()).toBe(true);
+    const fin = await json(await request.post(`/api/dms/uploads/${init.data.documentId}/finalize`, { data: { versionNumber: 1 } }));
+    expect(fin.ok).toBe(true);
+    expect(fin.data.contentStatus).toBe("pending"); // the response does not wait for indexing
+
+    // Indexing runs after the response; poll until the content matches.
+    await expect
+      .poll(async () => {
+        const r = await json(await request.get("/api/dms/documents?search=zeppelin&sort=relevance"));
+        return r.data.items.map((i: { id: string; contentMatch?: boolean }) => [i.id, i.contentMatch]);
+      }, { timeout: 15_000 })
+      .toEqual([[init.data.documentId, true]]);
+
+    const hit = (await json(await request.get("/api/dms/documents?search=zeppelin"))).data.items[0];
+    expect(hit.contentStatus).toBe("indexed");
+    expect(hit.snippet).toContain("\uE000zeppelin\uE001");
+    expect(JSON.stringify(hit)).not.toContain("contentText");
+
+    await page.goto("/app");
+    await page.getByRole("searchbox").fill("zeppelin");
+    const card = page.getByTestId("document-card");
+    await expect(card).toHaveCount(1);
+    await expect(card.getByTestId("snippet").locator("mark")).toHaveText("zeppelin");
+    await expect(card.getByRole("button", { name: /Open e2e-minutes.txt/ })).toBeVisible();
+  });
+
+  test("a word that is only in an unindexable file type finds nothing", async ({ request }) => {
+    const r = await json(await request.get("/api/dms/documents?search=qwertyuiopasdf"));
+    expect(r.data.total).toBe(0);
+  });
+
+  test("seeded sample PDFs are indexed on first load", async ({ request }) => {
+    await request.get("/api/dms/bootstrap"); // triggers the bounded background backfill
+    await expect
+      .poll(async () => (await json(await request.get("/api/dms/documents?search=%22placeholder%20content%22"))).data.total, { timeout: 20_000 })
+      .toBeGreaterThan(0);
+  });
+});
+

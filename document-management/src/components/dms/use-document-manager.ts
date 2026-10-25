@@ -81,10 +81,10 @@ export function useDocumentManager(api: DmsApi) {
   /* ------------------------------ list ------------------------------ */
 
   const fetchPage = useCallback(
-    async (q: DocumentQuery, append: boolean) => {
+    async (q: DocumentQuery, append: boolean, silent = false) => {
       const seq = ++listSeq.current;
       if (append) setLoadingMore(true);
-      else setListState("loading");
+      else if (!silent) setListState("loading");
       try {
         const page = await api.listDocuments(q);
         if (seq !== listSeq.current) return;
@@ -93,6 +93,7 @@ export function useDocumentManager(api: DmsApi) {
         setListState("ready");
       } catch (e) {
         if (seq !== listSeq.current) return;
+        if (silent) return;
         if (append) notify("error", toDmsError(e).message);
         else {
           setListError(toDmsError(e).message);
@@ -120,6 +121,23 @@ export function useDocumentManager(api: DmsApi) {
     [fetchPage, query, refreshMeta],
   );
 
+  // Text is indexed shortly after an upload finishes. While any listed document is still waiting,
+  // re-read the first page quietly so its status and any content matches appear without a manual refresh.
+  const waiting = items.some((d) => d.contentStatus === "pending" && d.status === "ready");
+  const pollCount = useRef(0);
+  useEffect(() => {
+    if (!waiting || listState !== "ready" || items.length > query.pageSize) {
+      if (!waiting) pollCount.current = 0;
+      return;
+    }
+    if (pollCount.current >= 10) return;
+    const t = setTimeout(() => {
+      pollCount.current += 1;
+      void fetchPage({ ...query, page: 1 }, false, true);
+    }, 3000);
+    return () => clearTimeout(t);
+  }, [waiting, listState, items, query, fetchPage]);
+
   const hasMore = items.length < total;
   const loadMore = useCallback(() => {
     if (!hasMore || loadingMore) return;
@@ -128,7 +146,16 @@ export function useDocumentManager(api: DmsApi) {
   }, [hasMore, loadingMore, query, items.length, fetchPage]);
 
   const patchQuery = useCallback((patch: Partial<DocumentQuery>) => {
-    setQuery((q) => ({ ...q, ...patch, page: 1 }));
+    setQuery((q) => {
+      const next = { ...q, ...patch, page: 1 };
+      // "Best match" only makes sense while searching: switch to it when a search starts
+      // (unless the person picked a sort), and back to newest when the search is cleared.
+      if (patch.search !== undefined && patch.sort === undefined) {
+        if (next.search.trim() && q.sort === "newest") next.sort = "relevance";
+        else if (!next.search.trim() && q.sort === "relevance") next.sort = "newest";
+      }
+      return next;
+    });
   }, []);
 
   /* ----------------------------- details ---------------------------- */

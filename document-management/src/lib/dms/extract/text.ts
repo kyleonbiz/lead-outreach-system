@@ -1,9 +1,9 @@
 /** Start/stop markers for search highlights live in the Unicode private-use area. Never allow them in content. */
-export const MARK_START = "";
-export const MARK_END = "";
+export const MARK_START = "\uE000";
+export const MARK_END = "\uE001";
 
-// eslint-disable-next-line no-control-regex
-const UNSAFE = /[\u0000-\u0008\u000b\u000c\u000e-\u001f\u007f-\u009f​-‏‪-‮⁦-⁩﻿]/g;
+ 
+const UNSAFE = /[\u0000-\u0008\u000b\u000c\u000e-\u001f\u007f-\u009f\u200b-\u200f\u202a-\u202e\u2066-\u2069\ufeff\ue000\ue001]/g;
 
 /** Decodes bytes as UTF-8 or (with a BOM) UTF-16, never throwing on bad sequences. */
 export function decodeText(bytes: Uint8Array): string {

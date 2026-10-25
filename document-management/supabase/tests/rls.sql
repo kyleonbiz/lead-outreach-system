@@ -248,4 +248,6 @@ reset role;
 reset role;
 \ir hardening.sql
 reset role;
+\ir content.sql
+reset role;
 \echo ALL RLS TESTS PASSED

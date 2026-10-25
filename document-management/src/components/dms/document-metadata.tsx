@@ -16,6 +16,7 @@ import {
 import { formatBytes } from "@/lib/dms/validation";
 import { formatDate, formatDateTime } from "./format";
 import { fileKindOf } from "./file-kind";
+import { contentStatusLabel } from "./snippet";
 
 export function SectionLabel({ children, id }: { children: React.ReactNode; id?: string }) {
   return (
@@ -49,6 +50,7 @@ export function FileDetails({ doc, folders }: { doc: DocumentDetail; folders: Fo
         <Row label="Uploaded">{formatDate(doc.createdAt)}</Row>
         <Row label="By">{doc.uploadedByName}</Row>
         <Row label="Version">v{doc.currentVersion}.0</Row>
+        <Row label="Text search">{contentStatusLabel(doc.contentStatus, doc.contentReason)}</Row>
       </dl>
     </section>
   );

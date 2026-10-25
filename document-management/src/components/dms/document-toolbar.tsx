@@ -14,6 +14,8 @@ const VIEWS: { id: DocumentView; label: string; Icon: LucideIcon }[] = [
   { id: "trash", label: "Trash", Icon: Trash2 },
 ];
 
+const RELEVANCE = { id: "relevance" as DocumentSort, label: "Best match" };
+
 const SORTS: { id: DocumentSort; label: string }[] = [
   { id: "newest", label: "Newest first" },
   { id: "oldest", label: "Oldest first" },
@@ -117,7 +119,7 @@ export function DocumentToolbar({
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
-            {SORTS.map((s) => (
+            {(query.search.trim() ? [RELEVANCE, ...SORTS] : SORTS).map((s) => (
               <SelectItem key={s.id} value={s.id}>
                 {s.label}
               </SelectItem>

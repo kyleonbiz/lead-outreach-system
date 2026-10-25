@@ -28,6 +28,7 @@ export function makeWorld(opts: { limits?: Partial<UploadLimits>; quotaA?: numbe
     storageKey: keyB, mimeType: "application/pdf", sizeBytes: 4000, category: "contract", tags: ["Confidential"],
     uploadedBy: USER_B, uploadedByName: "Bea", createdAt: NOW.toISOString(), updatedAt: NOW.toISOString(),
     expiresAt: null, starred: false, status: "ready", deletedAt: null, currentVersion: 1,
+    contentStatus: "pending", contentReason: null, contentIndexedAt: null,
   });
   store.versions.set(DOC_B, [{
     id: "00000000-0000-4000-8000-000000000b99", documentId: DOC_B, workspaceId: WS_B, versionNumber: 1,

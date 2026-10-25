@@ -1,7 +1,8 @@
 # Aurum Ventura · Document Management System
 
 A multi-tenant document manager for Aurum Ventura's client-facing admin platform:
-folders and tags, metadata, filename/metadata search, private file storage, versioning,
+folders and tags, metadata, filename/metadata and **document-text search** (text-based PDF, DOCX,
+XLSX, PPTX, CSV, TXT; no OCR), private file storage, versioning,
 expiring share links and an audit trail — on Next.js, Supabase (Postgres, Auth, Storage),
 Tailwind and shadcn/ui-style components.
 
@@ -57,6 +58,10 @@ fails closed) unless `DMS_ALLOW_DEV_MODE=true`.
 7. **Scheduled cleanup** (recommended): set `CRON_SECRET` (16+ random characters) and
    `SUPABASE_SERVICE_ROLE_KEY`, then call `/api/maintenance/cleanup-uploads` daily — see
    [Deployment](#deployment).
+8. **Content search backfill** (only if documents existed before migration `…0007`): they start
+   as "not indexed yet" and are searchable by name only. Editors opening the workspace index a
+   few at a time automatically; to do it in bulk call `/api/maintenance/reindex` — see
+   [Content search](#content-search).
 
 > The bucket limits uploads to 50 MB and a list of MIME types. If you raise
 > `DMS_MAX_FILE_SIZE_MB` or add file types, update the bucket row in
@@ -129,17 +134,56 @@ UI components ──► useDocumentManager (state) ──► DmsApi interface
 Database layout: `workspaces`, `workspace_members`, `document_folders`, `documents`,
 `document_versions` (with `status`), `document_tags`, `document_tag_assignments`,
 `audit_logs`, plus `document_share_links`. Child rows use composite foreign keys so they
-cannot point into another workspace. `documents.content_text` and a generated
-`search_vector` (GIN-indexed) are **reserved** for a future text-extraction pipeline —
-nothing populates or queries them today.
+cannot point into another workspace. `documents` also holds
+`content_text`, a generated `search_vector` (GIN-indexed, content only) and the
+`content_status` / `content_reason` / `content_indexed_at` / `content_version` columns
+described under [Content search](#content-search). Clients cannot write any of them directly.
+
+### Content search
+
+Extracted text is stored per document and searched with PostgreSQL full-text search.
+
+* **When**: right after `finalize` returns (Next's `after()`), the server reads the stored file as
+  the signed-in user, extracts text and calls `dms_set_document_content`. The upload never waits
+  for it and never fails because of it. The document is searchable by name immediately and by
+  content once `content_status` becomes `indexed` (the UI polls briefly and shows the state).
+* **What is read** (`src/lib/dms/extract/`): the **text layer** of PDFs (PDF.js via `unpdf`, scripts,
+  XFA and font loading off), DOCX, XLSX, PPTX, CSV and TXT. There is **no OCR**: scanned PDFs and
+  images have no searchable text and say so. Legacy `.doc`/`.xls` are not accepted by the app.
+* **Limits** (untrusted input): files over 25 MB are not read; archives are capped at 3,000 entries,
+  40 MB per entry, 80 MB in total and a 150× expansion ratio (checked while inflating, so a lying
+  header cannot bypass them); XML is parsed with a small non-expanding tokenizer (no DTD/entities);
+  PDFs stop after 300 pages; each file has a 20 s budget; stored text is capped at 400,000
+  characters (`reason = truncated`). Password-protected and malformed files are marked, not guessed at.
+* **Honest status**: `pending` (name only), `indexed`, `unsupported` (no extractable text, too large,
+  scanned…) or `failed` (retryable). Only `indexed` documents ever match on content. A new version
+  clears the previous version's text immediately; a slow extraction of an older version is
+  discarded (`content_version` must equal `current_version`).
+* **Query syntax** (`websearch_to_tsquery('simple')`): words are ANDed, `"quoted phrases"`, `or`,
+  `-exclude`. No stemming or stop-words (`simple`), so it works across languages but "rent" does not
+  match "rented". A document matches if every word is in its name/metadata/tags **or** the whole
+  query matches its text; a query split across the two (one word in the name, another in the
+  text) does not match. Sort **Best match** puts name/metadata matches first, then text rank.
+* **Snippets** are cut from the stored text by `ts_headline`, which drops markup; matches are wrapped
+  in U+E000/U+E001 (stripped from stored text so they cannot be forged) and rendered as React text
+  nodes, never HTML.
+* **Backfill**: opening the workspace as an editor indexes up to 5 pending documents in the
+  background. For bulk work, `GET|POST /api/maintenance/reindex?limit=20[&retryFailed=1]`
+  (same `CRON_SECRET` + `SUPABASE_SERVICE_ROLE_KEY` as the cleanup route) indexes unindexed
+  documents across all workspaces within a 45 s budget and returns counts only; repeat until
+  `found` is 0. It is not scheduled for you.
+* **Memory/demo parity**: the in-memory store implements the same behaviour with a reference matcher
+  (`src/lib/dms/query.ts`); PostgreSQL's parser is richer (e-mail addresses and decimals are single
+  tokens there, so searching `example` will not find `me@example.com` in Supabase but will in the
+  demo), so the two agree on ordinary words and phrases, not every edge case.
 
 ## Testing
 
 ```bash
 npm run typecheck && npm run lint
-npm test            # 187 unit/component tests (vitest)
-npm run test:db     # migrations + RLS against a throwaway local PostgreSQL 16 (185 PASS checks, including security regressions)
-npm run test:e2e    # Playwright: demo page, dev-mode server flows, tablet/phone layout (28 tests)
+npm test            # 276 unit/component tests (vitest)
+npm run test:db     # migrations + RLS against a throwaway local PostgreSQL 16 (237 PASS lines, including security and content-search regressions)
+npm run test:e2e    # Playwright: demo page, dev-mode server flows, content search, tablet/phone layout (32 tests)
 ```
 
 * `tests/unit` – service rules (roles, **workspace isolation**, upload validation,
@@ -154,7 +198,9 @@ npm run test:e2e    # Playwright: demo page, dev-mode server flows, tablet/phone
   (cross-workspace reads/writes, role limits, protected columns, storage policies, quota,
   audit triggers, share-link resolution, invites and acceptance incl. unverified/expired/
   wrong-address cases, role/removal rules, link revocation and use auditing, stale-upload
-  cleanup). `supabase/tests/team.sql` is included from `rls.sql`. Needs the PostgreSQL 16
+  cleanup, content search: who may store text, stale versions, status rules, phrase/OR/exclusion,
+  snippets, isolation, relevance, work queues). `team.sql`, `hardening.sql` and `content.sql` are
+  included from `rls.sql`. Needs the PostgreSQL 16
   server binaries (`PG_BIN` overrides the path).
 * `tests/e2e` – needs a Chromium; set `PLAYWRIGHT_CHROMIUM_PATH` or run
   `npx playwright install chromium`. `layout.spec.ts` checks 820 px and 360 px for page
@@ -214,9 +260,16 @@ abandoned uploads · per-user and per-address rate limiting.
   run end to end. `SupabaseRepository`/`SupabaseStorage` are tested against a *fake* client
   (they verify what we ask the database/Storage to do, not how Supabase answers). Run the
   two-account smoke test above before trusting a deployment.
-* **Full-text search of document contents is NOT implemented.** Search covers filenames,
-  tags, category, extension and uploader. The columns for later text extraction exist but
-  are unused, and the UI does not claim content search.
+* **Content search covers only what could be extracted.** Scanned/image-only PDFs, images and
+  password-protected files have no searchable text (no OCR). Documents are searchable by name
+  alone until indexed, and the details panel shows each document's state. Extraction runs inside
+  the Next.js server process after the upload response; on a serverless host it is bounded by the
+  platform's function duration (`maxDuration` is set to 60 s on the routes that index), and a
+  killed run leaves the document `pending` for the backfill to pick up. **The migration, RPCs,
+  extraction and queries are tested on local PostgreSQL 16 and in-process only**; extraction of real
+  files through Supabase Storage and PostgREST has not been run end to end. Search ranking is
+  PostgreSQL's `ts_rank_cd`, not tuned. Text is stored in the same table as the metadata, so anyone
+  who can read a document row can read its text via the API (they can already download the file).
 * Mutations are mostly one round trip each; multi-step operations rely on the RPCs (quota
   reservation, completing/aborting uploads, tag replacement, purge, team changes). Deleting
   storage objects after a purge or cleanup is best-effort: a failure leaves an orphaned
@@ -242,6 +295,8 @@ abandoned uploads · per-user and per-address rate limiting.
   for this document" button).
 * Expiration dates are informational (badge on cards); nothing enforces or notifies.
 * Previews: PDF, images, CSV, text only. No dark mode.
+* The marketing page's "Full-Text Search" pill refers to this feature; in the public demo it covers
+  the generated sample PDFs/CSVs and anything you add in your own browser session.
 * Development mode data is in server memory (lost on restart); seeded sample images have no
   bytes there, so their preview/download reports "not available".
 * Styling follows the supplied reference screenshot (glass frame, centred document cards, floating upload and details panels) but is an interpretation, not a pixel match; fonts are Geist, bundled locally.
@@ -249,7 +304,7 @@ abandoned uploads · per-user and per-address rate limiting.
   specs plus a manual look at the screenshots), not across other browsers or real devices;
   there is no visual-regression testing.
 * Dependencies were installed at current latest versions (Next 16.4, React 19, Tailwind 4,
-  zod 4, Vitest 5); `@hookform/resolvers` is pinned to v5 because v6 fails peer resolution.
+  zod 4, Vitest 5; `fflate` for archives, `unpdf` for PDF text); `@hookform/resolvers` is pinned to v5 because v6 fails peer resolution.
 
 ## Security
 

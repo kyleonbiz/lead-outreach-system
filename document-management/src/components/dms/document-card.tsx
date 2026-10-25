@@ -8,6 +8,7 @@ import { formatBytes } from "@/lib/dms/validation";
 import { cn } from "@/lib/utils";
 import { daysUntil, formatDate } from "./format";
 import { fileKindOf } from "./file-kind";
+import { Snippet } from "./snippet";
 
 const MAX_TAGS = 3;
 
@@ -68,6 +69,13 @@ export function DocumentCard({
             </Badge>
           )}
         </span>
+
+        {doc.snippet && (
+          <span className="w-full rounded-lg bg-muted/60 px-2.5 py-1.5 text-left text-xs leading-snug text-muted-foreground">
+            <span className="sr-only">Matching text: </span>
+            <Snippet text={doc.snippet} className="line-clamp-3 break-words" />
+          </span>
+        )}
 
         {doc.tags.length > 0 && (
           <span className="flex flex-wrap justify-center gap-1.5" aria-label="Tags">

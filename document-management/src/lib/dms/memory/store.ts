@@ -1,4 +1,5 @@
 import { DmsError } from "../errors";
+import { MAX_STORED_TEXT } from "../extract/limits";
 import { applyDocumentQuery } from "../query";
 import type {
   AuditEntry,
@@ -10,6 +11,7 @@ import type {
   TeamRepository,
 } from "../ports";
 import type {
+  ContentStatus,
   DocumentQuery,
   DocumentRecord,
   DocumentVersion,
@@ -63,6 +65,8 @@ export class MemoryStore {
   invites: StoredInvite[] = [];
   audit: StoredAudit[] = [];
   blobs = new Map<string, { bytes: Uint8Array; mimeType: string }>();
+  /** Extracted text per document id (never part of a DocumentRecord). */
+  contentText = new Map<string, string>();
 }
 
 export class MemoryRepository implements DocumentRepository, TeamRepository {
@@ -150,7 +154,7 @@ export class MemoryRepository implements DocumentRepository, TeamRepository {
 
   async queryDocuments(ws: string, q: DocumentQuery) {
     const docs = [...this.store.documents.values()].filter((d) => d.workspaceId === ws);
-    return applyDocumentQuery(docs, q, this.now());
+    return applyDocumentQuery(docs, q, this.now(), this.store.contentText);
   }
 
   async getDocument(ws: string, id: string) {
@@ -216,6 +220,9 @@ export class MemoryRepository implements DocumentRepository, TeamRepository {
         status: "pending",
         deletedAt: null,
         currentVersion: 0,
+        contentStatus: "pending",
+        contentReason: null,
+        contentIndexedAt: null,
       };
       this.store.documents.set(document.id, document);
     }
@@ -264,9 +271,71 @@ export class MemoryRepository implements DocumentRepository, TeamRepository {
       mimeType: a.mimeType,
       currentVersion: a.versionNumber,
       updatedAt: this.now().toISOString(),
+      // A new version invalidates the previous version's text.
+      contentStatus: "pending",
+      contentReason: null,
+      contentIndexedAt: null,
     };
+    this.store.contentText.delete(d.id);
     this.store.documents.set(d.id, next);
     return next;
+  }
+
+  async setDocumentContent(a: {
+    workspaceId: string;
+    documentId: string;
+    versionNumber: number;
+    status: Exclude<ContentStatus, "pending">;
+    reason: string | null;
+    text: string | null;
+  }) {
+    const d = this.store.documents.get(a.documentId);
+    if (!d || d.workspaceId !== a.workspaceId || d.status !== "ready" || d.currentVersion !== a.versionNumber) {
+      return false;
+    }
+    let status = a.status;
+    let reason = a.reason;
+    let text: string | null = null;
+    if (status === "indexed") {
+      // Mirrors dms__store_content: strip highlight delimiters and control characters, cap the length.
+      text = (a.text ?? "")
+         
+        .replace(/[\uE000\uE001\u0000]/g, "")
+         
+        .replace(/[\u0001-\u0008\u000B\u000C\u000E-\u001F\u007F]/g, " ");
+      if (text.length > MAX_STORED_TEXT) {
+        text = text.slice(0, MAX_STORED_TEXT);
+        reason = "truncated";
+      }
+      if (!/[\p{L}\p{N}]/u.test(text)) {
+        status = "unsupported";
+        reason = "no_text_found";
+        text = null;
+      }
+    }
+    if (text) this.store.contentText.set(d.id, text);
+    else this.store.contentText.delete(d.id);
+    this.store.documents.set(d.id, {
+      ...d,
+      contentStatus: status,
+      contentReason: reason,
+      contentIndexedAt: this.now().toISOString(),
+    });
+    return true;
+  }
+
+  async listDocumentsNeedingIndex(ws: string, opts: { limit: number; includeFailed: boolean }) {
+    return [...this.store.documents.values()]
+      .filter(
+        (d) =>
+          d.workspaceId === ws &&
+          d.status === "ready" &&
+          !d.deletedAt &&
+          (d.contentStatus === "pending" || (opts.includeFailed && d.contentStatus === "failed")),
+      )
+      .sort((a, b) => a.createdAt.localeCompare(b.createdAt) || a.id.localeCompare(b.id))
+      .slice(0, Math.min(Math.max(opts.limit, 1), 500))
+      .map((d) => ({ id: d.id, currentVersion: d.currentVersion }));
   }
 
   async abortUpload(ws: string, documentId: string, versionNumber: number) {
@@ -316,6 +385,7 @@ export class MemoryRepository implements DocumentRepository, TeamRepository {
     const keys = (this.store.versions.get(id) ?? []).map((v) => v.storageKey);
     this.store.documents.delete(id);
     this.store.versions.delete(id);
+    this.store.contentText.delete(id);
     return keys;
   }
 
@@ -487,6 +557,12 @@ export class MemoryStorage implements ObjectStorage {
   async readHead(key: string, bytes: number) {
     const b = this.store.blobs.get(key);
     return b ? b.bytes.slice(0, bytes) : null;
+  }
+
+  async read(key: string, maxBytes: number) {
+    const b = this.blob(key);
+    if (!b) return null;
+    return b.bytes.byteLength > maxBytes ? { tooLarge: true as const } : { bytes: b.bytes };
   }
 
   async createDownloadUrl(

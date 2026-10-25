@@ -40,8 +40,8 @@ export function DocumentSearch({
       <Input
         type="search"
         role="searchbox"
-        aria-label="Search documents by name, tag, category or uploader"
-        placeholder="Search by name, tag, category, or uploader…"
+        aria-label="Search documents by name, tag, category, uploader or indexed text"
+        placeholder="Search names, tags, uploaders and document text…"
         value={text}
         onChange={(e) => setText(e.target.value)}
         className="h-11 rounded-xl bg-card pl-10 pr-9 [&::-webkit-search-cancel-button]:hidden"

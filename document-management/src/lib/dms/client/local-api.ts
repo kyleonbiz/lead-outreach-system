@@ -29,7 +29,11 @@ export function createLocalApi(): DmsApi {
       role: "owner",
     },
   });
-  const ready = prepareSampleImages(kit.store, kit.storage).catch(() => undefined);
+  // Index the generated sample PDFs/CSVs in the browser; nothing leaves the page.
+  const ready = prepareSampleImages(kit.store, kit.storage)
+    .catch(() => undefined)
+    .then(() => service.indexPending({ limit: 50 }))
+    .catch(() => undefined);
 
   async function run<T>(fn: () => Promise<T>): Promise<T> {
     try {
@@ -81,7 +85,10 @@ export function createLocalApi(): DmsApi {
           const version = await kit.repo.getVersion(SAMPLE_WORKSPACE_ID, init.documentId, init.versionNumber);
           kit.storage.put(version!.storageKey, bytes, version!.mimeType);
           args.onProgress?.(args.file.size, args.file.size);
-          return await service.finalizeUpload(init.documentId, init.versionNumber);
+          const doc = await service.finalizeUpload(init.documentId, init.versionNumber);
+          // Local extraction is quick; wait so the demo shows the document as searchable at once.
+          await service.indexDocument(doc.id, doc.currentVersion);
+          return (await kit.repo.getDocument(SAMPLE_WORKSPACE_ID, doc.id)) ?? doc;
         } catch (e) {
           await service.abortUpload(init.documentId, init.versionNumber).catch(() => undefined);
           throw e;

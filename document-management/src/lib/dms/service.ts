@@ -1,4 +1,5 @@
 import { DmsError } from "./errors";
+import { computeContent } from "./index-content";
 import {
   DEFAULT_PAGE_SIZE,
   SHARE_LINK_MAX_MINUTES,
@@ -14,6 +15,7 @@ import type {
 import type {
   Bootstrap,
   Category,
+  ContentStatus,
   DocumentDetail,
   DocumentPage,
   DocumentQuery,
@@ -313,6 +315,53 @@ export class DocumentService {
       { name: doc.displayName, sizeBytes: doc.sizeBytes, version: versionNumber },
     );
     return doc;
+  }
+
+  /**
+   * Extracts and stores the text of a document's current version so it becomes
+   * searchable. Best-effort and never throws: the document stays searchable by
+   * filename and metadata whatever happens here. Returns the stored status, or
+   * null if nothing was stored (e.g. a newer version arrived meanwhile).
+   */
+  async indexDocument(documentId: string, versionNumber: number): Promise<Exclude<ContentStatus, "pending"> | null> {
+    try {
+      this.require("write");
+      const doc = await this.repo.getDocument(this.ctx.workspaceId, documentId);
+      if (!doc || doc.status !== "ready" || doc.currentVersion !== versionNumber) return null;
+      const outcome = await computeContent(this.storage, {
+        storageKey: doc.storageKey,
+        fileName: doc.originalName,
+        mimeType: doc.mimeType,
+      });
+      const stored = await this.repo.setDocumentContent({
+        workspaceId: this.ctx.workspaceId,
+        documentId,
+        versionNumber,
+        ...outcome,
+      });
+      return stored ? outcome.status : null;
+    } catch {
+      return null;
+    }
+  }
+
+  /** Indexes up to `limit` documents of this workspace that are still waiting (backfill / retry). */
+  async indexPending(opts: { limit?: number; includeFailed?: boolean } = {}) {
+    this.require("write");
+    const todo = await this.repo.listDocumentsNeedingIndex(this.ctx.workspaceId, {
+      limit: Math.min(Math.max(opts.limit ?? 10, 1), 50),
+      includeFailed: opts.includeFailed ?? false,
+    });
+    const counts = { processed: 0, indexed: 0, unsupported: 0, failed: 0, skipped: 0 };
+    for (const t of todo) {
+      const status = await this.indexDocument(t.id, t.currentVersion);
+      if (status === null) counts.skipped++;
+      else {
+        counts.processed++;
+        counts[status]++;
+      }
+    }
+    return counts;
   }
 
   async abortUpload(documentId: string, versionNumber: number): Promise<void> {

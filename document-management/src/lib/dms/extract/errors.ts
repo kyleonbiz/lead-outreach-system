@@ -29,5 +29,6 @@ export const REASON_LABELS: Record<string, string> = {
   parse_error: "The file could not be read.",
   timeout: "Reading the file took too long.",
   read_error: "The stored file could not be read.",
+  sample_no_content: "Sample record: the demo has no file content to read.",
   truncated: "Only the first part of the text is searchable.",
 };

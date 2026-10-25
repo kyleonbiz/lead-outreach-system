@@ -67,3 +67,19 @@ test.describe("public demo page", () => {
     await ctx.close();
   });
 });
+
+test.describe("demo content search", () => {
+  test("generated sample PDFs and CSVs are indexed in the browser and searchable by their text", async ({ page }) => {
+    await page.goto("/");
+    await page.getByRole("searchbox").fill("placeholder");
+    const cards = page.getByTestId("document-card");
+    await expect(cards.first()).toBeVisible({ timeout: 20_000 });
+    await expect(cards.first().getByTestId("snippet").locator("mark").first()).toHaveText(/placeholder/i);
+    // A sample without readable content is reported honestly, not as searchable.
+    await page.getByRole("searchbox").fill("");
+    await page.getByRole("button", { name: /Open AR_Aging_Report_Oct.xlsx/ }).click();
+    await expect(page.getByRole("dialog")).toContainText("Text search");
+    await expect(page.getByRole("dialog")).toContainText("Not searchable by text");
+  });
+});
+

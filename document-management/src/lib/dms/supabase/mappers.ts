@@ -1,5 +1,5 @@
 import { DmsError } from "../errors";
-import type { Category, DocumentRecord, DocumentVersion, Folder, FolderColor } from "../types";
+import type { Category, ContentStatus, DocumentRecord, DocumentVersion, Folder, FolderColor } from "../types";
 
 type Row = Record<string, unknown>;
 
@@ -24,6 +24,12 @@ export function documentFromRow(r: Row): DocumentRecord {
     status: r.status as "pending" | "ready",
     deletedAt: (r.deleted_at as string | null) ?? null,
     currentVersion: Number(r.current_version),
+    contentStatus: ((r.content_status as ContentStatus | undefined) ?? "pending"),
+    contentReason: (r.content_reason as string | null | undefined) ?? null,
+    contentIndexedAt: (r.content_indexed_at as string | null | undefined) ?? null,
+    ...(typeof r.content_match === "boolean"
+      ? { contentMatch: r.content_match, snippet: (r.snippet as string | null | undefined) ?? null }
+      : {}),
   };
 }
 

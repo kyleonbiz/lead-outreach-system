@@ -9,6 +9,7 @@ import type {
   TeamRepository,
 } from "../ports";
 import type {
+  ContentStatus,
   DocumentQuery,
   DocumentRecord,
   DocumentVersion,
@@ -136,6 +137,34 @@ export class SupabaseRepository implements DocumentRepository, TeamRepository {
       items: rows.map((r) => documentFromRow(r.doc)),
       total: rows.length ? Number(rows[0].total) : 0,
     };
+  }
+
+  async setDocumentContent(a: {
+    workspaceId: string;
+    documentId: string;
+    versionNumber: number;
+    status: Exclude<ContentStatus, "pending">;
+    reason: string | null;
+    text: string | null;
+  }): Promise<boolean> {
+    const stored = await this.rpc<boolean>("dms_set_document_content", {
+      p_workspace: a.workspaceId,
+      p_document: a.documentId,
+      p_version: a.versionNumber,
+      p_status: a.status,
+      p_reason: a.reason,
+      p_text: a.text,
+    });
+    return stored === true;
+  }
+
+  async listDocumentsNeedingIndex(ws: string, opts: { limit: number; includeFailed: boolean }) {
+    const rows = await this.rpc<{ document_id: string; version_number: number }[]>("dms_list_unindexed", {
+      p_workspace: ws,
+      p_limit: opts.limit,
+      p_include_failed: opts.includeFailed,
+    });
+    return (rows ?? []).map((r) => ({ id: r.document_id, currentVersion: Number(r.version_number) }));
   }
 
   async getDocument(ws: string, id: string): Promise<DocumentRecord | null> {

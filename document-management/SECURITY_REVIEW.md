@@ -1,7 +1,8 @@
 # Security review
 
-Scope: everything under `document-management/` on branch `claude/document-management-stage-1-2`
-(Next.js routes, service layer, Supabase adapters, SQL migrations 1–6, proxy, config). The Python
+Scope: everything under `document-management/` (Next.js routes, service layer, Supabase adapters,
+SQL migrations 1–6, proxy, config). Migration 7 and the content-search pipeline were added afterwards and
+are covered in the addendum at the end; the findings table below predates them. The Python
 repo root is out of scope.
 
 Method: manual read of every API route, `proxy.ts`, the auth routes, the service and adapters, and all
@@ -143,3 +144,24 @@ not attempted; React escapes all file-derived text and there is no `dangerouslyS
 3. How Supabase Storage renders the `download=` name in `Content-Disposition` for unusual names.
 4. Auth cookie attributes (`SameSite`, `Secure`) set by `@supabase/ssr` in production.
 5. End-to-end behaviour of every RLS policy through real PostgREST (the harness exercises them at the SQL layer only).
+
+## Addendum: content search (migration 7, `src/lib/dms/extract/`)
+
+Reviewed by reading the code and exercising it with tests; **not** penetration-tested, and not run against a hosted
+Supabase project. No Critical/High findings. Design choices and residual risks:
+
+| Area | What was done | Residual risk |
+|------|---------------|---------------|
+| Parsing hostile files | Only whitelisted extensions are parsed. Input ≤ 25 MB; archives ≤ 3,000 entries, 40 MB/entry, 80 MB total, 150× ratio, enforced on bytes actually inflated (headers are not trusted); a 20 s deadline checked between units of work plus a hard race; PDFs ≤ 300 pages with scripts/XFA/font loading off; OOXML read by a minimal tag scanner (no DOM, no DOCTYPE, no external entities, only the five XML entities). Tests cover zip bombs (size and ratio), too many entries, truncated/corrupt/lying archives, encrypted entries, DOCTYPE entities, shared-string amplification, garbage PDFs and the deadline. | Parsing runs in the Next.js server process, not a sandbox. A parser bug in PDF.js or fflate would run with the app's privileges; the timeout cannot interrupt a synchronous CPU loop inside a library. Run behind a platform function limit, and consider a separate worker if untrusted users can upload. |
+| Who can write text | `content_*` columns are protected by the existing guard trigger; the only writers are `dms_set_document_content` (editor+, current version only) and a service-role twin used by the reindex route. | An editor can call the RPC directly and store text that is **not** in the file (search poisoning inside their own workspace). They can already upload any file, so no boundary is crossed; admins can re-run the extraction by uploading a new version. |
+| Stale / racing writes | A write must name the document's current version, so a slow extraction cannot overwrite a newer version; a new version clears old text in the same transaction as completion. | None known. |
+| Tenant isolation | Search is SECURITY INVOKER (RLS applies), queue RPCs filter by workspace and role, service-role functions are not executable by `anon`/`authenticated`. Tested: a member of another workspace sees no text, no matches, no queue entries. | Text is as visible as the document row to every member who can read it, including viewers. |
+| Snippet injection | Snippets are plain text from `ts_headline` (which drops tags) with U+E000/U+E001 as highlight delimiters; those and control characters are stripped before storage. The UI only renders them as React text nodes; there is still no `dangerouslySetInnerHTML`. | None known. |
+| Resource limits | Stored text ≤ 400,000 characters (also keeps the tsvector under PostgreSQL's 1 MB limit); search input ≤ 100 characters; `ts_headline` runs on the returned page only, on at most 200,000 characters per row; reindex is bounded per call (≤ 100 documents, 45 s) and gated by `CRON_SECRET`. | A query over a very large workspace is limited by the GIN index and `ts_rank_cd`; not load-tested. |
+| Background work | `after()` indexing never affects the upload response; errors are swallowed and leave the document `pending`/`failed`. Bootstrap indexes ≤ 5 pending documents for editors only. | Many concurrent bootstraps can index the same document more than once (idempotent, wasteful). |
+| Logging | Nothing about file names, keys or text is logged; the reindex route returns counts only. | — |
+
+Deployment note: apply migration `20261023000007_dms_content_search.sql`. It drops and recreates the generated
+`search_vector` column (content only) and resets nothing else; existing documents become `pending` and are indexed
+by the backfill described in the README.
+
