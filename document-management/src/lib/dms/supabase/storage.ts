@@ -2,6 +2,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { DmsError } from "../errors";
 import type { ObjectStorage } from "../ports";
 import type { FileLink, UploadTarget } from "../types";
+import { sanitizeFilename } from "../validation";
 
 export const DOCUMENTS_BUCKET = "documents";
 
@@ -47,7 +48,8 @@ export class SupabaseStorage implements ObjectStorage {
     const { data, error } = await this.bucket.createSignedUrl(
       key,
       o.ttlSeconds,
-      o.disposition === "attachment" ? { download: o.fileName } : undefined,
+      // Re-sanitised: a direct database write could have stored an unsafe display name.
+      o.disposition === "attachment" ? { download: sanitizeFilename(o.fileName) || "download" } : undefined,
     );
     if (error || !data) throw new DmsError("not_found", "File not available.");
     return { url: data.signedUrl, expiresAt: new Date(Date.now() + o.ttlSeconds * 1000).toISOString() };

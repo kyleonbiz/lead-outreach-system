@@ -28,7 +28,7 @@ export function OnboardingForm({ displayName, email }: { displayName: string; em
       p_display_name: displayName,
       p_email: email,
     });
-    if (rpcError) return setError("Could not create the workspace. Please try again.");
+    if (rpcError) return setError(rpcError.message.includes("workspace_limit") ? "You already own the maximum number of workspaces." : "Could not create the workspace. Please try again.");
     router.refresh();
   });
 

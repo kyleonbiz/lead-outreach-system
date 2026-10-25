@@ -59,6 +59,7 @@ export function mapDbError(error: { code?: string; message?: string } | null | u
   const msg = error?.message ?? "";
   const code = error?.code ?? "";
   if (msg.includes("quota_exceeded")) return new DmsError("quota_exceeded", "Not enough storage left in this workspace.");
+  if (msg.includes("workspace_limit")) return new DmsError("quota_exceeded", "You already own the maximum number of workspaces.");
   if (msg.includes("last_owner")) return new DmsError("conflict", "A workspace must keep at least one owner.");
   if (msg.includes("protected_column") || msg.includes("forbidden") || code === "42501") {
     return new DmsError("forbidden", "You do not have permission to do that.");
@@ -68,6 +69,9 @@ export function mapDbError(error: { code?: string; message?: string } | null | u
   }
   if (msg.includes("conflict") || code === "23505" || code === "40001") {
     return new DmsError("conflict", "That conflicts with an existing item.");
+  }
+  if (msg.includes("object_missing") || msg.includes("size_mismatch")) {
+    return new DmsError("validation", "The uploaded file did not match what was declared.");
   }
   if (code === "22023" || code === "23514" || msg.includes("invalid_")) {
     return new DmsError("validation", "The request was not valid.");

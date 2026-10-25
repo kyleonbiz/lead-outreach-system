@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { sha256Hex } from "@/lib/dms/service";
+import { sanitizeFilename } from "@/lib/dms/validation";
 import { PUBLIC_SHARE_RATE, checkRate, clientKey } from "@/lib/dms/server/rate-limit";
 import { DOCUMENTS_BUCKET } from "@/lib/dms/supabase/storage";
 import { createServiceSupabase } from "@/lib/supabase/server";
@@ -33,7 +34,7 @@ export async function GET(req: Request, ctx: RouteContext<"/share/[token]">) {
   const row = Array.isArray(data) ? data[0] : null;
   if (!row) return text("This link is invalid or has expired.", 404);
 
-  const signed = await admin.storage.from(DOCUMENTS_BUCKET).createSignedUrl(row.storage_key, 60, { download: row.display_name });
+  const signed = await admin.storage.from(DOCUMENTS_BUCKET).createSignedUrl(row.storage_key, 60, { download: sanitizeFilename(String(row.display_name ?? "")) || "download" });
   if (signed.error || !signed.data) return text("The file is not available.", 404);
   return NextResponse.redirect(signed.data.signedUrl, { status: 302, headers: { "cache-control": "no-store", "referrer-policy": "no-referrer" } });
 }

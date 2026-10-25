@@ -138,7 +138,7 @@ nothing populates or queries them today.
 ```bash
 npm run typecheck && npm run lint
 npm test            # 187 unit/component tests (vitest)
-npm run test:db     # migrations + RLS against a throwaway local PostgreSQL 16 (171 assertions)
+npm run test:db     # migrations + RLS against a throwaway local PostgreSQL 16 (185 PASS checks, including security regressions)
 npm run test:e2e    # Playwright: demo page, dev-mode server flows, tablet/phone layout (28 tests)
 ```
 
@@ -250,3 +250,7 @@ abandoned uploads · per-user and per-address rate limiting.
   there is no visual-regression testing.
 * Dependencies were installed at current latest versions (Next 16.4, React 19, Tailwind 4,
   zod 4, Vitest 5); `@hookform/resolvers` is pinned to v5 because v6 fails peer resolution.
+
+## Security
+
+See [SECURITY_REVIEW.md](SECURITY_REVIEW.md) for the pre-release review: fixed findings, open items and the deployment requirements it depends on (notably: keep Supabase Auth "Confirm email" on, set `CRON_SECRET`, apply migration `…0006_dms_security_hardening.sql`).

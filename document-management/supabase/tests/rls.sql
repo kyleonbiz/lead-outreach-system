@@ -80,7 +80,7 @@ select t.ok('pending documents are not listed',
   (select count(*) from public.dms_query_documents(:'wsa','all',null,'',null,null,null,'newest',1,10)) = 0);
 
 -- storage insert allowed only for a pending key the caller opened
-insert into storage.objects (bucket_id, name, owner) values ('documents', :'key1', :alice);
+insert into storage.objects (bucket_id, name, owner, metadata) values ('documents', :'key1', :alice, '{"size": 1000}');
 select t.fails('storage insert for an unknown key is denied',
   format($q$insert into storage.objects (bucket_id, name) values ('documents', %L)$q$,
     :'wsa' || '/10000000-0000-4000-8000-0000000000ff/v1-zzz.pdf'), 'row-level security');
@@ -99,12 +99,14 @@ select t.affected('storage delete of ready object affects 0 rows',
 -- second document + new version
 select public.dms_begin_upload(:'wsa', null, '10000000-0000-4000-8000-000000000002', 'budget.xlsx', 'budget.xlsx',
   null, 'other', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', 500, 'nonce2', 'xlsx', 'Alice') as up2 \gset
+insert into storage.objects (bucket_id, name, owner, metadata) values ('documents', :'wsa' || '/10000000-0000-4000-8000-000000000002/v1-nonce2.xlsx', :alice, '{"size": 500}');
 select public.dms_complete_upload(:'wsa', '10000000-0000-4000-8000-000000000002', 1, 500, 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
 select public.dms_begin_upload(:'wsa', '10000000-0000-4000-8000-000000000002', null, 'budget.xlsx', 'budget.xlsx',
   null, 'other', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', 700, 'nonce3', 'xlsx', 'Alice') as up3 \gset
 select t.ok('new version gets number 2', (:'up3'::jsonb -> 'version' ->> 'version_number') = '2');
 select t.fails('second pending version for the same document is a conflict',
   format($q$select public.dms_begin_upload(%L,'10000000-0000-4000-8000-000000000002',null,'budget.xlsx','budget.xlsx',null,'other','x',10,'n4','xlsx','A')$q$, :'wsa'), 'conflict');
+insert into storage.objects (bucket_id, name, owner, metadata) values ('documents', :'wsa' || '/10000000-0000-4000-8000-000000000002/v2-nonce3.xlsx', :alice, '{"size": 700}');
 select public.dms_complete_upload(:'wsa', '10000000-0000-4000-8000-000000000002', 2, 700, 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
 select t.ok('all versions count toward usage', (public.dms_usage(:'wsa') ->> 'usedBytes')::bigint = 2200);
 select t.ok('document points at version 2',
@@ -243,5 +245,7 @@ select t.ok('unknown tokens do not resolve', (select count(*) from public.dms_re
 
 reset role;
 \ir team.sql
+reset role;
+\ir hardening.sql
 reset role;
 \echo ALL RLS TESTS PASSED

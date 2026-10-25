@@ -48,6 +48,28 @@ export const DEFAULT_ALLOWED_TYPES: AllowedType[] = [
   },
 ];
 
+/**
+ * Types that execute or render script when a browser opens them. They can never
+ * be enabled through DMS_EXTRA_FILE_TYPES, because previews and the dev download
+ * route can serve a file inline from a trusted origin.
+ */
+export const BLOCKED_EXTENSIONS = new Set([
+  "html", "htm", "xhtml", "shtml", "svg", "svgz", "xml", "xsl", "xslt", "js", "mjs", "cjs",
+  "jsx", "ts", "php", "asp", "aspx", "jsp", "swf", "hta", "exe", "msi", "bat", "cmd", "com",
+  "scr", "ps1", "sh", "jar", "dll", "apk", "vbs", "wsf",
+]);
+export const BLOCKED_MIME_PATTERNS = [
+  /^text\/html/, /^application\/xhtml/, /^image\/svg/, /xml$/, /javascript/, /ecmascript/,
+  /^application\/x-(msdownload|sh|csh|httpd-php)/, /^application\/java-archive/,
+];
+
+export function isBlockedType(extension: string, mimeTypes: string[]): boolean {
+  return (
+    BLOCKED_EXTENSIONS.has(extension) ||
+    mimeTypes.some((m) => BLOCKED_MIME_PATTERNS.some((re) => re.test(m)))
+  );
+}
+
 export const DEFAULT_MAX_FILE_SIZE = 50 * MB;
 export const DEFAULT_QUOTA = 5 * GB;
 export const DEFAULT_MAX_FILES_PER_BATCH = 10;
@@ -86,7 +108,8 @@ export function loadUploadLimits(
         label: extension.toUpperCase(),
       };
     })
-    .filter((t): t is AllowedType => t !== null);
+    .filter((t): t is AllowedType => t !== null)
+    .filter((t) => !isBlockedType(t.extension, t.mimeTypes));
   if (extra?.length) allowed = [...allowed, ...extra];
 
   return {
